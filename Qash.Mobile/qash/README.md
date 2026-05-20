@@ -343,5 +343,3 @@ flutter analyze
 ```
 
 ---
-
-If you'd like, I can run `flutter analyze` next or create a concise contributing guide.
