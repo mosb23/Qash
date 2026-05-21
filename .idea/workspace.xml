@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="ea07c690-8cb5-447b-8dad-9420c519c876" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/.env" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/.env" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/config/providers.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/config/providers.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/config/router.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/config/router.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugin_registrant.cc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugin_registrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugin_registrant.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugins.cmake" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/macos/Flutter/GeneratedPluginRegistrant.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/macos/Flutter/GeneratedPluginRegistrant.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/pubspec.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugin_registrant.cc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugin_registrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugin_registrant.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugins.cmake" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0
+}</component>
+  <component name="ProjectId" id="3E0Tp1KDmVyNV9WYl0C9qIlbfE7" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "dart.analysis.tool.window.visible": "false",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/AAST/Semester10/MobileApplications/Qash",
+    "settings.editor.selected.configurable": "AndroidSdkUpdater",
+    "show.migrate.to.gradle.popup": "false"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="ea07c690-8cb5-447b-8dad-9420c519c876" name="Changes" comment="" />
+      <created>1779314667910</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1779314667910</updated>
+    </task>
+    <servers />
+  </component>
+</project>
