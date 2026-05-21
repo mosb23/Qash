@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../screens/login/login_screen.dart';
-import '../screens/onboarding/onboarding_screen.dart';
-import '../screens/register/register_screen.dart';
-import '../screens/splash/splash_screen.dart';
-import '../screens/verify/verify_phone_screen.dart';
+import '../features/auth/presentation/login_screen.dart';
+import '../features/auth/presentation/register_screen.dart';
+import '../features/auth/presentation/verify_phone_screen.dart';
+import '../features/onboarding/presentation/onboarding_screen.dart';
+import '../features/splash/presentation/splash_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',

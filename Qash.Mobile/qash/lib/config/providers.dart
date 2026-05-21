@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/auth_interceptor.dart';
 import '../core/network/dio_provider.dart';
 import '../core/storage/secure_storage_service.dart';
-import '../features/auth/data/auth_api.dart';
 
 final appInitializationProvider = FutureProvider<void>((ref) async {});
 
@@ -22,8 +21,4 @@ final dioProvider = Provider<Dio>((ref) {
     dio.interceptors.add(AuthInterceptor(storage));
   }
   return dio;
-});
-
-final authApiProvider = Provider<AuthApi>((ref) {
-  return AuthApi(ref.read(dioProvider), ref.read(secureStorageProvider));
 });
