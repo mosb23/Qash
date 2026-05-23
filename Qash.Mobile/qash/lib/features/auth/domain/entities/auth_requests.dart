@@ -2,10 +2,7 @@ class LoginCredentials {
   final String phoneNumber;
   final String password;
 
-  const LoginCredentials({
-    required this.phoneNumber,
-    required this.password,
-  });
+  const LoginCredentials({required this.phoneNumber, required this.password});
 }
 
 class RegistrationData {
@@ -33,5 +30,41 @@ class PhoneVerificationData {
   const PhoneVerificationData({
     required this.phoneNumber,
     required this.verificationCode,
+  });
+}
+
+class ForgotPasswordCodeRequestData {
+  final String phoneNumber;
+
+  const ForgotPasswordCodeRequestData({required this.phoneNumber});
+}
+
+class ResetForgotPasswordData {
+  final String phoneNumber;
+  final String verificationCode;
+  final String newPassword;
+  final String confirmPassword;
+
+  const ResetForgotPasswordData({
+    required this.phoneNumber,
+    required this.verificationCode,
+    required this.newPassword,
+    required this.confirmPassword,
+  });
+}
+
+class ChangePasswordData {
+  final String userId;
+  final String oldPassword;
+  final String verificationCode;
+  final String newPassword;
+  final String confirmPassword;
+
+  const ChangePasswordData({
+    required this.userId,
+    required this.oldPassword,
+    required this.verificationCode,
+    required this.newPassword,
+    required this.confirmPassword,
   });
 }

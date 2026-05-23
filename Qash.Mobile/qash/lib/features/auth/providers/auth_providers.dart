@@ -5,8 +5,11 @@ import '../data/auth_api.dart';
 import '../data/datasources/auth_remote_data_source.dart';
 import '../data/repositories/auth_repository_impl.dart';
 import '../domain/repositories/auth_repository.dart';
+import '../domain/usecases/change_password_use_case.dart';
 import '../domain/usecases/login_use_case.dart';
 import '../domain/usecases/register_use_case.dart';
+import '../domain/usecases/request_forgot_password_code_use_case.dart';
+import '../domain/usecases/reset_forgot_password_use_case.dart';
 import '../domain/usecases/verify_phone_use_case.dart';
 
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
@@ -30,4 +33,19 @@ final registerUseCaseProvider = Provider<RegisterUseCase>((ref) {
 
 final verifyPhoneUseCaseProvider = Provider<VerifyPhoneUseCase>((ref) {
   return VerifyPhoneUseCase(ref.read(authRepositoryProvider));
+});
+
+final requestForgotPasswordCodeUseCaseProvider =
+    Provider<RequestForgotPasswordCodeUseCase>((ref) {
+      return RequestForgotPasswordCodeUseCase(ref.read(authRepositoryProvider));
+    });
+
+final resetForgotPasswordUseCaseProvider = Provider<ResetForgotPasswordUseCase>(
+  (ref) {
+    return ResetForgotPasswordUseCase(ref.read(authRepositoryProvider));
+  },
+);
+
+final changePasswordUseCaseProvider = Provider<ChangePasswordUseCase>((ref) {
+  return ChangePasswordUseCase(ref.read(authRepositoryProvider));
 });

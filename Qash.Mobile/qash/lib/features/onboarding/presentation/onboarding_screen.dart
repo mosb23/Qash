@@ -46,9 +46,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void skip() {
-    setState(() {
-      currentPage = 2;
-    });
+    context.go('/login');
   }
 
   Widget buildIndicator(int index) {

@@ -244,13 +244,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: Text(
-                    'Forgot password?',
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 14,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
+                  child: GestureDetector(
+                    onTap: () => context.go('/forgot-password'),
+                    child: const Text(
+                      'Forgot password?',
+                      style: TextStyle(
+                        color: Color(0xFF111111),
+                        fontSize: 14,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
@@ -277,127 +280,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 1,
-                        color: const Color(0xFFE5E7EB),
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'or continue with',
-                        style: TextStyle(
-                          color: Color(0xFF8B8B8B),
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        height: 1,
-                        color: const Color(0xFFE5E7EB),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x19000000),
-                              blurRadius: 2,
-                              offset: Offset(0, 1),
-                              spreadRadius: -1,
-                            ),
-                            BoxShadow(
-                              color: Color(0x19000000),
-                              blurRadius: 3,
-                              offset: Offset(0, 1),
-                              spreadRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.apple,
-                              size: 24,
-                              color: Color(0xFF111111),
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Apple',
-                              style: TextStyle(
-                                color: Color(0xFF111111),
-                                fontSize: 14,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Container(
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x19000000),
-                              blurRadius: 2,
-                              offset: Offset(0, 1),
-                              spreadRadius: -1,
-                            ),
-                            BoxShadow(
-                              color: Color(0x19000000),
-                              blurRadius: 3,
-                              offset: Offset(0, 1),
-                              spreadRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.g_mobiledata,
-                              size: 28,
-                              color: Color(0xFF111111),
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Google',
-                              style: TextStyle(
-                                color: Color(0xFF111111),
-                                fontSize: 14,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
                 const SizedBox(height: 32),
                 Row(

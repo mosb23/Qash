@@ -1,45 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../domain/entities/auth_requests.dart';
-import '../providers/auth_providers.dart';
-
-class VerifyPhoneScreen extends ConsumerStatefulWidget {
+class ForgotVerifyScreen extends StatefulWidget {
   final String? phoneNumber;
+  final String? demoCode;
 
-  const VerifyPhoneScreen({super.key, this.phoneNumber});
+  const ForgotVerifyScreen({super.key, this.phoneNumber, this.demoCode});
 
   @override
-  ConsumerState<VerifyPhoneScreen> createState() => _VerifyPhoneScreenState();
+  State<ForgotVerifyScreen> createState() => _ForgotVerifyScreenState();
 }
 
-class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
-  final TextEditingController _phoneController = TextEditingController();
+class _ForgotVerifyScreenState extends State<ForgotVerifyScreen> {
   final TextEditingController _codeController = TextEditingController();
   bool _isLoading = false;
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.phoneNumber != null) {
-      _phoneController.text = widget.phoneNumber!;
-    }
-  }
-
-  @override
   void dispose() {
-    _phoneController.dispose();
     _codeController.dispose();
     super.dispose();
   }
 
-  Future<void> _verify() async {
-    final phone = _phoneController.text.trim();
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _verifyCode() async {
     final code = _codeController.text.trim();
 
-    if (phone.isEmpty || code.isEmpty) {
-      _showMessage('Enter phone number and code.');
+    if (code.isEmpty) {
+      _showMessage('Enter the verification code.');
       return;
     }
 
@@ -47,10 +39,7 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
       _isLoading = true;
     });
 
-    final verifyPhone = ref.read(verifyPhoneUseCaseProvider);
-    final response = await verifyPhone(
-      PhoneVerificationData(phoneNumber: phone, verificationCode: code),
-    );
+    await Future.delayed(const Duration(milliseconds: 700));
 
     if (!mounted) {
       return;
@@ -60,26 +49,17 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
       _isLoading = false;
     });
 
-    if (response.isSuccess) {
-      _showMessage('Phone verified. Welcome to Qash.');
-      context.go('/home');
-    } else {
-      _showMessage(
-        response.errors.isNotEmpty
-            ? response.errors.join('\n')
-            : response.message,
-      );
-    }
-  }
-
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    final phone = widget.phoneNumber ?? '';
+    final phoneParam = Uri.encodeComponent(phone);
+    final codeParam = Uri.encodeComponent(code);
+    context.go('/forgot-reset?phone=$phoneParam&code=$codeParam');
   }
 
   @override
   Widget build(BuildContext context) {
+    final phone = widget.phoneNumber ?? '';
+    final demoCode = widget.demoCode ?? '';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
@@ -92,7 +72,7 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
               children: [
                 const SizedBox(height: 56),
                 const Text(
-                  'Verify your phone',
+                  'Verify code',
                   style: TextStyle(
                     color: Color(0xFF111111),
                     fontSize: 24,
@@ -101,9 +81,11 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Use the 5-digit code sent to your phone.',
-                  style: TextStyle(
+                Text(
+                  phone.isEmpty
+                      ? 'Enter the code sent to your phone.'
+                      : 'Enter the code sent to $phone.',
+                  style: const TextStyle(
                     color: Color(0xFF8B8B8B),
                     fontSize: 16,
                     fontFamily: 'Inter',
@@ -111,62 +93,6 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                const Text(
-                  'Phone number',
-                  style: TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: ShapeDecoration(
-                    color: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    shadows: const [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                        spreadRadius: -1,
-                      ),
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: '+20 1xx xxx xxxx',
-                      hintStyle: TextStyle(
-                        color: Color(0xFFC4C4C4),
-                        fontSize: 16,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 16,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
                 const Text(
                   'Verification code',
                   style: TextStyle(
@@ -181,12 +107,10 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
                   width: double.infinity,
                   height: 56,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: ShapeDecoration(
+                  decoration: BoxDecoration(
                     color: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    shadows: const [
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
                       BoxShadow(
                         color: Color(0x19000000),
                         blurRadius: 2,
@@ -206,7 +130,7 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
-                      hintText: '00000',
+                      hintText: '000000',
                       hintStyle: TextStyle(
                         color: Color(0xFFC4C4C4),
                         fontSize: 16,
@@ -223,9 +147,11 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Demo code: 00000',
-                  style: TextStyle(
+                Text(
+                  demoCode.isEmpty
+                      ? 'Did not receive the code? Resend in 30s'
+                      : 'Demo code: $demoCode',
+                  style: const TextStyle(
                     color: Color(0xFF8B8B8B),
                     fontSize: 12,
                     fontFamily: 'Inter',
@@ -237,7 +163,7 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _verify,
+                    onPressed: _isLoading ? null : _verifyCode,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF111111),
                       shape: RoundedRectangleBorder(
@@ -251,6 +177,25 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: OutlinedButton(
+                    onPressed: () => context.go('/forgot-password'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF111111),
+                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      'Change phone number',
+                      style: TextStyle(fontSize: 16),
                     ),
                   ),
                 ),
