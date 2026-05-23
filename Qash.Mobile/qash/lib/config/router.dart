@@ -9,8 +9,10 @@ import '../features/auth/presentation/change_password_screen.dart';
 import '../features/auth/presentation/password_changed_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/verify_phone_screen.dart';
+import '../features/dashboard/presentation/home_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
+import '../features/transactions/presentation/transactions_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -70,10 +72,10 @@ final appRouter = GoRouter(
         return VerifyPhoneScreen(phoneNumber: phone);
       },
     ),
+    GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     GoRoute(
-      path: '/home',
-      builder: (context, state) =>
-          const Scaffold(body: Center(child: Text('Home'))),
+      path: '/transactions',
+      builder: (context, state) => const TransactionsScreen(),
     ),
   ],
 );
