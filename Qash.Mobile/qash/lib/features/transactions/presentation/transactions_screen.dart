@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../../../core/errors/app_failure.dart';
+import '../../../core/utils/result.dart';
+import '../../categories/domain/entities/category.dart';
+import '../../categories/providers/categories_providers.dart';
 import '../domain/entities/transaction.dart';
 import '../providers/transactions_providers.dart';
 
@@ -16,6 +19,7 @@ class TransactionsScreen extends ConsumerWidget {
     final summary = ref.watch(transactionsSummaryProvider);
     final filter = ref.watch(transactionsFilterProvider);
     final transactions = ref.watch(filteredTransactionsProvider);
+    final categories = ref.watch(categoriesProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -101,28 +105,34 @@ class TransactionsScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Container(
-                          width: double.infinity,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF4D93A),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              '+ Add Transaction',
-                              style: TextStyle(
-                                color: Color(0xFF111111),
-                                fontSize: 14,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
+                        GestureDetector(
+                          onTap: () {
+                            final type = _initialTypeFromFilter(filter);
+                            context.push('/transactions/add?type=$type');
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF4D93A),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                '+ Add Transaction',
+                                style: TextStyle(
+                                  color: Color(0xFF111111),
+                                  fontSize: 14,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 24),
                         transactions.when(
-                          data: (items) => _transactionsList(items),
+                          data: (items) => _transactionsList(items, categories),
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
                             child: Center(child: CircularProgressIndicator()),
@@ -162,14 +172,32 @@ class TransactionsScreen extends ConsumerWidget {
     ref.read(transactionsFilterProvider.notifier).state = filter;
   }
 
+  int _initialTypeFromFilter(TransactionFilter filter) {
+    switch (filter) {
+      case TransactionFilter.income:
+        return 1;
+      case TransactionFilter.expense:
+        return 2;
+      case TransactionFilter.transfer:
+        return 3;
+      case TransactionFilter.all:
+        return 2;
+    }
+  }
+
   void _onTabSelected(BuildContext context, AppTab tab) {
     switch (tab) {
       case AppTab.home:
         context.go('/home');
+        return;
       case AppTab.transactions:
         return;
       case AppTab.analytics:
+        context.go('/analytics');
+        return;
       case AppTab.goals:
+        context.go('/goals');
+        return;
       case AppTab.profile:
         ScaffoldMessenger.of(
           context,
@@ -240,7 +268,10 @@ class TransactionsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _transactionsList(List<TransactionEntity> items) {
+  Widget _transactionsList(
+    List<TransactionEntity> items,
+    AsyncValue<Result<List<CategoryEntity>>> categories,
+  ) {
     if (items.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
@@ -255,6 +286,7 @@ class TransactionsScreen extends ConsumerWidget {
       );
     }
 
+    final categoryMap = _buildCategoryMap(categories);
     final sorted = [...items]
       ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
     final grouped = <String, List<TransactionEntity>>{};
@@ -271,12 +303,24 @@ class TransactionsScreen extends ConsumerWidget {
           _sectionLabel(entry.key),
           const SizedBox(height: 8),
           for (final item in entry.value) ...[
-            _transactionItem(item),
+            _transactionItem(item, categoryMap),
             const SizedBox(height: 8),
           ],
           const SizedBox(height: 16),
         ],
       ],
+    );
+  }
+
+  Map<String, CategoryEntity> _buildCategoryMap(
+    AsyncValue<Result<List<CategoryEntity>>> categories,
+  ) {
+    return categories.maybeWhen(
+      data: (result) {
+        final items = result.data ?? const [];
+        return {for (final item in items) item.id: item};
+      },
+      orElse: () => const {},
     );
   }
 
@@ -378,7 +422,10 @@ class TransactionsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _transactionItem(TransactionEntity item) {
+  Widget _transactionItem(
+    TransactionEntity item,
+    Map<String, CategoryEntity> categoryMap,
+  ) {
     final isTransfer = item.isTransfer;
     final amountColor = isTransfer
         ? const Color(0xFF2B7FFF)
@@ -395,9 +442,23 @@ class TransactionsScreen extends ConsumerWidget {
         : item.isIncome
         ? const Color(0xFFD9F0C8)
         : const Color(0xFFFFD3D4);
-    final iconText = item.categoryName.isNotEmpty
-        ? item.categoryName.substring(0, 1).toUpperCase()
+    final resolvedCategoryName = item.categoryName.isNotEmpty
+        ? item.categoryName
+        : (categoryMap[item.categoryId]?.name ?? '');
+    final iconText = resolvedCategoryName.isNotEmpty
+        ? resolvedCategoryName.substring(0, 1).toUpperCase()
         : '?';
+    final title = item.description.isNotEmpty
+        ? item.description
+        : resolvedCategoryName;
+    final subtitleParts = <String>[];
+    if (resolvedCategoryName.isNotEmpty && resolvedCategoryName != title) {
+      subtitleParts.add(resolvedCategoryName);
+    }
+    if (item.walletName.isNotEmpty) {
+      subtitleParts.add(item.walletName);
+    }
+    final subtitle = subtitleParts.join(' · ');
 
     return Container(
       width: double.infinity,
@@ -440,22 +501,21 @@ class TransactionsScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.description.isNotEmpty
-                        ? item.description
-                        : item.categoryName,
+                    title,
                     style: const TextStyle(
                       color: Color(0xFF111111),
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  Text(
-                    '${item.categoryName} · ${item.walletName}',
-                    style: const TextStyle(
-                      color: Color(0xFF8B8B8B),
-                      fontSize: 12,
+                  if (subtitle.isNotEmpty)
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Color(0xFF8B8B8B),
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ],

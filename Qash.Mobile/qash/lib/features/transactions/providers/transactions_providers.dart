@@ -8,6 +8,7 @@ import '../data/transactions_api.dart';
 import '../data/repositories/transactions_repository_impl.dart';
 import '../domain/entities/transaction.dart';
 import '../domain/repositories/transactions_repository.dart';
+import '../domain/usecases/create_transaction_use_case.dart';
 import '../domain/usecases/get_transactions_use_case.dart';
 
 enum TransactionFilter { all, income, expense, transfer }
@@ -30,11 +31,18 @@ final transactionsRemoteDataSourceProvider =
 final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {
   return TransactionsRepositoryImpl(
     ref.read(transactionsRemoteDataSourceProvider),
+    ref.read(secureStorageProvider),
   );
 });
 
 final getTransactionsUseCaseProvider = Provider<GetTransactionsUseCase>((ref) {
   return GetTransactionsUseCase(ref.read(transactionsRepositoryProvider));
+});
+
+final createTransactionUseCaseProvider = Provider<CreateTransactionUseCase>((
+  ref,
+) {
+  return CreateTransactionUseCase(ref.read(transactionsRepositoryProvider));
 });
 
 final transactionsFilterProvider = StateProvider<TransactionFilter>((ref) {

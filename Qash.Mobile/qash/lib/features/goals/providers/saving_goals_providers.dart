@@ -7,6 +7,9 @@ import '../data/repositories/saving_goals_repository_impl.dart';
 import '../data/saving_goals_api.dart';
 import '../domain/entities/saving_goal.dart';
 import '../domain/repositories/saving_goals_repository.dart';
+import '../domain/usecases/contribute_to_saving_goal_use_case.dart';
+import '../domain/usecases/create_saving_goal_use_case.dart';
+import '../domain/usecases/delete_saving_goal_use_case.dart';
 import '../domain/usecases/get_saving_goals_use_case.dart';
 
 final savingGoalsRemoteDataSourceProvider =
@@ -22,6 +25,25 @@ final savingGoalsRepositoryProvider = Provider<SavingGoalsRepository>((ref) {
 
 final getSavingGoalsUseCaseProvider = Provider<GetSavingGoalsUseCase>((ref) {
   return GetSavingGoalsUseCase(ref.read(savingGoalsRepositoryProvider));
+});
+
+final createSavingGoalUseCaseProvider = Provider<CreateSavingGoalUseCase>((
+  ref,
+) {
+  return CreateSavingGoalUseCase(ref.read(savingGoalsRepositoryProvider));
+});
+
+final contributeToSavingGoalUseCaseProvider =
+    Provider<ContributeToSavingGoalUseCase>((ref) {
+      return ContributeToSavingGoalUseCase(
+        ref.read(savingGoalsRepositoryProvider),
+      );
+    });
+
+final deleteSavingGoalUseCaseProvider = Provider<DeleteSavingGoalUseCase>((
+  ref,
+) {
+  return DeleteSavingGoalUseCase(ref.read(savingGoalsRepositoryProvider));
 });
 
 final savingGoalsProvider = FutureProvider<Result<List<SavingGoalEntity>>>((

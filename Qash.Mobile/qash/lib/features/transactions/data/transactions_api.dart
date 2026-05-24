@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_response.dart';
 import 'datasources/transactions_remote_data_source.dart';
+import 'models/transaction_create_request_model.dart';
 import 'models/transaction_model.dart';
 
 class TransactionsApi implements TransactionsRemoteDataSource {
@@ -24,6 +25,25 @@ class TransactionsApi implements TransactionsRemoteDataSource {
       });
     } on DioException catch (error) {
       return _handleError<List<TransactionModel>>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<String>> createTransaction(
+    TransactionCreateRequestModel request,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/transactions',
+        data: request.toJson(),
+      );
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<String>.fromJson(
+        data,
+        (json) => json?.toString() ?? '',
+      );
+    } on DioException catch (error) {
+      return _handleError<String>(error);
     }
   }
 

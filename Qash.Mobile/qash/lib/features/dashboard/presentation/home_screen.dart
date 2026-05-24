@@ -120,12 +120,7 @@ class HomeScreen extends ConsumerWidget {
                               Row(
                                 children: [
                                   Text(
-                                    _formatCurrency(
-                                      _dashboardValue(
-                                        dashboard,
-                                        (value) => value.totalBalance,
-                                      ),
-                                    ),
+                                    _formatCurrency(_walletsTotal(wallets)),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 30,
@@ -484,6 +479,13 @@ class HomeScreen extends ConsumerWidget {
     double Function(DashboardEntity) selector,
   ) {
     return dashboard.maybeWhen(data: selector, orElse: () => 0);
+  }
+
+  double _walletsTotal(AsyncValue<List<WalletEntity>> wallets) {
+    return wallets.maybeWhen(
+      data: (items) => items.fold(0, (sum, item) => sum + item.balance),
+      orElse: () => 0,
+    );
   }
 
   String _profileName(AsyncValue<ProfileEntity> profile) {
@@ -1111,8 +1113,13 @@ class HomeScreen extends ConsumerWidget {
         return;
       case AppTab.transactions:
         context.go('/transactions');
+        return;
       case AppTab.analytics:
+        context.go('/analytics');
+        return;
       case AppTab.goals:
+        context.go('/goals');
+        return;
       case AppTab.profile:
         ScaffoldMessenger.of(
           context,
