@@ -12,14 +12,7 @@ import '../providers/saving_goals_providers.dart';
 class GoalsScreen extends ConsumerWidget {
   const GoalsScreen({super.key});
 
-  static const _cardColors = [
-    Color(0xFFD9F0C8),
-    Color(0xFFFEF3C7),
-    Color(0xFFEDE9FE),
-    Color(0xFFFEE2E2),
-    Color(0xFFDBEAFE),
-    Color(0xFFFCE7F3),
-  ];
+  static const _goalCardColor = Color(0xFFE5E7EB);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -382,8 +375,7 @@ class GoalsScreen extends ConsumerWidget {
   }
 
   Color _goalColor(SavingGoalEntity goal) {
-    final hash = goal.savingGoalId.hashCode.abs();
-    return _cardColors[hash % _cardColors.length];
+    return _goalCardColor;
   }
 
   Widget _addGoalButton(BuildContext context) {

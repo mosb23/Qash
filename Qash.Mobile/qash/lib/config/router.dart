@@ -10,6 +10,8 @@ import '../features/auth/presentation/password_changed_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/verify_phone_screen.dart';
 import '../features/analytics/presentation/analytics_screen.dart';
+import '../features/budgets/presentation/budget_screen.dart';
+import '../features/budgets/presentation/create_budget_screen.dart';
 import '../features/dashboard/presentation/home_screen.dart';
 import '../features/goals/presentation/create_goal_screen.dart';
 import '../features/goals/presentation/add_funds_screen.dart';
@@ -21,6 +23,9 @@ import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 import '../features/transactions/presentation/transactions_screen.dart';
 import '../features/transactions/presentation/add_transaction_screen.dart';
+import '../features/wallets/presentation/add_wallet_screen.dart';
+import '../features/wallets/presentation/wallets_screen.dart';
+import '../features/wallets/domain/entities/wallet.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -99,6 +104,33 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/analytics',
       builder: (context, state) => const AnalyticsScreen(),
+    ),
+    GoRoute(
+      path: '/budgets',
+      builder: (context, state) => const BudgetScreen(),
+      routes: [
+        GoRoute(
+          path: 'create',
+          builder: (context, state) => const CreateBudgetScreen(),
+        ),
+      ],
+    ),
+    GoRoute(
+      path: '/wallets',
+      builder: (context, state) => const WalletsScreen(),
+      routes: [
+        GoRoute(
+          path: 'create',
+          builder: (context, state) => const AddWalletScreen(),
+        ),
+        GoRoute(
+          path: ':id/edit',
+          builder: (context, state) {
+            final wallet = state.extra as WalletEntity?;
+            return AddWalletScreen(wallet: wallet);
+          },
+        ),
+      ],
     ),
     GoRoute(
       path: '/goals',

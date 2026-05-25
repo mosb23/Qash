@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_response.dart';
 import 'datasources/budgets_remote_data_source.dart';
+import 'models/budget_create_request_model.dart';
 import 'models/budget_status_model.dart';
 
 class BudgetsApi implements BudgetsRemoteDataSource {
@@ -31,6 +32,22 @@ class BudgetsApi implements BudgetsRemoteDataSource {
       });
     } on DioException catch (error) {
       return _handleError<List<BudgetStatusModel>>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<String>> createBudget(
+    BudgetCreateRequestModel request,
+  ) async {
+    try {
+      final response = await _dio.post('/api/budgets', data: request.toJson());
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<String>.fromJson(
+        data,
+        (json) => json?.toString() ?? '',
+      );
+    } on DioException catch (error) {
+      return _handleError<String>(error);
     }
   }
 

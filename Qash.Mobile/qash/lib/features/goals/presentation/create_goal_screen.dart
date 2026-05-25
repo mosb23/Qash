@@ -20,9 +20,10 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
 
   String _selectedEmoji = '💻';
   DateTime? _selectedDeadline;
-  Color _selectedColor = const Color(0xFFD9F0C8);
   bool _submitting = false;
   String? _errorMessage;
+
+  static const Color _goalCardColor = Color(0xFFE5E7EB);
 
   final List<String> _emojis = const [
     '💻',
@@ -37,15 +38,6 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
     '🎵',
     '📱',
     '🌴',
-  ];
-
-  final List<Color> _cardColors = const [
-    Color(0xFFD9F0C8),
-    Color(0xFFFEF3C7),
-    Color(0xFFEDE9FE),
-    Color(0xFFFEE2E2),
-    Color(0xFFDBEAFE),
-    Color(0xFFFCE7F3),
   ];
 
   @override
@@ -98,6 +90,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
         name: name,
         targetAmount: targetAmount,
         deadline: _selectedDeadline!,
+        colorHex: _toHexColor(_goalCardColor),
       ),
     );
 
@@ -162,7 +155,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                 goalName: goalName,
                 target: target,
                 saved: saved,
-                color: _selectedColor,
+                color: _goalCardColor,
               ),
               const SizedBox(height: 24),
               _sectionTitle('Icon'),
@@ -274,34 +267,6 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              _sectionTitle('Card Color'),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: _cardColors.map((color) {
-                  final selected = _selectedColor == color;
-
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedColor = color;
-                      });
-                    },
-                    child: Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: selected ? Colors.black : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
               const SizedBox(height: 24),
               if (_errorMessage != null)
                 Padding(
@@ -357,6 +322,11 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
         ),
       ),
     );
+  }
+
+  String _toHexColor(Color color) {
+    final value = color.value.toRadixString(16).padLeft(8, '0').toUpperCase();
+    return '#${value.substring(2)}';
   }
 }
 

@@ -2,7 +2,9 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_response.dart';
 import 'datasources/wallets_remote_data_source.dart';
+import 'models/wallet_create_request_model.dart';
 import 'models/wallet_model.dart';
+import 'models/wallet_update_request_model.dart';
 
 class WalletsApi implements WalletsRemoteDataSource {
   final Dio _dio;
@@ -22,6 +24,59 @@ class WalletsApi implements WalletsRemoteDataSource {
       });
     } on DioException catch (error) {
       return _handleError<List<WalletModel>>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<WalletModel>> createWallet(
+    WalletCreateRequestModel request,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/wallets',
+        data: request.toJson(),
+      );
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<WalletModel>.fromJson(
+        data,
+        (json) => WalletModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (error) {
+      return _handleError<WalletModel>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<WalletModel>> updateWallet(
+    String walletId,
+    WalletUpdateRequestModel request,
+  ) async {
+    try {
+      final response = await _dio.put(
+        '/api/wallets/$walletId',
+        data: request.toJson(),
+      );
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<WalletModel>.fromJson(
+        data,
+        (json) => WalletModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (error) {
+      return _handleError<WalletModel>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<String>> deleteWallet(String walletId) async {
+    try {
+      final response = await _dio.delete('/api/wallets/$walletId');
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<String>.fromJson(
+        data,
+        (json) => json?.toString() ?? '',
+      );
+    } on DioException catch (error) {
+      return _handleError<String>(error);
     }
   }
 

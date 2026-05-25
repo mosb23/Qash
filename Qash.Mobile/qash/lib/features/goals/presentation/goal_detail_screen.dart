@@ -19,14 +19,7 @@ class GoalDetailScreen extends StatefulWidget {
 class _GoalDetailScreenState extends State<GoalDetailScreen> {
   late SavingGoalEntity _goal;
 
-  static const _cardColors = [
-    Color(0xFFD9F0C8),
-    Color(0xFFFEF3C7),
-    Color(0xFFEDE9FE),
-    Color(0xFFFEE2E2),
-    Color(0xFFDBEAFE),
-    Color(0xFFFCE7F3),
-  ];
+  static const _goalCardColor = Color(0xFFE5E7EB);
 
   @override
   void initState() {
@@ -197,8 +190,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   Color _goalColor(SavingGoalEntity goal) {
-    final hash = goal.savingGoalId.hashCode.abs();
-    return _cardColors[hash % _cardColors.length];
+    return _goalCardColor;
   }
 
   int _daysLeft(DateTime deadline) {

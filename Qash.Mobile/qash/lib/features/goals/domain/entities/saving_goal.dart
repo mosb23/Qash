@@ -5,6 +5,7 @@ class SavingGoalEntity {
   final double currentAmount;
   final DateTime deadline;
   final double progressPercent;
+  final String colorHex;
 
   const SavingGoalEntity({
     required this.savingGoalId,
@@ -13,6 +14,7 @@ class SavingGoalEntity {
     required this.currentAmount,
     required this.deadline,
     required this.progressPercent,
+    required this.colorHex,
   });
 
   double get progress => (progressPercent / 100).clamp(0, 1);

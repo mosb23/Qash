@@ -242,8 +242,8 @@ class HomeScreen extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: const [
-                            Text(
+                          children: [
+                            const Text(
                               'Wallets',
                               style: TextStyle(
                                 color: Color(0xFF111111),
@@ -251,18 +251,21 @@ class HomeScreen extends ConsumerWidget {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            Text(
-                              'See all >',
-                              style: TextStyle(
-                                color: Color(0xFF8B8B8B),
-                                fontSize: 14,
+                            GestureDetector(
+                              onTap: () => context.push('/wallets'),
+                              child: const Text(
+                                'See all >',
+                                style: TextStyle(
+                                  color: Color(0xFF8B8B8B),
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _walletsSection(wallets),
+                      _walletsSection(context, wallets),
                       const SizedBox(height: 24),
                       // -- Quick Actions --
                       Padding(
@@ -286,21 +289,28 @@ class HomeScreen extends ConsumerWidget {
                                   'Income',
                                   '\u2199',
                                   const Color(0xFFD9F0C8),
+                                  onTap: () =>
+                                      context.push('/transactions/add?type=1'),
                                 ),
                                 _quickAction(
                                   'Expense',
                                   '\u2197',
                                   const Color(0xFFFEE2E2),
+                                  onTap: () =>
+                                      context.push('/transactions/add?type=2'),
                                 ),
                                 _quickAction(
                                   'Transfer',
                                   '\u21c4',
                                   const Color(0xFFEFF6FF),
+                                  onTap: () =>
+                                      context.push('/transactions/add?type=3'),
                                 ),
                                 _quickAction(
                                   'Wallets',
                                   '\u25a4',
                                   const Color(0xFFF3F4F6),
+                                  onTap: () => context.push('/wallets'),
                                 ),
                               ],
                             ),
@@ -316,8 +326,8 @@ class HomeScreen extends ConsumerWidget {
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: const [
-                                Text(
+                              children: [
+                                const Text(
                                   'Budget',
                                   style: TextStyle(
                                     color: Color(0xFF111111),
@@ -325,11 +335,14 @@ class HomeScreen extends ConsumerWidget {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                Text(
-                                  'See all >',
-                                  style: TextStyle(
-                                    color: Color(0xFF8B8B8B),
-                                    fontSize: 14,
+                                GestureDetector(
+                                  onTap: () => context.push('/budgets'),
+                                  child: const Text(
+                                    'See all >',
+                                    style: TextStyle(
+                                      color: Color(0xFF8B8B8B),
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -519,7 +532,10 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _walletsSection(AsyncValue<List<WalletEntity>> wallets) {
+  Widget _walletsSection(
+    BuildContext context,
+    AsyncValue<List<WalletEntity>> wallets,
+  ) {
     return wallets.when(
       data: (items) {
         if (items.isEmpty) {
@@ -542,7 +558,7 @@ class HomeScreen extends ConsumerWidget {
                 _walletCard(wallet),
                 const SizedBox(width: 12),
               ],
-              _addWalletCard(),
+              _addWalletCard(context),
             ],
           ),
         );
@@ -793,27 +809,30 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _addWalletCard() {
-    return Container(
-      width: 80,
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1.4),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.add, color: Color(0xFF8B8B8B)),
-          SizedBox(height: 8),
-          Text(
-            'Add',
-            style: TextStyle(
-              color: Color(0xFF8B8B8B),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+  Widget _addWalletCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/wallets/create'),
+      child: Container(
+        width: 80,
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFE5E7EB), width: 1.4),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.add, color: Color(0xFF8B8B8B)),
+            SizedBox(height: 8),
+            Text(
+              'Add',
+              style: TextStyle(
+                color: Color(0xFF8B8B8B),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1127,26 +1146,34 @@ class HomeScreen extends ConsumerWidget {
     }
   }
 
-  Widget _quickAction(String label, String icon, Color color) {
-    return Column(
-      children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(16),
+  Widget _quickAction(
+    String label,
+    String icon,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Center(
+              child: Text(icon, style: const TextStyle(fontSize: 20)),
+            ),
           ),
-          child: Center(
-            child: Text(icon, style: const TextStyle(fontSize: 20)),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

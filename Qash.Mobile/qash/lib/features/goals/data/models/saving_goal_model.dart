@@ -8,6 +8,7 @@ class SavingGoalModel extends SavingGoalEntity {
     required super.currentAmount,
     required super.deadline,
     required super.progressPercent,
+    required super.colorHex,
   });
 
   factory SavingGoalModel.fromJson(Map<String, dynamic> json) {
@@ -18,6 +19,7 @@ class SavingGoalModel extends SavingGoalEntity {
       currentAmount: (json['currentAmount'] as num?)?.toDouble() ?? 0,
       deadline: _parseDate(json['deadline']),
       progressPercent: (json['progressPercent'] as num?)?.toDouble() ?? 0,
+      colorHex: json['colorHex']?.toString() ?? '',
     );
   }
 

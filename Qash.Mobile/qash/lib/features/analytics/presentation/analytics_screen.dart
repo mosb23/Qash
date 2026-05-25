@@ -10,6 +10,8 @@ import '../../../core/utils/result.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
+import '../../transactions/domain/entities/transaction.dart';
+import '../../transactions/providers/transactions_providers.dart';
 import '../domain/entities/category_breakdown.dart';
 import '../domain/entities/income_vs_expense.dart';
 import '../domain/entities/spending_trend.dart';
@@ -39,6 +41,9 @@ class AnalyticsScreen extends ConsumerWidget {
     final categories = period == AnalyticsPeriod.month
         ? ref.watch(categoriesProvider)
         : AsyncValue.data(Result.success(<CategoryEntity>[]));
+    final transactions = period == AnalyticsPeriod.month
+      ? ref.watch(transactionsProvider)
+      : AsyncValue.data(Result.success(<TransactionEntity>[]));
     final incomeVsExpense = ref.watch(incomeVsExpenseProvider);
     final spendingTrend = ref.watch(spendingTrendProvider);
 
@@ -82,6 +87,7 @@ class AnalyticsScreen extends ConsumerWidget {
                         period: period,
                         breakdown: breakdown,
                         categories: categories,
+                        transactions: transactions,
                       ),
                       const SizedBox(height: 16),
                       _card(
@@ -99,7 +105,6 @@ class AnalyticsScreen extends ConsumerWidget {
                       if (period == AnalyticsPeriod.year)
                         _card(
                           title: 'Income vs Expense',
-                          height: 200,
                           child: _incomeVsExpenseSection(incomeVsExpense),
                         ),
                       const SizedBox(height: 24),
@@ -254,6 +259,7 @@ class AnalyticsScreen extends ConsumerWidget {
     required AnalyticsPeriod period,
     required AsyncValue<Result<List<CategoryBreakdownEntity>>> breakdown,
     required AsyncValue<Result<List<CategoryEntity>>> categories,
+    required AsyncValue<Result<List<TransactionEntity>>> transactions,
   }) {
     if (period != AnalyticsPeriod.month) {
       return const SizedBox.shrink();
@@ -274,7 +280,7 @@ class AnalyticsScreen extends ConsumerWidget {
             style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
           );
         }
-        final categoryMap = _buildCategoryMap(categories);
+        final categoryMap = _buildCategoryNameMap(categories, transactions);
         return _card(
           title: 'Spending by Category',
           height: 200,
@@ -292,21 +298,40 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Map<String, CategoryEntity> _buildCategoryMap(
+  Map<String, String> _buildCategoryNameMap(
     AsyncValue<Result<List<CategoryEntity>>> categories,
+    AsyncValue<Result<List<TransactionEntity>>> transactions,
   ) {
-    return categories.maybeWhen(
+    final names = <String, String>{};
+
+    categories.maybeWhen(
       data: (result) {
         final items = result.data ?? const [];
-        return {for (final item in items) item.id: item};
+        for (final item in items) {
+          names[item.id] = item.name;
+        }
       },
-      orElse: () => const {},
+      orElse: () {},
     );
+
+    transactions.maybeWhen(
+      data: (result) {
+        final items = result.data ?? const [];
+        for (final item in items) {
+          if (item.categoryId.isNotEmpty && item.categoryName.isNotEmpty) {
+            names.putIfAbsent(item.categoryId, () => item.categoryName);
+          }
+        }
+      },
+      orElse: () {},
+    );
+
+    return names;
   }
 
   Widget _categoryChart(
     List<CategoryBreakdownEntity> items,
-    Map<String, CategoryEntity> categoryMap,
+    Map<String, String> categoryMap,
   ) {
     final total = items.fold<double>(0, (sum, item) => sum + item.totalAmount);
     if (total <= 0) {
@@ -345,8 +370,8 @@ class AnalyticsScreen extends ConsumerWidget {
               final idx = entry.key;
               final item = entry.value;
               final color = _categoryColors[idx % _categoryColors.length];
-              final categoryName =
-                  categoryMap[item.categoryId]?.name ?? 'Category';
+                    final categoryName =
+                      categoryMap[item.categoryId] ?? item.categoryId;
 
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
@@ -643,7 +668,7 @@ class AnalyticsScreen extends ConsumerWidget {
                           child: Container(
                             height: 6,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF10B981),
+                              color: const Color(0xFFEF4444),
                               borderRadius: BorderRadius.circular(999),
                             ),
                           ),
@@ -653,7 +678,7 @@ class AnalyticsScreen extends ConsumerWidget {
                           child: Container(
                             height: 6,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEF4444),
+                              color: const Color(0xFF10B981),
                               borderRadius: BorderRadius.circular(999),
                             ),
                           ),
@@ -686,7 +711,7 @@ class AnalyticsScreen extends ConsumerWidget {
 
   Widget _card({
     required String title,
-    required double height,
+    double? height,
     required Widget child,
   }) {
     return Container(
@@ -722,7 +747,7 @@ class AnalyticsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(height: height, child: child),
+          if (height != null) SizedBox(height: height, child: child) else child,
         ],
       ),
     );

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class DeleteGoalScreen extends StatelessWidget {
-  final String goalName;
+class DeleteWalletScreen extends StatelessWidget {
+  final String walletName;
   final VoidCallback? onDelete;
   final VoidCallback? onCancel;
 
-  const DeleteGoalScreen({
+  const DeleteWalletScreen({
     super.key,
-    this.goalName = 'Japan Vacation',
+    this.walletName = 'US Dollar Wallet',
     this.onDelete,
     this.onCancel,
   });
@@ -16,33 +16,22 @@ class DeleteGoalScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'Delete Goal',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F6F3),
-              borderRadius: BorderRadius.circular(24),
-            ),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const Text(
+                  'Delete Wallet',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 48),
                 Container(
                   width: 80,
                   height: 80,
@@ -50,40 +39,32 @@ class DeleteGoalScreen extends StatelessWidget {
                     color: const Color(0xFFFEF2F2),
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.delete_outline,
-                      color: Color(0xFFFB2C36),
-                      size: 40,
-                    ),
+                  child: const Icon(
+                    Icons.delete_outline,
+                    color: Color(0xFFFB2C36),
+                    size: 40,
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 const Text(
-                  'Delete Goal?',
+                  'Delete Wallet?',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
                 Text(
-                  'Are you sure you want to delete "$goalName"?',
+                  'Are you sure you want to delete "$walletName"? All transactions linked to this wallet will be permanently lost.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     color: Color(0xFF8B8B8B),
                     height: 1.5,
                   ),
                 ),
-
                 const SizedBox(height: 32),
-
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -91,24 +72,22 @@ class DeleteGoalScreen extends StatelessWidget {
                     onPressed: onDelete ?? () {},
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFB2C36),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      elevation: 0,
                     ),
                     child: const Text(
-                      'Delete',
+                      'Yes, Delete Wallet',
                       style: TextStyle(
+                        color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
                       ),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -120,14 +99,13 @@ class DeleteGoalScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      elevation: 2,
                     ),
                     child: const Text(
                       'Cancel',
                       style: TextStyle(
+                        color: Colors.black,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black,
                       ),
                     ),
                   ),
