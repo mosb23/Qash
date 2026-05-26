@@ -767,9 +767,7 @@ class AnalyticsScreen extends ConsumerWidget {
         context.go('/goals');
         return;
       case AppTab.profile:
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Coming soon.')));
+        context.go('/profile');
     }
   }
 

@@ -381,8 +381,8 @@ class HomeScreen extends ConsumerWidget {
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: const [
-                                Text(
+                              children: [
+                                const Text(
                                   'Goals',
                                   style: TextStyle(
                                     color: Color(0xFF111111),
@@ -390,11 +390,14 @@ class HomeScreen extends ConsumerWidget {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                Text(
-                                  'See all >',
-                                  style: TextStyle(
-                                    color: Color(0xFF8B8B8B),
-                                    fontSize: 14,
+                                GestureDetector(
+                                  onTap: () => context.push('/goals'),
+                                  child: const Text(
+                                    'See all >',
+                                    style: TextStyle(
+                                      color: Color(0xFF8B8B8B),
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -413,20 +416,23 @@ class HomeScreen extends ConsumerWidget {
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: const [
-                                Text(
-                                  'Recent',
+                              children: [
+                                const Text(
+                                  'Recent Transactions',
                                   style: TextStyle(
                                     color: Color(0xFF111111),
                                     fontSize: 20,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                Text(
-                                  'See all >',
-                                  style: TextStyle(
-                                    color: Color(0xFF8B8B8B),
-                                    fontSize: 14,
+                                GestureDetector(
+                                  onTap: () => context.push('/transactions'),
+                                  child: const Text(
+                                    'See all >',
+                                    style: TextStyle(
+                                      color: Color(0xFF8B8B8B),
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -1140,9 +1146,7 @@ class HomeScreen extends ConsumerWidget {
         context.go('/goals');
         return;
       case AppTab.profile:
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Coming soon.')));
+        context.go('/profile');
     }
   }
 

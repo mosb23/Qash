@@ -26,6 +26,18 @@ import '../features/transactions/presentation/add_transaction_screen.dart';
 import '../features/wallets/presentation/add_wallet_screen.dart';
 import '../features/wallets/presentation/wallets_screen.dart';
 import '../features/wallets/domain/entities/wallet.dart';
+import '../features/profile/presentation/profile_screen.dart';
+import '../features/profile/presentation/edit_profile_screen.dart';
+import '../features/profile/presentation/settings_screen.dart';
+import '../features/profile/presentation/change_password_screen.dart';
+import '../features/profile/presentation/privacy_policy_screen.dart';
+import '../features/profile/presentation/terms_of_service_screen.dart';
+import '../features/profile/presentation/delete_account_screen.dart';
+import '../features/profile/presentation/logout_confirm_screen.dart';
+import '../features/profile/presentation/help_faq_screen.dart';
+import '../features/profile/presentation/change_verify_screen.dart';
+import '../features/profile/presentation/change_reset_password_screen.dart';
+import '../features/profile/presentation/change_password_success_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -104,6 +116,71 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/analytics',
       builder: (context, state) => const AnalyticsScreen(),
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
+      routes: [
+        GoRoute(
+          path: 'edit',
+          builder: (context, state) => const EditProfileScreen(),
+        ),
+        GoRoute(
+          path: 'settings',
+          builder: (context, state) => const SettingsScreen(),
+        ),
+        GoRoute(
+          path: 'change-password',
+          builder: (context, state) => const ProfileChangePasswordScreen(),
+        ),
+        GoRoute(
+          path: 'change-verify',
+          builder: (context, state) {
+            final phone = state.uri.queryParameters['phone'];
+            final code = state.uri.queryParameters['code'];
+            return ProfileChangeVerifyScreen(
+              phoneNumber: phone,
+              demoCode: code,
+            );
+          },
+        ),
+        GoRoute(
+          path: 'change-reset',
+          builder: (context, state) {
+            final phone = state.uri.queryParameters['phone'];
+            final code = state.uri.queryParameters['code'];
+            return ProfileChangeResetPasswordScreen(
+              phoneNumber: phone,
+              verificationCode: code,
+            );
+          },
+        ),
+        GoRoute(
+          path: 'change-success',
+          builder: (context, state) =>
+              const ProfileChangePasswordSuccessScreen(),
+        ),
+        GoRoute(
+          path: 'terms',
+          builder: (context, state) => const TermsOfServiceScreen(),
+        ),
+        GoRoute(
+          path: 'privacy',
+          builder: (context, state) => const PrivacyPolicyScreen(),
+        ),
+        GoRoute(
+          path: 'delete',
+          builder: (context, state) => const DeleteAccountScreen(),
+        ),
+        GoRoute(
+          path: 'logout',
+          builder: (context, state) => const LogoutConfirmScreen(),
+        ),
+        GoRoute(
+          path: 'help',
+          builder: (context, state) => const HelpFaqScreen(),
+        ),
+      ],
     ),
     GoRoute(
       path: '/budgets',

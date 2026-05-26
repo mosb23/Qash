@@ -1,8 +1,10 @@
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/utils/result.dart';
 import '../../domain/entities/profile.dart';
+import '../../domain/entities/profile_update.dart';
 import '../../domain/repositories/profile_repository.dart';
 import '../datasources/profile_remote_data_source.dart';
+import '../models/profile_update_request_model.dart';
 
 class ProfileRepositoryImpl implements ProfileRepository {
   final ProfileRemoteDataSource _remoteDataSource;
@@ -15,6 +17,34 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
     if (response.success && response.data != null) {
       return Result.success(response.data!);
+    }
+
+    return Result.failure(
+      AppFailure(message: response.message, errors: response.errors),
+    );
+  }
+
+  @override
+  Future<Result<ProfileEntity>> updateProfile(ProfileUpdateData data) async {
+    final response = await _remoteDataSource.updateProfile(
+      ProfileUpdateRequestModel.fromDomain(data),
+    );
+
+    if (response.success && response.data != null) {
+      return Result.success(response.data!);
+    }
+
+    return Result.failure(
+      AppFailure(message: response.message, errors: response.errors),
+    );
+  }
+
+  @override
+  Future<Result<String>> deleteProfile() async {
+    final response = await _remoteDataSource.deleteProfile();
+
+    if (response.success) {
+      return Result.success(response.data ?? response.message);
     }
 
     return Result.failure(

@@ -416,9 +416,7 @@ class GoalsScreen extends ConsumerWidget {
       case AppTab.goals:
         return;
       case AppTab.profile:
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Coming soon.')));
+        context.go('/profile');
     }
   }
 
