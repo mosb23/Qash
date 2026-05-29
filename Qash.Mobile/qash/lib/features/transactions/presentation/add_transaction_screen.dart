@@ -425,6 +425,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
   }
 
+  List<CategoryEntity> _currentCategories() {
+    return _filterCategories(_allCategories);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ratesAsync = ref.watch(exchangeRatesProvider);
@@ -554,6 +558,40 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             hint: 'What was this for?',
                           ),
                           const SizedBox(height: 16),
+                          if (_transactionType != 3) ...[
+                            if (_currentCategories().isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 16),
+                                child: Text(
+                                  'No categories found for this transaction type.',
+                                  style: TextStyle(
+                                    color: Color(0xFF8B8B8B),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              )
+                            else
+                              _dropdown<String>(
+                                label: 'Category',
+                                value: _categoryId,
+                                items: _currentCategories().map((category) {
+                                  return DropdownMenuItem<String>(
+                                    value: category.id,
+                                    child: Text(
+                                      category.name,
+                                      style: const TextStyle(
+                                        color: Color(0xFF111111),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) => setState(() {
+                                  _categoryId = value;
+                                }),
+                              ),
+                            const SizedBox(height: 16),
+                          ],
                           if (_wallets.isEmpty)
                             const Padding(
                               padding: EdgeInsets.only(bottom: 16),
@@ -572,12 +610,26 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               items: _wallets.map((wallet) {
                                 return DropdownMenuItem<String>(
                                   value: wallet.walletId,
-                                  child: Text(
-                                    wallet.name,
-                                    style: const TextStyle(
-                                      color: Color(0xFF111111),
-                                      fontSize: 14,
-                                    ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          wallet.name,
+                                          style: const TextStyle(
+                                            color: Color(0xFF111111),
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        wallet.currency.trim().toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Color(0xFF8B8B8B),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 );
                               }).toList(),
@@ -586,8 +638,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                   _walletId = value;
                                   if (_transactionType == 3 &&
                                       _toWalletId == value) {
-                                    _toWalletId =
-                                        _defaultToWalletId(_wallets, value);
+                                    _toWalletId = _defaultToWalletId(
+                                      _wallets,
+                                      value,
+                                    );
                                   }
                                 });
                               },
@@ -613,12 +667,28 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                     .map((wallet) {
                                       return DropdownMenuItem<String>(
                                         value: wallet.walletId,
-                                        child: Text(
-                                          wallet.name,
-                                          style: const TextStyle(
-                                            color: Color(0xFF111111),
-                                            fontSize: 14,
-                                          ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                wallet.name,
+                                                style: const TextStyle(
+                                                  color: Color(0xFF111111),
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                            Text(
+                                              wallet.currency
+                                                  .trim()
+                                                  .toUpperCase(),
+                                              style: const TextStyle(
+                                                color: Color(0xFF8B8B8B),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       );
                                     })

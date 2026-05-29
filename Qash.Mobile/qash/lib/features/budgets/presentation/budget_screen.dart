@@ -138,7 +138,7 @@ class BudgetScreen extends ConsumerWidget {
                                 ),
                                 const SizedBox(width: 8),
                                 _filterTab(
-                                  label: 'Expired',
+                                  label: 'Limit reached',
                                   isActive: filter == BudgetFilter.expired,
                                   onTap: () => _updateFilter(
                                     ref,
@@ -228,7 +228,7 @@ class BudgetScreen extends ConsumerWidget {
 
     return switch (filter) {
       BudgetFilter.current => 'No current budgets.',
-      BudgetFilter.expired => 'No expired budgets.',
+      BudgetFilter.expired => 'No limit reached budgets.',
       BudgetFilter.all => 'No budgets for this month.',
     };
   }
@@ -495,7 +495,7 @@ class BudgetCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(
-                              'Expired',
+                              'Limit reached',
                               style: TextStyle(
                                 color: Color(0xFFEF4444),
                                 fontSize: 10,
