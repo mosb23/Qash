@@ -76,3 +76,4 @@ flutter:
 
   assets:
     - .env
+    - assets/icons/flags/

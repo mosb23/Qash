@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/errors/app_failure.dart';
+import '../../../core/widgets/currency_flag.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../domain/entities/wallet.dart';
 import '../../transactions/domain/entities/transaction.dart';
@@ -29,8 +30,9 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
     final exchangeRatesAsync = ref.watch(exchangeRatesProvider);
 
     final typedTransactions = transactionsAsync.maybeWhen(
-      data: (result) =>
-          result.isFailure ? const <TransactionEntity>[] : (result.data ?? const []),
+      data: (result) => result.isFailure
+          ? const <TransactionEntity>[]
+          : (result.data ?? const []),
       orElse: () => const <TransactionEntity>[],
     );
     final exchangeRates = exchangeRatesAsync.maybeWhen(
@@ -133,20 +135,23 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 56,
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton.icon(
                       onPressed: () => context.push('/wallets/create'),
-                      icon: const Icon(Icons.add, color: Color(0xFF8B8B8B)),
+                      icon: const Icon(Icons.add, color: Colors.black),
                       label: const Text(
                         'Add New Wallet',
                         style: TextStyle(
-                          color: Color(0xFF8B8B8B),
-                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF4D93A),
+                        foregroundColor: Colors.black,
+                        elevation: 3,
+                        shadowColor: const Color(0x22000000),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(18),
                         ),
                       ),
                     ),
@@ -270,7 +275,13 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                 color: const Color(0xFFF3F4F6),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.account_balance_wallet_outlined),
+              child: Center(
+                child: CurrencyFlag(
+                  currencyCode: wallet.currency.trim().toUpperCase(),
+                  width: 28,
+                  height: 18,
+                ),
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -434,7 +445,14 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               .map(
                 (currency) => DropdownMenuItem<String>(
                   value: currency,
-                  child: Text(currency),
+                  child: Text(
+                    currency,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               )
               .toList(),

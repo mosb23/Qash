@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/currency/currency_format.dart';
 import '../../../core/errors/app_failure.dart';
+import '../../../core/widgets/currency_flag.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../../budgets/domain/entities/budget_status.dart';
 import '../../budgets/providers/budgets_providers.dart';
@@ -58,10 +59,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ref.watch(savingGoalsProvider),
     );
     final recents = _resolveRecentTransactions(ref.watch(transactionsProvider));
-    final exchangeRates = ref.watch(exchangeRatesProvider).maybeWhen(
-      data: (rates) => defaultRatesOr(rates),
-      orElse: () => defaultRatesOr(null),
-    );
+    final exchangeRates = ref
+        .watch(exchangeRatesProvider)
+        .maybeWhen(
+          data: (rates) => defaultRatesOr(rates),
+          orElse: () => defaultRatesOr(null),
+        );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -154,10 +157,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
+                                  CurrencyFlag(
+                                    currencyCode: activeCurrency,
+                                    width: 28,
+                                    height: 18,
+                                  ),
+                                  const SizedBox(width: 10),
                                   Text(
                                     _hideBalances
                                         ? '****'
-                                        : _formatCurrencyWithCode(
+                                        : _formatCurrencyWithSymbol(
                                             _walletsTotalForCurrency(
                                               wallets,
                                               transactions,
@@ -224,10 +233,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             ),
                                           ),
                                           Text(
-                                            _formatCurrencyWithSymbol(
-                                              currencyTotals.income,
-                                              activeCurrency,
-                                            ),
+                                            _hideBalances
+                                                ? '****'
+                                                : _formatCurrencyWithSymbol(
+                                                    currencyTotals.income,
+                                                    activeCurrency,
+                                                  ),
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontSize: 14,
@@ -268,10 +279,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             ),
                                           ),
                                           Text(
-                                            _formatCurrencyWithSymbol(
-                                              currencyTotals.expenses,
-                                              activeCurrency,
-                                            ),
+                                            _hideBalances
+                                                ? '****'
+                                                : _formatCurrencyWithSymbol(
+                                                    currencyTotals.expenses,
+                                                    activeCurrency,
+                                                  ),
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontSize: 14,
@@ -934,11 +947,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return 'Failed to load data.';
   }
 
-  Widget _walletCard(
-    WalletEntity wallet,
-    bool hideBalances,
-    double balance,
-  ) {
+  Widget _walletCard(WalletEntity wallet, bool hideBalances, double balance) {
     final currencyCode = wallet.currency.trim().toUpperCase();
     return Container(
       width: 240,
@@ -972,17 +981,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF3B82F6),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Center(
-                      child: Text(
-                        _currencySymbol(currencyCode),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: CurrencyFlag(
+                        currencyCode: currencyCode,
+                        width: 22,
+                        height: 14,
                       ),
                     ),
                   ),
@@ -1357,11 +1363,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return NumberFormat.currency(symbol: '\$').format(value);
   }
 
-  String _formatCurrencyWithCode(double value, String code) {
-    final formatted = NumberFormat.currency(symbol: '').format(value).trim();
-    return '${code.toUpperCase()} $formatted';
-  }
-
   String _formatCurrencyWithSymbol(double value, String code) {
     final symbol = _currencySymbol(code.toUpperCase());
     return NumberFormat.currency(symbol: symbol).format(value);
@@ -1411,7 +1412,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               .map(
                 (currency) => DropdownMenuItem<String>(
                   value: currency,
-                  child: Text(currency),
+                  child: Text(
+                    currency,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+          selectedItemBuilder: (context) => items
+              .map(
+                (currency) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    currency,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               )
               .toList(),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/currency_flag.dart';
 import '../domain/entities/wallet.dart';
 import '../domain/entities/wallet_create.dart';
 import '../domain/entities/wallet_update.dart';
@@ -188,12 +189,17 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 12,
+                      horizontal: 12,
+                      vertical: 10,
                     ),
                     decoration: BoxDecoration(
                       color: selected ? Colors.black : Colors.white,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(11),
+                      border: Border.all(
+                        color: selected
+                            ? Colors.black
+                            : const Color(0xFFE5E7EB),
+                      ),
                       boxShadow: selected
                           ? null
                           : [
@@ -203,12 +209,24 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
                               ),
                             ],
                     ),
-                    child: Text(
-                      currency,
-                      style: TextStyle(
-                        color: selected ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CurrencyFlag(
+                          currencyCode: currency,
+                          width: 22,
+                          height: 14,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          currency,
+                          style: TextStyle(
+                            color: selected ? Colors.white : Colors.black,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
