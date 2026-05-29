@@ -37,29 +37,76 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
                 ["Wallet was not found."]);
         }
 
-        var category = await _context.Categories
-            .FirstOrDefaultAsync(
-                x => x.Id == request.CategoryId && x.ApplicationUserId == request.UserId,
-                cancellationToken);
+        Category category;
 
-        if (category is null)
+        if (request.TransactionType == CategoryType.Transfer)
         {
-            return ApiResponse<TransactionDto>.FailResponse(
-                "Create transaction failed.",
-                ["Category was not found."]);
+            category = await GetOrCreateTransferCategory(
+                request.UserId,
+                cancellationToken);
+        }
+        else
+        {
+            var resolvedCategory = await _context.Categories
+                .FirstOrDefaultAsync(
+                    x => x.Id == request.CategoryId && x.ApplicationUserId == request.UserId,
+                    cancellationToken);
+
+            if (resolvedCategory is null)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Create transaction failed.",
+                    ["Category was not found."]);
+            }
+
+            if (resolvedCategory.Type != request.TransactionType)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Create transaction failed.",
+                    ["Category type does not match transaction type."]);
+            }
+
+            category = resolvedCategory;
         }
 
-        if (category.Type != request.TransactionType)
+        WalletEntity? targetWallet = null;
+
+        if (request.TransactionType == CategoryType.Transfer)
         {
-            return ApiResponse<TransactionDto>.FailResponse(
-                "Create transaction failed.",
-                ["Category type does not match transaction type."]);
+            if (request.ToWalletId is null || request.ToWalletId == Guid.Empty)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Create transaction failed.",
+                    ["Target wallet is required for transfers."]);
+            }
+
+            if (request.ToWalletId == request.WalletId)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Create transaction failed.",
+                    ["Source and target wallets must be different."]);
+            }
+
+            targetWallet = await _context.Wallets
+                .FirstOrDefaultAsync(
+                    x => x.Id == request.ToWalletId && x.ApplicationUserId == request.UserId,
+                    cancellationToken);
+
+            if (targetWallet is null)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Create transaction failed.",
+                    ["Target wallet was not found."]);
+            }
         }
 
         var transaction = new Transaction
         {
             ApplicationUserId = request.UserId,
             WalletId = wallet.Id,
+            ToWalletId = request.TransactionType == CategoryType.Transfer
+                ? request.ToWalletId
+                : null,
             CategoryId = category.Id,
             Amount = request.Amount,
             TransactionType = request.TransactionType,
@@ -69,13 +116,25 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
                 : request.TransactionDate
         };
 
-        ApplyEffect(wallet, transaction.TransactionType, transaction.Amount);
+        if (transaction.TransactionType == CategoryType.Transfer)
+        {
+            wallet.Balance -= transaction.Amount;
+            targetWallet!.Balance += transaction.Amount;
+        }
+        else
+        {
+            ApplyEffect(wallet, transaction.TransactionType, transaction.Amount);
+        }
 
         await _context.Transactions.AddAsync(transaction, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
         await _context.Entry(transaction).Reference(x => x.Wallet).LoadAsync(cancellationToken);
         await _context.Entry(transaction).Reference(x => x.Category).LoadAsync(cancellationToken);
+        if (transaction.ToWalletId != null)
+        {
+            await _context.Entry(transaction).Reference(x => x.ToWallet).LoadAsync(cancellationToken);
+        }
 
         var dto = _mapper.Map<TransactionDto>(transaction);
 
@@ -93,5 +152,34 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
         }
 
         wallet.Balance -= amount;
+    }
+
+    private async Task<Category> GetOrCreateTransferCategory(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var existing = await _context.Categories
+            .FirstOrDefaultAsync(
+                x => x.ApplicationUserId == userId && x.Type == CategoryType.Transfer,
+                cancellationToken);
+
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var category = new Category
+        {
+            ApplicationUserId = userId,
+            Name = "Transfer",
+            Type = CategoryType.Transfer,
+            Icon = null,
+            Color = null
+        };
+
+        await _context.Categories.AddAsync(category, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return category;
     }
 }

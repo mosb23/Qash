@@ -12,11 +12,22 @@ public class CreateTransactionCommandValidator : AbstractValidator<CreateTransac
             .NotEmpty();
 
         RuleFor(x => x.CategoryId)
-            .NotEmpty();
+            .NotEmpty()
+            .When(x => x.TransactionType != CategoryType.Transfer)
+            .WithMessage("Category is required for income and expense.");
 
         RuleFor(x => x.TransactionType)
-            .Must(x => x == CategoryType.Income || x == CategoryType.Expense)
-            .WithMessage("Transaction type must be Income or Expense.");
+            .Must(
+                x =>
+                    x == CategoryType.Income ||
+                    x == CategoryType.Expense ||
+                    x == CategoryType.Transfer)
+            .WithMessage("Transaction type must be Income, Expense, or Transfer.");
+
+        RuleFor(x => x.ToWalletId)
+            .NotEmpty()
+            .When(x => x.TransactionType == CategoryType.Transfer)
+            .WithMessage("Target wallet is required for transfers.");
 
         RuleFor(x => x.Amount)
             .GreaterThan(0);

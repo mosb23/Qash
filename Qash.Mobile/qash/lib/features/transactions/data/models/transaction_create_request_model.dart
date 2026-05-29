@@ -3,6 +3,7 @@ import '../../domain/entities/transaction_create.dart';
 class TransactionCreateRequestModel {
   final String userId;
   final String walletId;
+  final String? toWalletId;
   final double amount;
   final int transactionType;
   final String categoryId;
@@ -12,6 +13,7 @@ class TransactionCreateRequestModel {
   const TransactionCreateRequestModel({
     required this.userId,
     required this.walletId,
+    this.toWalletId,
     required this.amount,
     required this.transactionType,
     required this.categoryId,
@@ -23,6 +25,7 @@ class TransactionCreateRequestModel {
     return TransactionCreateRequestModel(
       userId: data.userId,
       walletId: data.walletId,
+      toWalletId: data.toWalletId,
       amount: data.amount,
       transactionType: data.transactionType,
       categoryId: data.categoryId,
@@ -35,6 +38,7 @@ class TransactionCreateRequestModel {
     return {
       'userId': userId,
       'walletId': walletId,
+      'toWalletId': toWalletId,
       'amount': amount,
       'transactionType': transactionType,
       'categoryId': categoryId,

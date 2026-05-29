@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Qash.API.Common.Responses;
+using Qash.API.Domain.Entities;
 using Qash.API.Domain.Enums;
 using Qash.API.Features.Transactions.Commands;
 using Qash.API.Features.Transactions.DTOs;
@@ -27,6 +28,7 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
         var transaction = await _context.Transactions
             .Include(x => x.Wallet)
             .Include(x => x.Category)
+            .Include(x => x.ToWallet)
             .FirstOrDefaultAsync(
                 x => x.Id == request.TransactionId && x.ApplicationUserId == request.UserId,
                 cancellationToken);
@@ -50,29 +52,76 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
                 ["Target wallet was not found."]);
         }
 
-        var category = await _context.Categories
-            .FirstOrDefaultAsync(
-                x => x.Id == request.CategoryId && x.ApplicationUserId == request.UserId,
+        Category category;
+
+        if (request.TransactionType == CategoryType.Transfer)
+        {
+            category = await GetOrCreateTransferCategory(
+                request.UserId,
                 cancellationToken);
-
-        if (category is null)
+        }
+        else
         {
-            return ApiResponse<TransactionDto>.FailResponse(
-                "Update transaction failed.",
-                ["Category was not found."]);
+            var resolvedCategory = await _context.Categories
+                .FirstOrDefaultAsync(
+                    x => x.Id == request.CategoryId && x.ApplicationUserId == request.UserId,
+                    cancellationToken);
+
+            if (resolvedCategory is null)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Update transaction failed.",
+                    ["Category was not found."]);
+            }
+
+            if (resolvedCategory.Type != request.TransactionType)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Update transaction failed.",
+                    ["Category type does not match transaction type."]);
+            }
+
+            category = resolvedCategory;
         }
 
-        if (category.Type != request.TransactionType)
+        WalletEntity? targetTransferWallet = null;
+
+        if (request.TransactionType == CategoryType.Transfer)
         {
-            return ApiResponse<TransactionDto>.FailResponse(
-                "Update transaction failed.",
-                ["Category type does not match transaction type."]);
+            if (request.ToWalletId is null || request.ToWalletId == Guid.Empty)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Update transaction failed.",
+                    ["Target wallet is required for transfers."]);
+            }
+
+            if (request.ToWalletId == request.WalletId)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Update transaction failed.",
+                    ["Source and target wallets must be different."]);
+            }
+
+            targetTransferWallet = await _context.Wallets
+                .FirstOrDefaultAsync(
+                    x => x.Id == request.ToWalletId && x.ApplicationUserId == request.UserId,
+                    cancellationToken);
+
+            if (targetTransferWallet is null)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Update transaction failed.",
+                    ["Target wallet was not found."]);
+            }
         }
 
-        ReverseEffect(transaction.Wallet, transaction.TransactionType, transaction.Amount);
-        ApplyEffect(targetWallet, request.TransactionType, request.Amount);
+        ReverseTransactionEffect(transaction);
+        ApplyTransactionEffect(targetWallet, targetTransferWallet, request.TransactionType, request.Amount);
 
         transaction.WalletId = targetWallet.Id;
+        transaction.ToWalletId = request.TransactionType == CategoryType.Transfer
+            ? request.ToWalletId
+            : null;
         transaction.CategoryId = category.Id;
         transaction.Amount = request.Amount;
         transaction.TransactionType = request.TransactionType;
@@ -86,6 +135,7 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
 
         await _context.Entry(transaction).Reference(x => x.Wallet).LoadAsync(cancellationToken);
         await _context.Entry(transaction).Reference(x => x.Category).LoadAsync(cancellationToken);
+        await _context.Entry(transaction).Reference(x => x.ToWallet).LoadAsync(cancellationToken);
 
         var dto = _mapper.Map<TransactionDto>(transaction);
 
@@ -114,5 +164,72 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
         }
 
         wallet.Balance += amount;
+    }
+
+    private static void ReverseTransactionEffect(Transaction transaction)
+    {
+        if (transaction.TransactionType == CategoryType.Transfer)
+        {
+            if (transaction.ToWallet is null)
+            {
+                return;
+            }
+
+            transaction.Wallet.Balance += transaction.Amount;
+            transaction.ToWallet.Balance -= transaction.Amount;
+            return;
+        }
+
+        ReverseEffect(transaction.Wallet, transaction.TransactionType, transaction.Amount);
+    }
+
+    private static void ApplyTransactionEffect(
+        WalletEntity sourceWallet,
+        WalletEntity? targetWallet,
+        CategoryType transactionType,
+        decimal amount)
+    {
+        if (transactionType == CategoryType.Transfer)
+        {
+            if (targetWallet is null)
+            {
+                return;
+            }
+
+            sourceWallet.Balance -= amount;
+            targetWallet.Balance += amount;
+            return;
+        }
+
+        ApplyEffect(sourceWallet, transactionType, amount);
+    }
+
+    private async Task<Category> GetOrCreateTransferCategory(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var existing = await _context.Categories
+            .FirstOrDefaultAsync(
+                x => x.ApplicationUserId == userId && x.Type == CategoryType.Transfer,
+                cancellationToken);
+
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var category = new Category
+        {
+            ApplicationUserId = userId,
+            Name = "Transfer",
+            Type = CategoryType.Transfer,
+            Icon = null,
+            Color = null
+        };
+
+        await _context.Categories.AddAsync(category, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return category;
     }
 }

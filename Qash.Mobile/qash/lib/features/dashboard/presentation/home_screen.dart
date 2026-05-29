@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -18,17 +19,35 @@ import '../../wallets/providers/wallets_providers.dart';
 import '../domain/entities/dashboard.dart';
 import '../providers/dashboard_providers.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _hideBalances = false;
+  String? _selectedCurrency;
+
+  @override
+  Widget build(BuildContext context) {
     final profile = _resolveResult<ProfileEntity>(ref.watch(profileProvider));
     final dashboard = _resolveResult<DashboardEntity>(
       ref.watch(dashboardProvider),
     );
     final wallets = _resolveResultList<WalletEntity>(
       ref.watch(walletsProvider),
+    );
+    final transactions = _resolveResultList<TransactionEntity>(
+      ref.watch(transactionsProvider),
+    );
+    final availableCurrencies = _walletCurrencies(wallets);
+    final activeCurrency = _resolveActiveCurrency(availableCurrencies);
+    final currencyTotals = _transactionsTotalsForCurrency(
+      transactions,
+      wallets,
+      activeCurrency,
     );
     final budgets = _resolveResultList<BudgetStatusEntity>(
       ref.watch(budgetStatusesProvider),
@@ -109,18 +128,36 @@ class HomeScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Total Balance',
-                                style: TextStyle(
-                                  color: Color(0xFF8B8B8B),
-                                  fontSize: 12,
-                                ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Total Balance',
+                                    style: TextStyle(
+                                      color: Color(0xFF8B8B8B),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  _currencyDropdown(
+                                    availableCurrencies,
+                                    activeCurrency,
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
                                   Text(
-                                    _formatCurrency(_walletsTotal(wallets)),
+                                    _hideBalances
+                                        ? '****'
+                                        : _formatCurrencyWithCode(
+                                            _walletsTotalForCurrency(
+                                              wallets,
+                                              activeCurrency,
+                                            ),
+                                            activeCurrency,
+                                          ),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 30,
@@ -128,10 +165,21 @@ class HomeScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  const Icon(
-                                    Icons.visibility_outlined,
-                                    color: Color(0xFF8B8B8B),
-                                    size: 20,
+                                  IconButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _hideBalances = !_hideBalances;
+                                      });
+                                    },
+                                    icon: Icon(
+                                      _hideBalances
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: const Color(0xFF8B8B8B),
+                                      size: 20,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
                                   ),
                                 ],
                               ),
@@ -168,11 +216,9 @@ class HomeScreen extends ConsumerWidget {
                                             ),
                                           ),
                                           Text(
-                                            _formatCurrency(
-                                              _dashboardValue(
-                                                dashboard,
-                                                (value) => value.monthlyIncome,
-                                              ),
+                                            _formatCurrencyWithSymbol(
+                                              currencyTotals.income,
+                                              activeCurrency,
                                             ),
                                             style: const TextStyle(
                                               color: Colors.white,
@@ -214,12 +260,9 @@ class HomeScreen extends ConsumerWidget {
                                             ),
                                           ),
                                           Text(
-                                            _formatCurrency(
-                                              _dashboardValue(
-                                                dashboard,
-                                                (value) =>
-                                                    value.monthlyExpenses,
-                                              ),
+                                            _formatCurrencyWithSymbol(
+                                              currencyTotals.expenses,
+                                              activeCurrency,
                                             ),
                                             style: const TextStyle(
                                               color: Colors.white,
@@ -243,12 +286,15 @@ class HomeScreen extends ConsumerWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Wallets',
-                              style: TextStyle(
-                                color: Color(0xFF111111),
-                                fontSize: 20,
-                                fontWeight: FontWeight.w500,
+                            GestureDetector(
+                              onTap: () => context.push('/wallets'),
+                              child: const Text(
+                                'Wallets',
+                                style: TextStyle(
+                                  color: Color(0xFF111111),
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                             GestureDetector(
@@ -265,7 +311,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _walletsSection(context, wallets),
+                      _walletsSection(context, wallets, _hideBalances),
                       const SizedBox(height: 24),
                       // -- Quick Actions --
                       Padding(
@@ -327,12 +373,15 @@ class HomeScreen extends ConsumerWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  'Budget',
-                                  style: TextStyle(
-                                    color: Color(0xFF111111),
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w500,
+                                GestureDetector(
+                                  onTap: () => context.push('/budgets'),
+                                  child: const Text(
+                                    'Budget',
+                                    style: TextStyle(
+                                      color: Color(0xFF111111),
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                                 GestureDetector(
@@ -382,12 +431,15 @@ class HomeScreen extends ConsumerWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  'Goals',
-                                  style: TextStyle(
-                                    color: Color(0xFF111111),
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w500,
+                                GestureDetector(
+                                  onTap: () => context.push('/goals'),
+                                  child: const Text(
+                                    'Goals',
+                                    style: TextStyle(
+                                      color: Color(0xFF111111),
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                                 GestureDetector(
@@ -438,7 +490,7 @@ class HomeScreen extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            _recentSection(recents),
+                            _recentSection(context, recents),
                           ],
                         ),
                       ),
@@ -493,17 +545,101 @@ class HomeScreen extends ConsumerWidget {
     });
   }
 
-  double _dashboardValue(
-    AsyncValue<DashboardEntity> dashboard,
-    double Function(DashboardEntity) selector,
-  ) {
-    return dashboard.maybeWhen(data: selector, orElse: () => 0);
+  String _resolveActiveCurrency(List<String> currencies) {
+    if (_selectedCurrency == null || !currencies.contains(_selectedCurrency)) {
+      final nextCurrency = currencies.isNotEmpty ? currencies.first : 'USD';
+      if (_selectedCurrency != nextCurrency) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _selectedCurrency = nextCurrency;
+          });
+        });
+      }
+      return nextCurrency;
+    }
+    return _selectedCurrency!;
   }
 
-  double _walletsTotal(AsyncValue<List<WalletEntity>> wallets) {
+  List<String> _walletCurrencies(AsyncValue<List<WalletEntity>> wallets) {
     return wallets.maybeWhen(
-      data: (items) => items.fold(0, (sum, item) => sum + item.balance),
+      data: (items) {
+        final values = <String>{};
+        for (final wallet in items) {
+          final currency = wallet.currency.trim();
+          if (currency.isNotEmpty) {
+            values.add(currency.toUpperCase());
+          }
+        }
+        final list = values.toList()..sort();
+        return list.isEmpty ? ['USD'] : list;
+      },
+      orElse: () => ['USD'],
+    );
+  }
+
+  double _walletsTotalForCurrency(
+    AsyncValue<List<WalletEntity>> wallets,
+    String currency,
+  ) {
+    return wallets.maybeWhen(
+      data: (items) {
+        final target = currency.toUpperCase();
+        return items
+            .where((item) => item.currency.toUpperCase() == target)
+            .fold(0.0, (sum, item) => sum + item.balance);
+      },
       orElse: () => 0,
+    );
+  }
+
+  Map<String, String> _walletCurrencyById(
+    AsyncValue<List<WalletEntity>> wallets,
+  ) {
+    return wallets.maybeWhen(
+      data: (items) => {
+        for (final wallet in items) wallet.walletId: wallet.currency,
+      },
+      orElse: () => const {},
+    );
+  }
+
+  _CurrencyTotals _transactionsTotalsForCurrency(
+    AsyncValue<List<TransactionEntity>> transactions,
+    AsyncValue<List<WalletEntity>> wallets,
+    String currency,
+  ) {
+    final walletCurrencies = _walletCurrencyById(wallets);
+    final now = DateTime.now();
+    return transactions.maybeWhen(
+      data: (items) {
+        final target = currency.toUpperCase();
+        var income = 0.0;
+        var expenses = 0.0;
+        for (final item in items) {
+          if (item.isTransfer) {
+            continue;
+          }
+          if (item.transactionDate.year != now.year ||
+              item.transactionDate.month != now.month) {
+            continue;
+          }
+          final walletCurrency = walletCurrencies[item.walletId];
+          if (walletCurrency == null ||
+              walletCurrency.toUpperCase() != target) {
+            continue;
+          }
+          if (item.isIncome) {
+            income += item.amount;
+          } else if (item.isExpense) {
+            expenses += item.amount;
+          }
+        }
+        return _CurrencyTotals(income: income, expenses: expenses);
+      },
+      orElse: () => const _CurrencyTotals(income: 0, expenses: 0),
     );
   }
 
@@ -541,6 +677,7 @@ class HomeScreen extends ConsumerWidget {
   Widget _walletsSection(
     BuildContext context,
     AsyncValue<List<WalletEntity>> wallets,
+    bool hideBalances,
   ) {
     return wallets.when(
       data: (items) {
@@ -561,7 +698,13 @@ class HomeScreen extends ConsumerWidget {
             padding: const EdgeInsets.only(left: 24),
             children: [
               for (final wallet in items) ...[
-                _walletCard(wallet),
+                GestureDetector(
+                  onTap: () => context.push(
+                    '/wallets/${wallet.walletId}',
+                    extra: wallet,
+                  ),
+                  child: _walletCard(wallet, hideBalances),
+                ),
                 const SizedBox(width: 12),
               ],
               _addWalletCard(context),
@@ -606,10 +749,26 @@ class HomeScreen extends ConsumerWidget {
         final cards = items.take(2).toList();
         return Row(
           children: [
-            Expanded(child: _budgetStatusCard(cards.first)),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => context.push(
+                  '/budgets/${cards.first.budgetId}',
+                  extra: cards.first,
+                ),
+                child: _budgetStatusCard(cards.first),
+              ),
+            ),
             if (cards.length > 1) ...[
               const SizedBox(width: 12),
-              Expanded(child: _budgetStatusCard(cards.last)),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => context.push(
+                    '/budgets/${cards.last.budgetId}',
+                    extra: cards.last,
+                  ),
+                  child: _budgetStatusCard(cards.last),
+                ),
+              ),
             ],
           ],
         );
@@ -667,7 +826,11 @@ class HomeScreen extends ConsumerWidget {
         return Column(
           children: [
             for (final goal in list) ...[
-              _goalCardFromData(goal),
+              GestureDetector(
+                onTap: () =>
+                    context.push('/goals/${goal.savingGoalId}', extra: goal),
+                child: _goalCardFromData(goal),
+              ),
               const SizedBox(height: 12),
             ],
           ],
@@ -684,7 +847,10 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _recentSection(AsyncValue<List<TransactionEntity>> transactions) {
+  Widget _recentSection(
+    BuildContext context,
+    AsyncValue<List<TransactionEntity>> transactions,
+  ) {
     return transactions.when(
       data: (items) {
         if (items.isEmpty) {
@@ -696,7 +862,7 @@ class HomeScreen extends ConsumerWidget {
         return Column(
           children: [
             for (final item in items) ...[
-              _transactionCard(item),
+              _transactionCard(context, item),
               const SizedBox(height: 8),
             ],
           ],
@@ -720,7 +886,8 @@ class HomeScreen extends ConsumerWidget {
     return 'Failed to load data.';
   }
 
-  Widget _walletCard(WalletEntity wallet) {
+  Widget _walletCard(WalletEntity wallet, bool hideBalances) {
+    final currencyCode = wallet.currency.trim().toUpperCase();
     return Container(
       width: 240,
       padding: const EdgeInsets.all(20),
@@ -758,13 +925,11 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     child: Center(
                       child: Text(
-                        wallet.currency.isNotEmpty
-                            ? wallet.currency.substring(0, 1).toUpperCase()
-                            : '\$',
+                        _currencySymbol(currencyCode),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -783,14 +948,16 @@ class HomeScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: const Color(0xFF111111),
                   borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFF2E2E2E)),
                 ),
                 child: Text(
-                  wallet.currency,
+                  currencyCode,
                   style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -798,7 +965,9 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            _formatCurrency(wallet.balance),
+            hideBalances
+                ? '****'
+                : _formatCurrencyWithSymbol(wallet.balance, currencyCode),
             style: const TextStyle(
               color: Color(0xFF111111),
               fontSize: 24,
@@ -1030,7 +1199,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _transactionCard(TransactionEntity item) {
+  Widget _transactionCard(BuildContext context, TransactionEntity item) {
     final isTransfer = item.isTransfer;
     final amountColor = isTransfer
         ? const Color(0xFF2B7FFF)
@@ -1051,81 +1220,155 @@ class HomeScreen extends ConsumerWidget {
         ? item.categoryName.substring(0, 1).toUpperCase()
         : '?';
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-            spreadRadius: -1,
-          ),
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(iconText, style: const TextStyle(fontSize: 18)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.description.isNotEmpty
-                        ? item.description
-                        : item.categoryName,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    _formatDate(item.transactionDate),
-                    style: const TextStyle(
-                      color: Color(0xFF8B8B8B),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Text(
-            '$amountSign${_formatCurrency(item.amount)}',
-            style: TextStyle(
-              color: amountColor,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+    return GestureDetector(
+      onTap: () => context.push('/transactions/${item.id}'),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x19000000),
+              blurRadius: 2,
+              offset: Offset(0, 1),
+              spreadRadius: -1,
             ),
-          ),
-        ],
+            BoxShadow(
+              color: Color(0x19000000),
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Center(
+                    child: Text(iconText, style: const TextStyle(fontSize: 18)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.description.isNotEmpty
+                          ? item.description
+                          : item.categoryName,
+                      style: const TextStyle(
+                        color: Color(0xFF111111),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      _formatDate(item.transactionDate),
+                      style: const TextStyle(
+                        color: Color(0xFF8B8B8B),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Text(
+              '$amountSign${_formatCurrency(item.amount)}',
+              style: TextStyle(
+                color: amountColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   String _formatCurrency(double value) {
     return NumberFormat.currency(symbol: '\$').format(value);
+  }
+
+  String _formatCurrencyWithCode(double value, String code) {
+    final formatted = NumberFormat.currency(symbol: '').format(value).trim();
+    return '${code.toUpperCase()} $formatted';
+  }
+
+  String _formatCurrencyWithSymbol(double value, String code) {
+    final symbol = _currencySymbol(code.toUpperCase());
+    return NumberFormat.currency(symbol: symbol).format(value);
+  }
+
+  String _currencySymbol(String currencyCode) {
+    switch (currencyCode) {
+      case 'USD':
+        return '\$';
+      case 'EUR':
+        return '\u20ac';
+      case 'GBP':
+        return '\u00a3';
+      case 'EGP':
+        return 'E£';
+      case 'JPY':
+        return '\u00a5';
+      default:
+        return currencyCode.isNotEmpty ? currencyCode.substring(0, 1) : '\$';
+    }
+  }
+
+  Widget _currencyDropdown(List<String> items, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F1F1F),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF2E2E2E)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            color: Color(0xFF8B8B8B),
+            size: 18,
+          ),
+          dropdownColor: const Color(0xFF1F1F1F),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+          isDense: true,
+          items: items
+              .map(
+                (currency) => DropdownMenuItem<String>(
+                  value: currency,
+                  child: Text(currency),
+                ),
+              )
+              .toList(),
+          onChanged: (next) {
+            if (next == null) {
+              return;
+            }
+            setState(() {
+              _selectedCurrency = next;
+            });
+          },
+        ),
+      ),
+    );
   }
 
   String _formatDate(DateTime value) {
@@ -1180,4 +1423,11 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _CurrencyTotals {
+  final double income;
+  final double expenses;
+
+  const _CurrencyTotals({required this.income, required this.expenses});
 }

@@ -5,5 +5,11 @@ import '../entities/transaction.dart';
 abstract class TransactionsRepository {
   Future<Result<List<TransactionEntity>>> getTransactions();
 
-  Future<Result<String>> createTransaction(TransactionCreateData data);
+  Future<Result<TransactionEntity>> getTransactionById(String transactionId);
+
+  Future<Result<TransactionEntity>> createTransaction(
+    TransactionCreateData data,
+  );
+
+  Future<Result<String>> deleteTransaction(String transactionId);
 }

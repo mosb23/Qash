@@ -65,7 +65,7 @@ public class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         modelBuilder.Entity<ApplicationUser>(entity =>
         {
             entity.ToTable("Users");
@@ -175,6 +175,11 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(x => x.WalletId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasOne(x => x.ToWallet)
+                .WithMany()
+                .HasForeignKey(x => x.ToWalletId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             entity.HasOne(x => x.Category)
                 .WithMany(x => x.Transactions)
                 .HasForeignKey(x => x.CategoryId)
@@ -234,7 +239,8 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(x => new { x.ApplicationUserId, x.CategoryId, x.Year, x.Month })
-                .IsUnique();
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
 
             entity.HasQueryFilter(x => !x.IsDeleted);
         });

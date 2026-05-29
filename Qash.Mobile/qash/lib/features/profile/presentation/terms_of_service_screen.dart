@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+
 class TermsOfServiceScreen extends StatelessWidget {
   const TermsOfServiceScreen({super.key});
 

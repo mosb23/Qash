@@ -1,5 +1,6 @@
 import '../../../../core/network/api_response.dart';
 import '../models/budget_create_request_model.dart';
+import '../models/budget_detail_model.dart';
 import '../models/budget_status_model.dart';
 
 abstract class BudgetsRemoteDataSource {
@@ -8,5 +9,9 @@ abstract class BudgetsRemoteDataSource {
     int month,
   );
 
-  Future<ApiResponse<String>> createBudget(BudgetCreateRequestModel request);
+  Future<ApiResponse<BudgetDetailModel>> createBudget(
+    BudgetCreateRequestModel request,
+  );
+
+  Future<ApiResponse<String>> deleteBudget(String budgetId);
 }

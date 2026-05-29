@@ -29,7 +29,37 @@ class TransactionsApi implements TransactionsRemoteDataSource {
   }
 
   @override
-  Future<ApiResponse<String>> createTransaction(
+  Future<ApiResponse<TransactionModel>> getTransactionById(
+    String transactionId,
+  ) async {
+    try {
+      final response = await _dio.get('/api/transactions/$transactionId');
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<TransactionModel>.fromJson(
+        data,
+        (json) => TransactionModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (error) {
+      return _handleError<TransactionModel>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<String>> deleteTransaction(String transactionId) async {
+    try {
+      final response = await _dio.delete('/api/transactions/$transactionId');
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<String>.fromJson(
+        data,
+        (json) => json?.toString() ?? '',
+      );
+    } on DioException catch (error) {
+      return _handleError<String>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<TransactionModel>> createTransaction(
     TransactionCreateRequestModel request,
   ) async {
     try {
@@ -38,12 +68,12 @@ class TransactionsApi implements TransactionsRemoteDataSource {
         data: request.toJson(),
       );
       final data = response.data as Map<String, dynamic>;
-      return ApiResponse<String>.fromJson(
+      return ApiResponse<TransactionModel>.fromJson(
         data,
-        (json) => json?.toString() ?? '',
+        (json) => TransactionModel.fromJson(json as Map<String, dynamic>),
       );
     } on DioException catch (error) {
-      return _handleError<String>(error);
+      return _handleError<TransactionModel>(error);
     }
   }
 

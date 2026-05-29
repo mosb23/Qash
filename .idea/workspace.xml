@@ -5,17 +5,79 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ea07c690-8cb5-447b-8dad-9420c519c876" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/.env" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/config/providers.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/config/providers.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Domain/Entities/Transaction.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Domain/Entities/Transaction.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Domain/Enums/CategoryType.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Domain/Enums/CategoryType.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Features/Transactions/Commands/CreateTransactionCommand.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Features/Transactions/Commands/CreateTransactionCommand.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Features/Transactions/Commands/UpdateTransactionCommand.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Features/Transactions/Commands/UpdateTransactionCommand.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Features/Transactions/DTOs/TransactionDto.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Features/Transactions/DTOs/TransactionDto.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Features/Transactions/Handlers/CreateTransactionCommandHandler.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Features/Transactions/Handlers/CreateTransactionCommandHandler.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Features/Transactions/Handlers/GetTransactionByIdQueryHandler.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Features/Transactions/Handlers/GetTransactionByIdQueryHandler.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Features/Transactions/Handlers/GetTransactionsQueryHandler.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Features/Transactions/Handlers/GetTransactionsQueryHandler.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Features/Transactions/Handlers/UpdateTransactionCommandHandler.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Features/Transactions/Handlers/UpdateTransactionCommandHandler.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Features/Transactions/Validators/CreateTransactionCommandValidator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Features/Transactions/Validators/CreateTransactionCommandValidator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Features/Transactions/Validators/UpdateTransactionCommandValidator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Features/Transactions/Validators/UpdateTransactionCommandValidator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Infrastructure/Data/ApplicationDbContext.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Infrastructure/Data/ApplicationDbContext.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Infrastructure/Mapping/MappingProfile.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Infrastructure/Mapping/MappingProfile.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.API/Migrations/ApplicationDbContextModelSnapshot.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.API/Migrations/ApplicationDbContextModelSnapshot.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/config/router.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/config/router.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugin_registrant.cc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugin_registrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugin_registrant.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/linux/flutter/generated_plugins.cmake" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/analytics/presentation/analytics_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/analytics/presentation/analytics_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/analytics/providers/analytics_providers.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/analytics/providers/analytics_providers.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/change_password_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/change_password_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/forgot_password_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/forgot_password_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/forgot_reset_password_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/forgot_reset_password_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/forgot_verify_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/forgot_verify_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/login_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/login_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/password_changed_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/password_changed_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/register_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/register_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/verify_phone_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/auth/presentation/verify_phone_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/data/budgets_api.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/data/budgets_api.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/data/datasources/budgets_remote_data_source.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/data/datasources/budgets_remote_data_source.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/data/models/budget_create_request_model.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/data/models/budget_create_request_model.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/data/repositories/budgets_repository_impl.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/data/repositories/budgets_repository_impl.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/domain/entities/budget_detail.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/domain/entities/budget_detail.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/domain/repositories/budgets_repository.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/domain/repositories/budgets_repository.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/domain/usecases/create_budget_use_case.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/domain/usecases/create_budget_use_case.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/presentation/budget_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/presentation/budget_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/presentation/create_budget_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/presentation/create_budget_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/providers/budgets_providers.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/budgets/providers/budgets_providers.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/categories/data/models/category_model.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/categories/data/models/category_model.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/categories/domain/entities/category.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/categories/domain/entities/category.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/dashboard/presentation/home_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/dashboard/presentation/home_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/goals/presentation/add_funds_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/goals/presentation/add_funds_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/goals/presentation/create_goal_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/goals/presentation/create_goal_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/goals/presentation/delete_goal_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/goals/presentation/delete_goal_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/goals/presentation/goals_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/goals/presentation/goals_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/onboarding/presentation/onboarding_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/onboarding/presentation/onboarding_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/change_password_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/change_password_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/change_password_success_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/change_password_success_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/change_reset_password_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/change_reset_password_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/change_verify_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/change_verify_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/delete_account_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/delete_account_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/edit_profile_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/edit_profile_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/help_faq_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/help_faq_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/logout_confirm_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/logout_confirm_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/privacy_policy_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/privacy_policy_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/profile_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/profile_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/terms_of_service_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/profile/presentation/terms_of_service_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/splash/presentation/splash_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/splash/presentation/splash_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/data/datasources/transactions_remote_data_source.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/data/datasources/transactions_remote_data_source.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/data/models/transaction_create_request_model.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/data/models/transaction_create_request_model.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/data/models/transaction_model.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/data/models/transaction_model.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/data/repositories/transactions_repository_impl.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/data/repositories/transactions_repository_impl.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/data/transactions_api.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/data/transactions_api.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/domain/entities/transaction.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/domain/entities/transaction.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/domain/entities/transaction_create.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/domain/entities/transaction_create.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/domain/repositories/transactions_repository.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/domain/repositories/transactions_repository.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/domain/usecases/create_transaction_use_case.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/domain/usecases/create_transaction_use_case.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/presentation/add_transaction_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/presentation/add_transaction_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/presentation/transactions_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/presentation/transactions_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/providers/transactions_providers.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/transactions/providers/transactions_providers.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/wallets/presentation/delete_wallet_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/wallets/presentation/delete_wallet_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/wallets/presentation/wallets_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/lib/features/wallets/presentation/wallets_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/macos/Flutter/GeneratedPluginRegistrant.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/macos/Flutter/GeneratedPluginRegistrant.swift" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/pubspec.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugin_registrant.cc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugin_registrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugin_registrant.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/Qash.Mobile/qash/windows/flutter/generated_plugins.cmake" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,24 +98,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.cidr.known.project.marker": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.readMode.enableVisualFormatting": "true",
-    "cf.first.check.clang-format": "false",
-    "cidr.known.project.marker": "true",
-    "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/AAST/Semester10/MobileApplications/Qash",
-    "settings.editor.selected.configurable": "AndroidSdkUpdater",
-    "show.migrate.to.gradle.popup": "false"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/AAST/Semester10/MobileApplications/Qash&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;AndroidSdkUpdater&quot;,
+    &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;
   }
-}]]></component>
+}</component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="ea07c690-8cb5-447b-8dad-9420c519c876" name="Changes" comment="" />

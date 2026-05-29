@@ -32,6 +32,18 @@ class AnalyticsSummary {
   });
 }
 
+class YearlyComparison {
+  final int year;
+  final double income;
+  final double expenses;
+
+  const YearlyComparison({
+    required this.year,
+    required this.income,
+    required this.expenses,
+  });
+}
+
 class AnalyticsPeriodConfig {
   final int year;
   final int month;
@@ -61,12 +73,13 @@ final analyticsPeriodConfigProvider = Provider<AnalyticsPeriodConfig>((ref) {
   }
 
   if (period == AnalyticsPeriod.week) {
+    final start = DateTime(now.year, now.month, 1);
     final end = startOfDay(now).add(const Duration(days: 1));
-    final start = end.subtract(const Duration(days: 7));
+    final days = end.difference(start).inDays.clamp(1, 31);
     return AnalyticsPeriodConfig(
       year: now.year,
       month: now.month,
-      days: 7,
+      days: days,
       fromUtc: start,
       toUtcExclusive: end,
     );
@@ -85,9 +98,9 @@ final analyticsPeriodConfigProvider = Provider<AnalyticsPeriodConfig>((ref) {
     );
   }
 
-  final start = DateTime(now.year, now.month, 1);
-  final end = DateTime(now.year, now.month + 1, 1);
-  final days = end.difference(start).inDays;
+  final start = DateTime(now.year, 1, 1);
+  final end = startOfDay(now).add(const Duration(days: 1));
+  final days = end.difference(start).inDays.clamp(1, 365);
   return AnalyticsPeriodConfig(
     year: now.year,
     month: now.month,
@@ -173,6 +186,37 @@ final dateRangeSummaryProvider = FutureProvider<Result<DateRangeSummaryEntity>>(
     return useCase(config.fromUtc, config.toUtcExclusive);
   },
 );
+
+final yearlyComparisonProvider =
+    FutureProvider<Result<List<YearlyComparison>>>((ref) async {
+      final now = DateTime.now();
+      final useCase = ref.read(getDateRangeSummaryUseCaseProvider);
+      final years = [now.year - 2, now.year - 1, now.year];
+      final comparisons = <YearlyComparison>[];
+
+      for (final year in years) {
+        final from = DateTime(year, 1, 1);
+        final to = DateTime(year + 1, 1, 1);
+        final result = await useCase(from, to);
+        if (result.isFailure) {
+          return Result.failure(
+            result.failure ??
+                const AppFailure(message: 'Failed to load yearly comparison.'),
+          );
+        }
+
+        final data = result.data;
+        comparisons.add(
+          YearlyComparison(
+            year: year,
+            income: data?.totalIncome ?? 0,
+            expenses: data?.totalExpenses ?? 0,
+          ),
+        );
+      }
+
+      return Result.success(comparisons);
+    });
 
 final analyticsSummaryProvider = Provider<AsyncValue<AnalyticsSummary>>((ref) {
   final period = ref.watch(analyticsPeriodProvider);

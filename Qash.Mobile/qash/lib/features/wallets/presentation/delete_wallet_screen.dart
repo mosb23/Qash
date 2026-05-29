@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+
 class DeleteWalletScreen extends StatelessWidget {
   final String walletName;
   final VoidCallback? onDelete;

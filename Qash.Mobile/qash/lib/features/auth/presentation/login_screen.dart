@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,6 +17,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -214,7 +216,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Expanded(
                         child: TextField(
                           controller: _passwordController,
-                          obscureText: true,
+                          obscureText: _obscurePassword,
                           decoration: const InputDecoration(
                             border: InputBorder.none,
                             hintText: 'Enter your password',
@@ -233,10 +235,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                       ),
-                      const Icon(
-                        Icons.visibility_off_outlined,
-                        color: Color(0xFFC4C4C4),
-                        size: 20,
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: const Color(0xFFC4C4C4),
+                          size: 20,
+                        ),
+                        tooltip: _obscurePassword
+                            ? 'Show password'
+                            : 'Hide password',
                       ),
                     ],
                   ),

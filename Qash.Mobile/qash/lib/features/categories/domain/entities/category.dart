@@ -1,4 +1,4 @@
-enum CategoryType { income, expense }
+enum CategoryType { income, expense, transfer }
 
 class CategoryEntity {
   final String id;

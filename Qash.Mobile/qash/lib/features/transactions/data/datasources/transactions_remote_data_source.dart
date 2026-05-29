@@ -5,7 +5,11 @@ import '../models/transaction_model.dart';
 abstract class TransactionsRemoteDataSource {
   Future<ApiResponse<List<TransactionModel>>> getTransactions();
 
-  Future<ApiResponse<String>> createTransaction(
+  Future<ApiResponse<TransactionModel>> getTransactionById(String transactionId);
+
+  Future<ApiResponse<TransactionModel>> createTransaction(
     TransactionCreateRequestModel request,
   );
+
+  Future<ApiResponse<String>> deleteTransaction(String transactionId);
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -26,6 +27,8 @@ class _ProfileChangeResetPasswordScreenState
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
   bool _isLoading = false;
+  bool _passwordObscured = true;
+  bool _confirmPasswordObscured = true;
 
   @override
   void dispose() {
@@ -172,25 +175,43 @@ class _ProfileChangeResetPasswordScreenState
                       ),
                     ],
                   ),
-                  child: TextField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'Enter new password',
-                      hintStyle: TextStyle(
-                        color: Color(0xFFC4C4C4),
-                        fontSize: 16,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _passwordController,
+                          obscureText: _passwordObscured,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            hintText: 'Enter new password',
+                            hintStyle: TextStyle(
+                              color: Color(0xFFC4C4C4),
+                              fontSize: 16,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          style: const TextStyle(
+                            color: Color(0xFF111111),
+                            fontSize: 16,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
                       ),
-                    ),
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 16,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
+                      IconButton(
+                        onPressed: () => setState(
+                          () => _passwordObscured = !_passwordObscured,
+                        ),
+                        icon: Icon(
+                          _passwordObscured
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: const Color(0xFFC4C4C4),
+                          size: 20,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -226,25 +247,44 @@ class _ProfileChangeResetPasswordScreenState
                       ),
                     ],
                   ),
-                  child: TextField(
-                    controller: _confirmController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'Confirm new password',
-                      hintStyle: TextStyle(
-                        color: Color(0xFFC4C4C4),
-                        fontSize: 16,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _confirmController,
+                          obscureText: _confirmPasswordObscured,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            hintText: 'Confirm new password',
+                            hintStyle: TextStyle(
+                              color: Color(0xFFC4C4C4),
+                              fontSize: 16,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          style: const TextStyle(
+                            color: Color(0xFF111111),
+                            fontSize: 16,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
                       ),
-                    ),
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 16,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
+                      IconButton(
+                        onPressed: () => setState(
+                          () => _confirmPasswordObscured =
+                              !_confirmPasswordObscured,
+                        ),
+                        icon: Icon(
+                          _confirmPasswordObscured
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: const Color(0xFFC4C4C4),
+                          size: 20,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 24),

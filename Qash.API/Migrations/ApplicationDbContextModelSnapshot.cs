@@ -117,7 +117,8 @@ namespace Qash.API.Migrations
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("ApplicationUserId", "CategoryId", "Year", "Month")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.ToTable("Budgets", (string)null);
                 });
@@ -342,6 +343,9 @@ namespace Qash.API.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("ToWalletId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("TransactionDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -359,6 +363,8 @@ namespace Qash.API.Migrations
                     b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("ToWalletId");
 
                     b.HasIndex("WalletId");
 
@@ -500,6 +506,11 @@ namespace Qash.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Qash.API.Domain.Entities.Wallet", "ToWallet")
+                        .WithMany()
+                        .HasForeignKey("ToWalletId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Qash.API.Domain.Entities.Wallet", "Wallet")
                         .WithMany("Transactions")
                         .HasForeignKey("WalletId")
@@ -509,6 +520,8 @@ namespace Qash.API.Migrations
                     b.Navigation("ApplicationUser");
 
                     b.Navigation("Category");
+
+                    b.Navigation("ToWallet");
 
                     b.Navigation("Wallet");
                 });

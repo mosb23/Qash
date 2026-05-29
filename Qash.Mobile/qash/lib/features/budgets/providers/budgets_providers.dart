@@ -8,6 +8,7 @@ import '../data/repositories/budgets_repository_impl.dart';
 import '../domain/entities/budget_status.dart';
 import '../domain/repositories/budgets_repository.dart';
 import '../domain/usecases/create_budget_use_case.dart';
+import '../domain/usecases/delete_budget_use_case.dart';
 import '../domain/usecases/get_budget_statuses_use_case.dart';
 
 final budgetPeriodProvider = Provider<BudgetPeriod>((ref) {
@@ -22,10 +23,7 @@ final budgetsRemoteDataSourceProvider = Provider<BudgetsRemoteDataSource>((
 });
 
 final budgetsRepositoryProvider = Provider<BudgetsRepository>((ref) {
-  return BudgetsRepositoryImpl(
-    ref.read(budgetsRemoteDataSourceProvider),
-    ref.read(secureStorageProvider),
-  );
+  return BudgetsRepositoryImpl(ref.read(budgetsRemoteDataSourceProvider));
 });
 
 final getBudgetStatusesUseCaseProvider = Provider<GetBudgetStatusesUseCase>((
@@ -36,6 +34,10 @@ final getBudgetStatusesUseCaseProvider = Provider<GetBudgetStatusesUseCase>((
 
 final createBudgetUseCaseProvider = Provider<CreateBudgetUseCase>((ref) {
   return CreateBudgetUseCase(ref.read(budgetsRepositoryProvider));
+});
+
+final deleteBudgetUseCaseProvider = Provider<DeleteBudgetUseCase>((ref) {
+  return DeleteBudgetUseCase(ref.read(budgetsRepositoryProvider));
 });
 
 final budgetStatusesProvider = FutureProvider<Result<List<BudgetStatusEntity>>>(

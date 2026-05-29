@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -19,6 +20,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
   bool _isLoading = false;
+  bool _oldPasswordObscured = true;
+  bool _newPasswordObscured = true;
+  bool _confirmPasswordObscured = true;
 
   @override
   void dispose() {
@@ -124,7 +128,11 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 _buildField(
                   label: 'Current password',
                   controller: _oldPasswordController,
-                  obscure: true,
+                  obscure: _oldPasswordObscured,
+                  showToggle: true,
+                  onToggle: () => setState(
+                    () => _oldPasswordObscured = !_oldPasswordObscured,
+                  ),
                   hint: 'Enter current password',
                 ),
                 const SizedBox(height: 16),
@@ -137,14 +145,22 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 _buildField(
                   label: 'New password',
                   controller: _newPasswordController,
-                  obscure: true,
+                  obscure: _newPasswordObscured,
+                  showToggle: true,
+                  onToggle: () => setState(
+                    () => _newPasswordObscured = !_newPasswordObscured,
+                  ),
                   hint: 'Enter new password',
                 ),
                 const SizedBox(height: 16),
                 _buildField(
                   label: 'Confirm password',
                   controller: _confirmController,
-                  obscure: true,
+                  obscure: _confirmPasswordObscured,
+                  showToggle: true,
+                  onToggle: () => setState(
+                    () => _confirmPasswordObscured = !_confirmPasswordObscured,
+                  ),
                   hint: 'Confirm new password',
                 ),
                 const SizedBox(height: 24),
@@ -202,6 +218,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     required TextEditingController controller,
     String hint = '',
     bool obscure = false,
+    bool showToggle = false,
+    VoidCallback? onToggle,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,25 +256,42 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               ),
             ],
           ),
-          child: TextField(
-            controller: controller,
-            obscureText: obscure,
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: hint,
-              hintStyle: const TextStyle(
-                color: Color(0xFFC4C4C4),
-                fontSize: 16,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w400,
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  obscureText: obscure,
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: hint,
+                    hintStyle: const TextStyle(
+                      color: Color(0xFFC4C4C4),
+                      fontSize: 16,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  style: const TextStyle(
+                    color: Color(0xFF111111),
+                    fontSize: 16,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
               ),
-            ),
-            style: const TextStyle(
-              color: Color(0xFF111111),
-              fontSize: 16,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
-            ),
+              if (showToggle)
+                IconButton(
+                  onPressed: onToggle,
+                  icon: Icon(
+                    obscure
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: const Color(0xFFC4C4C4),
+                    size: 20,
+                  ),
+                ),
+            ],
           ),
         ),
       ],

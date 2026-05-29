@@ -12,6 +12,8 @@ import '../features/auth/presentation/verify_phone_screen.dart';
 import '../features/analytics/presentation/analytics_screen.dart';
 import '../features/budgets/presentation/budget_screen.dart';
 import '../features/budgets/presentation/create_budget_screen.dart';
+import '../features/budgets/presentation/budget_detail_screen.dart';
+import '../features/budgets/domain/entities/budget_status.dart';
 import '../features/dashboard/presentation/home_screen.dart';
 import '../features/goals/presentation/create_goal_screen.dart';
 import '../features/goals/presentation/add_funds_screen.dart';
@@ -23,7 +25,10 @@ import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 import '../features/transactions/presentation/transactions_screen.dart';
 import '../features/transactions/presentation/add_transaction_screen.dart';
+import '../features/transactions/presentation/transaction_detail_screen.dart';
+import '../features/transactions/presentation/delete_transaction_screen.dart';
 import '../features/wallets/presentation/add_wallet_screen.dart';
+import '../features/wallets/presentation/wallet_detail_screen.dart';
 import '../features/wallets/presentation/wallets_screen.dart';
 import '../features/wallets/domain/entities/wallet.dart';
 import '../features/profile/presentation/profile_screen.dart';
@@ -114,6 +119,22 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/transactions/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id'] ?? '';
+        return TransactionDetailScreen(transactionId: id);
+      },
+      routes: [
+        GoRoute(
+          path: 'delete',
+          builder: (context, state) {
+            final id = state.pathParameters['id'] ?? '';
+            return DeleteTransactionScreen(transactionId: id);
+          },
+        ),
+      ],
+    ),
+    GoRoute(
       path: '/analytics',
       builder: (context, state) => const AnalyticsScreen(),
     ),
@@ -190,6 +211,16 @@ final appRouter = GoRouter(
           path: 'create',
           builder: (context, state) => const CreateBudgetScreen(),
         ),
+        GoRoute(
+          path: ':id',
+          builder: (context, state) {
+            final budget = state.extra as BudgetStatusEntity?;
+            if (budget == null) {
+              return const BudgetScreen();
+            }
+            return BudgetDetailScreen(budget: budget);
+          },
+        ),
       ],
     ),
     GoRoute(
@@ -201,10 +232,13 @@ final appRouter = GoRouter(
           builder: (context, state) => const AddWalletScreen(),
         ),
         GoRoute(
-          path: ':id/edit',
+          path: ':id',
           builder: (context, state) {
             final wallet = state.extra as WalletEntity?;
-            return AddWalletScreen(wallet: wallet);
+            if (wallet == null) {
+              return const WalletsScreen();
+            }
+            return WalletDetailScreen(wallet: wallet);
           },
         ),
       ],

@@ -5,6 +5,8 @@ class TransactionModel extends TransactionEntity {
     required super.id,
     required super.walletId,
     required super.walletName,
+    super.toWalletId,
+    super.toWalletName,
     required super.userId,
     required super.amount,
     required super.type,
@@ -19,6 +21,8 @@ class TransactionModel extends TransactionEntity {
       id: json['transactionId']?.toString() ?? '',
       walletId: json['walletId']?.toString() ?? '',
       walletName: json['walletName']?.toString() ?? '',
+      toWalletId: json['toWalletId']?.toString(),
+      toWalletName: json['toWalletName']?.toString(),
       userId: json['userId']?.toString() ?? '',
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       type: _parseTransactionType(json['transactionType']),
@@ -31,9 +35,13 @@ class TransactionModel extends TransactionEntity {
 
   static TransactionType _parseTransactionType(dynamic value) {
     if (value is num) {
-      return value.toInt() == 1
-          ? TransactionType.income
-          : TransactionType.expense;
+      if (value.toInt() == 1) {
+        return TransactionType.income;
+      }
+      if (value.toInt() == 2) {
+        return TransactionType.expense;
+      }
+      return TransactionType.transfer;
     }
     if (value is String) {
       final normalized = value.toLowerCase();
@@ -43,9 +51,18 @@ class TransactionModel extends TransactionEntity {
       if (normalized == 'expense') {
         return TransactionType.expense;
       }
+      if (normalized == 'transfer') {
+        return TransactionType.transfer;
+      }
       final asInt = int.tryParse(value);
       if (asInt == 1) {
         return TransactionType.income;
+      }
+      if (asInt == 2) {
+        return TransactionType.expense;
+      }
+      if (asInt == 3) {
+        return TransactionType.transfer;
       }
     }
     return TransactionType.expense;
@@ -53,10 +70,14 @@ class TransactionModel extends TransactionEntity {
 
   static DateTime _parseDate(dynamic value) {
     if (value is DateTime) {
-      return value;
+      return value.isUtc ? value.toLocal() : value;
     }
     if (value is String) {
-      return DateTime.tryParse(value) ?? DateTime.now();
+      final parsed = DateTime.tryParse(value);
+      if (parsed == null) {
+        return DateTime.now();
+      }
+      return parsed.isUtc ? parsed.toLocal() : parsed;
     }
     return DateTime.now();
   }

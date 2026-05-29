@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
-import 'delete_wallet_screen.dart';
 import '../domain/entities/wallet.dart';
 import '../providers/wallets_providers.dart';
 
-class WalletsScreen extends ConsumerWidget {
+class WalletsScreen extends ConsumerStatefulWidget {
   const WalletsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WalletsScreen> createState() => _WalletsScreenState();
+}
+
+class _WalletsScreenState extends ConsumerState<WalletsScreen> {
+  String? _selectedCurrency;
+
+  @override
+  Widget build(BuildContext context) {
     final wallets = ref.watch(walletsProvider);
 
     return Scaffold(
@@ -74,10 +81,14 @@ class WalletsScreen extends ConsumerWidget {
                 );
               }
               final items = result.data ?? const [];
+              final availableCurrencies = _walletCurrencies(items);
+              final activeCurrency = _resolveActiveCurrency(
+                availableCurrencies,
+              );
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _summaryCard(items),
+                  _summaryCard(items, availableCurrencies, activeCurrency),
                   const SizedBox(height: 20),
                   if (items.isEmpty)
                     const Text(
@@ -132,11 +143,12 @@ class WalletsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryCard(List<WalletEntity> wallets) {
-    final total = wallets.fold<double>(
-      0,
-      (sum, wallet) => sum + wallet.balance,
-    );
+  Widget _summaryCard(
+    List<WalletEntity> wallets,
+    List<String> currencies,
+    String activeCurrency,
+  ) {
+    final total = _walletsTotalForCurrency(wallets, activeCurrency);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -147,13 +159,19 @@ class WalletsScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Total Assets',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Total Assets',
+                style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+              ),
+              _currencyDropdown(currencies, activeCurrency),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
-            _formatCurrency(total),
+            _formatCurrencyWithSymbol(total, activeCurrency),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 30,
@@ -172,8 +190,7 @@ class WalletsScreen extends ConsumerWidget {
 
   Widget _walletCard(BuildContext context, WidgetRef ref, WalletEntity wallet) {
     return GestureDetector(
-      onTap: () =>
-          context.push('/wallets/${wallet.walletId}/edit', extra: wallet),
+      onTap: () => context.push('/wallets/${wallet.walletId}', extra: wallet),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -218,13 +235,7 @@ class WalletsScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    wallet.currency,
-                    style: const TextStyle(
-                      color: Color(0xFF8B8B8B),
-                      fontSize: 12,
-                    ),
-                  ),
+                  const SizedBox(height: 2),
                 ],
               ),
             ),
@@ -232,69 +243,23 @@ class WalletsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  _formatCurrency(wallet.balance),
+                  _formatCurrencyWithSymbol(
+                    wallet.balance,
+                    wallet.currency.trim().toUpperCase(),
+                  ),
                   style: const TextStyle(
                     color: Color(0xFF111111),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  wallet.currency,
-                  style: const TextStyle(
-                    color: Color(0xFF8B8B8B),
-                    fontSize: 12,
-                  ),
-                ),
               ],
             ),
             const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Color(0xFFFB2C36)),
-              onPressed: () => _confirmDelete(context, ref, wallet),
-            ),
+            const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF), size: 20),
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _confirmDelete(
-    BuildContext context,
-    WidgetRef ref,
-    WalletEntity wallet,
-  ) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (pageContext) => DeleteWalletScreen(
-          walletName: wallet.name,
-          onDelete: () => _deleteWallet(pageContext, ref, wallet),
-          onCancel: () => Navigator.of(pageContext).pop(),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _deleteWallet(
-    BuildContext context,
-    WidgetRef ref,
-    WalletEntity wallet,
-  ) async {
-    final result = await ref.read(deleteWalletUseCaseProvider)(wallet.walletId);
-    if (!context.mounted) return;
-
-    if (result.isSuccess) {
-      ref.invalidate(walletsProvider);
-      Navigator.of(context).pop();
-      return;
-    }
-
-    final message = result.message.isNotEmpty
-        ? result.message
-        : 'Failed to delete wallet.';
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _onTabSelected(BuildContext context, AppTab tab) {
@@ -316,8 +281,107 @@ class WalletsScreen extends ConsumerWidget {
     }
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
+  String _formatCurrencyWithSymbol(double value, String currencyCode) {
+    final symbol = _currencySymbol(currencyCode);
+    return NumberFormat.currency(symbol: symbol).format(value);
+  }
+
+  String _currencySymbol(String currencyCode) {
+    switch (currencyCode.toUpperCase()) {
+      case 'USD':
+        return '\$';
+      case 'EUR':
+        return '\u20ac';
+      case 'GBP':
+        return '\u00a3';
+      case 'EGP':
+        return 'E£';
+      case 'JPY':
+        return '\u00a5';
+      default:
+        return currencyCode.isNotEmpty ? currencyCode.substring(0, 1) : '\$';
+    }
+  }
+
+  List<String> _walletCurrencies(List<WalletEntity> wallets) {
+    final values = <String>{};
+    for (final wallet in wallets) {
+      final currency = wallet.currency.trim();
+      if (currency.isNotEmpty) {
+        values.add(currency.toUpperCase());
+      }
+    }
+    final list = values.toList()..sort();
+    return list.isEmpty ? ['USD'] : list;
+  }
+
+  String _resolveActiveCurrency(List<String> currencies) {
+    if (_selectedCurrency == null || !currencies.contains(_selectedCurrency)) {
+      final nextCurrency = currencies.isNotEmpty ? currencies.first : 'USD';
+      if (_selectedCurrency != nextCurrency) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _selectedCurrency = nextCurrency;
+          });
+        });
+      }
+      return nextCurrency;
+    }
+    return _selectedCurrency!;
+  }
+
+  double _walletsTotalForCurrency(List<WalletEntity> wallets, String currency) {
+    final target = currency.toUpperCase();
+    return wallets
+        .where((wallet) => wallet.currency.toUpperCase() == target)
+        .fold(0.0, (sum, wallet) => sum + wallet.balance);
+  }
+
+  Widget _currencyDropdown(List<String> items, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F1F1F),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF2E2E2E)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            color: Color(0xFF8B8B8B),
+            size: 18,
+          ),
+          dropdownColor: const Color(0xFF1F1F1F),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+          isDense: true,
+          items: items
+              .map(
+                (currency) => DropdownMenuItem<String>(
+                  value: currency,
+                  child: Text(currency),
+                ),
+              )
+              .toList(),
+          onChanged: (next) {
+            if (next == null) {
+              return;
+            }
+            setState(() {
+              _selectedCurrency = next;
+            });
+          },
+        ),
+      ),
+    );
   }
 
   String _errorText(Object error) {

@@ -21,7 +21,13 @@ class CategoryModel extends CategoryEntity {
 
   static CategoryType _parseCategoryType(dynamic value) {
     if (value is num) {
-      return value.toInt() == 1 ? CategoryType.income : CategoryType.expense;
+      if (value.toInt() == 1) {
+        return CategoryType.income;
+      }
+      if (value.toInt() == 2) {
+        return CategoryType.expense;
+      }
+      return CategoryType.transfer;
     }
     if (value is String) {
       final normalized = value.toLowerCase();
@@ -31,9 +37,18 @@ class CategoryModel extends CategoryEntity {
       if (normalized == 'expense') {
         return CategoryType.expense;
       }
+      if (normalized == 'transfer') {
+        return CategoryType.transfer;
+      }
       final asInt = int.tryParse(value);
       if (asInt == 1) {
         return CategoryType.income;
+      }
+      if (asInt == 2) {
+        return CategoryType.expense;
+      }
+      if (asInt == 3) {
+        return CategoryType.transfer;
       }
     }
     return CategoryType.expense;

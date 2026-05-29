@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../categories/domain/entities/category.dart';
@@ -21,6 +22,7 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
 }
 
 class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
+  static const String _emptyGuid = '00000000-0000-0000-0000-000000000000';
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
 
@@ -28,8 +30,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   DateTime _date = DateTime.now();
   List<WalletEntity> _wallets = [];
   List<CategoryEntity> _allCategories = [];
-  List<CategoryEntity> _categories = [];
   String? _walletId;
+  String? _toWalletId;
   String? _categoryId;
   bool _loadingData = true;
   bool _submitting = false;
@@ -64,17 +66,20 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     if (!mounted) return;
 
+    final resolvedWalletId =
+        _walletId ?? (wallets.isNotEmpty ? wallets.first.walletId : null);
+    final resolvedToWalletId = _transactionType == 3
+        ? (_toWalletId ?? _defaultToWalletId(wallets, resolvedWalletId))
+        : null;
+
     setState(() {
       _wallets = wallets;
       _allCategories = categories;
-      _categories = filteredCategories;
-      _walletId =
-          _walletId ?? (wallets.isNotEmpty ? wallets.first.walletId : null);
-      _categoryId = _transactionType == 3
-          ? null
-          : (filteredCategories.isNotEmpty
-                ? filteredCategories.first.id
-                : null);
+      _walletId = resolvedWalletId;
+      _toWalletId = resolvedToWalletId;
+      _categoryId = filteredCategories.isNotEmpty
+          ? filteredCategories.first.id
+          : null;
       _loadingData = false;
       _errorMessage = _errorMessageFromResults(walletsResult, categoriesResult);
     });
@@ -100,17 +105,29 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (_transactionType == 2) {
       return categories.where((c) => c.type == CategoryType.expense).toList();
     }
+    if (_transactionType == 3) {
+      return categories.where((c) => c.type == CategoryType.transfer).toList();
+    }
     return const [];
   }
 
   void _applyCategoryFilter() {
     final filtered = _filterCategories(_allCategories);
     setState(() {
-      _categories = filtered;
-      _categoryId = _transactionType == 3
-          ? null
-          : (filtered.isNotEmpty ? filtered.first.id : null);
+      _categoryId = filtered.isNotEmpty ? filtered.first.id : null;
+      if (_transactionType == 3) {
+        _toWalletId = _defaultToWalletId(_wallets, _walletId);
+      }
     });
+  }
+
+  String? _defaultToWalletId(List<WalletEntity> wallets, String? fromWalletId) {
+    for (final wallet in wallets) {
+      if (wallet.walletId != fromWalletId) {
+        return wallet.walletId;
+      }
+    }
+    return null;
   }
 
   Future<void> _pickTime() async {
@@ -185,7 +202,17 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       );
       return;
     }
-    if (_categoryId == null && _transactionType != 3) {
+    if (_transactionType == 3 && _toWalletId == null) {
+      setState(() => _errorMessage = 'Select a target wallet for transfers.');
+      return;
+    }
+    if (_transactionType == 3 && _toWalletId == _walletId) {
+      setState(
+        () => _errorMessage = 'Source and target wallets must be different.',
+      );
+      return;
+    }
+    if (_transactionType != 3 && _categoryId == null) {
       setState(() => _errorMessage = 'Select a category.');
       return;
     }
@@ -195,13 +222,18 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _errorMessage = null;
     });
 
+    final resolvedCategoryId = _transactionType == 3
+        ? (_categoryId ?? _emptyGuid)
+        : _categoryId!;
+
     final result = await ref.read(createTransactionUseCaseProvider)(
       TransactionCreateData(
         userId: '',
         walletId: _walletId!,
+        toWalletId: _transactionType == 3 ? _toWalletId : null,
         amount: amount,
         transactionType: _transactionType,
-        categoryId: _transactionType == 3 ? _walletId! : _categoryId!,
+        categoryId: resolvedCategoryId,
         description: _descriptionController.text.trim(),
         transactionDate: _date,
       ),
@@ -440,14 +472,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                   ),
                                 );
                               }).toList(),
-                              onChanged: (value) =>
-                                  setState(() => _walletId = value),
+                              onChanged: (value) {
+                                setState(() {
+                                  _walletId = value;
+                                  if (_transactionType == 3 &&
+                                      _toWalletId == value) {
+                                    _toWalletId =
+                                        _defaultToWalletId(_wallets, value);
+                                  }
+                                });
+                              },
                             ),
-                          if (_transactionType != 3) ...[
+                          if (_transactionType == 3) ...[
                             const SizedBox(height: 16),
-                            if (_categories.isEmpty)
+                            if (_wallets.length < 2)
                               const Text(
-                                'No categories available for this type.',
+                                'Create another wallet to make transfers.',
                                 style: TextStyle(
                                   color: Color(0xFF8B8B8B),
                                   fontSize: 14,
@@ -455,24 +495,30 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               )
                             else
                               _dropdown<String>(
-                                label: 'Category',
-                                value: _categoryId,
-                                items: _categories.map((category) {
-                                  return DropdownMenuItem<String>(
-                                    value: category.id,
-                                    child: Text(
-                                      category.name,
-                                      style: const TextStyle(
-                                        color: Color(0xFF111111),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
+                                label: 'To Wallet',
+                                value: _toWalletId,
+                                items: _wallets
+                                    .where(
+                                      (wallet) => wallet.walletId != _walletId,
+                                    )
+                                    .map((wallet) {
+                                      return DropdownMenuItem<String>(
+                                        value: wallet.walletId,
+                                        child: Text(
+                                          wallet.name,
+                                          style: const TextStyle(
+                                            color: Color(0xFF111111),
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      );
+                                    })
+                                    .toList(),
                                 onChanged: (value) =>
-                                    setState(() => _categoryId = value),
+                                    setState(() => _toWalletId = value),
                               ),
                           ],
+                          const SizedBox(height: 16),
                           const SizedBox(height: 16),
                           _label('Date & Time'),
                           const SizedBox(height: 8),

@@ -36,7 +36,11 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.TransactionId, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.WalletId, opt => opt.MapFrom(src => src.WalletId))
             .ForMember(dest => dest.WalletName, opt => opt.MapFrom(src => src.Wallet.Name))
-            .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.ApplicationUserId));
+            .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.ApplicationUserId))
+            .ForMember(dest => dest.ToWalletId, opt => opt.MapFrom(src => src.ToWalletId))
+            .ForMember(
+                dest => dest.ToWalletName,
+                opt => opt.MapFrom(src => src.ToWallet != null ? src.ToWallet.Name : null));
 
         CreateMap<Category, CategoryDto>();
 

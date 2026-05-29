@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,7 +22,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
+  late final TapGestureRecognizer _termsTapRecognizer;
+  late final TapGestureRecognizer _privacyTapRecognizer;
   bool _isLoading = false;
+  bool _passwordObscured = true;
+  bool _confirmPasswordObscured = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsTapRecognizer = TapGestureRecognizer()
+      ..onTap = () => context.push('/profile/terms');
+    _privacyTapRecognizer = TapGestureRecognizer()
+      ..onTap = () => context.push('/profile/privacy');
+  }
 
   @override
   void dispose() {
@@ -30,6 +45,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _termsTapRecognizer.dispose();
+    _privacyTapRecognizer.dispose();
     super.dispose();
   }
 
@@ -206,6 +223,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 _passwordField(
                   controller: _passwordController,
                   hintText: 'Min. 8 characters',
+                  obscured: _passwordObscured,
+                  onToggle: () =>
+                      setState(() => _passwordObscured = !_passwordObscured),
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -221,6 +241,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 _passwordField(
                   controller: _confirmPasswordController,
                   hintText: 'Repeat your password',
+                  obscured: _confirmPasswordObscured,
+                  onToggle: () => setState(
+                    () => _confirmPasswordObscured = !_confirmPasswordObscured,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text.rich(
@@ -243,6 +267,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w400,
                         ),
+                        recognizer: _termsTapRecognizer,
                       ),
                       TextSpan(
                         text: ' and ',
@@ -261,6 +286,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w400,
                         ),
+                        recognizer: _privacyTapRecognizer,
                       ),
                       TextSpan(
                         text: '.',
@@ -390,6 +416,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget _passwordField({
     required TextEditingController controller,
     required String hintText,
+    required bool obscured,
+    required VoidCallback onToggle,
   }) {
     return Container(
       width: double.infinity,
@@ -419,7 +447,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           Expanded(
             child: TextField(
               controller: controller,
-              obscureText: true,
+              obscureText: obscured,
               decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: hintText,
@@ -438,10 +466,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
             ),
           ),
-          const Icon(
-            Icons.visibility_off_outlined,
-            color: Color(0xFFC4C4C4),
-            size: 20,
+          IconButton(
+            onPressed: onToggle,
+            icon: Icon(
+              obscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              color: const Color(0xFFC4C4C4),
+              size: 20,
+            ),
           ),
         ],
       ),

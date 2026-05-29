@@ -16,6 +16,8 @@ import '../domain/entities/category_breakdown.dart';
 import '../domain/entities/income_vs_expense.dart';
 import '../domain/entities/spending_trend.dart';
 import '../providers/analytics_providers.dart';
+import '../utils/analytics_chart_data.dart';
+import '../widgets/analytics_vertical_bar_chart.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({super.key});
@@ -41,11 +43,13 @@ class AnalyticsScreen extends ConsumerWidget {
     final categories = period == AnalyticsPeriod.month
         ? ref.watch(categoriesProvider)
         : AsyncValue.data(Result.success(<CategoryEntity>[]));
-    final transactions = period == AnalyticsPeriod.month
-      ? ref.watch(transactionsProvider)
-      : AsyncValue.data(Result.success(<TransactionEntity>[]));
+    final transactions =
+        period == AnalyticsPeriod.month || period == AnalyticsPeriod.week
+        ? ref.watch(transactionsProvider)
+        : AsyncValue.data(Result.success(<TransactionEntity>[]));
     final incomeVsExpense = ref.watch(incomeVsExpenseProvider);
     final spendingTrend = ref.watch(spendingTrendProvider);
+    final yearlyComparison = ref.watch(yearlyComparisonProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -60,7 +64,9 @@ class AnalyticsScreen extends ConsumerWidget {
                   ref.invalidate(incomeVsExpenseProvider);
                   ref.invalidate(spendingTrendProvider);
                   ref.invalidate(dateRangeSummaryProvider);
+                  ref.invalidate(yearlyComparisonProvider);
                   ref.invalidate(categoriesProvider);
+                  ref.invalidate(transactionsProvider);
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -97,16 +103,23 @@ class AnalyticsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 16),
                       _card(
-                        title: 'Spending Trend',
-                        height: 180,
-                        child: _spendingTrendSection(spendingTrend),
+                        title: _spendingTrendTitle(period),
+                        child: _spendingTrendSection(
+                          period: period,
+                          trend: spendingTrend,
+                          yearlyComparison: yearlyComparison,
+                        ),
                       ),
                       const SizedBox(height: 16),
-                      if (period == AnalyticsPeriod.year)
-                        _card(
-                          title: 'Income vs Expense',
-                          child: _incomeVsExpenseSection(incomeVsExpense),
+                      _card(
+                        title: _incomeVsExpenseTitle(period),
+                        child: _incomeVsExpenseSection(
+                          period: period,
+                          monthlyData: incomeVsExpense,
+                          yearlyData: yearlyComparison,
+                          transactions: transactions,
                         ),
+                      ),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -521,9 +534,62 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _spendingTrendSection(
-    AsyncValue<Result<List<SpendingTrendEntity>>> trend,
-  ) {
+  String _spendingTrendTitle(AnalyticsPeriod period) {
+    switch (period) {
+      case AnalyticsPeriod.week:
+        return 'Weekly Spending';
+      case AnalyticsPeriod.month:
+        return 'Monthly Spending';
+      case AnalyticsPeriod.year:
+        return 'Yearly Spending';
+    }
+  }
+
+  String _incomeVsExpenseTitle(AnalyticsPeriod period) {
+    switch (period) {
+      case AnalyticsPeriod.week:
+        return 'Income vs Expense by Week';
+      case AnalyticsPeriod.month:
+        return 'Income vs Expense by Month';
+      case AnalyticsPeriod.year:
+        return 'Income vs Expense by Year';
+    }
+  }
+
+  Widget _spendingTrendSection({
+    required AnalyticsPeriod period,
+    required AsyncValue<Result<List<SpendingTrendEntity>>> trend,
+    required AsyncValue<Result<List<YearlyComparison>>> yearlyComparison,
+  }) {
+    if (period == AnalyticsPeriod.year) {
+      return yearlyComparison.when(
+        data: (result) {
+          if (result.isFailure) {
+            return Text(
+              result.message,
+              style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            );
+          }
+          final bars = spendingTrendBarsForPeriod(
+            items: const [],
+            period: period,
+            now: DateTime.now(),
+            yearlyComparisons: result.data ?? const [],
+          );
+          return _barChart(
+            bars,
+            period: period,
+            emptyMessage: 'No yearly spending data yet.',
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Text(
+          _errorText(error),
+          style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        ),
+      );
+    }
+
     return trend.when(
       data: (result) {
         if (result.isFailure) {
@@ -533,72 +599,16 @@ class AnalyticsScreen extends ConsumerWidget {
           );
         }
         final items = result.data ?? const [];
-        if (items.isEmpty) {
-          return const Center(
-            child: Text(
-              'No spending data yet.',
-              style: TextStyle(color: Color(0xFF8B8B8B)),
-            ),
-          );
-        }
-        final slice = items.length > 7
-            ? items.sublist(items.length - 7)
-            : items;
-        final maxValue = slice.fold<double>(
-          0,
-          (max, item) => math.max(max, item.totalExpenses),
+        final bars = spendingTrendBarsForPeriod(
+          items: items,
+          period: period,
+          now: DateTime.now(),
         );
-
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: slice.map((item) {
-            final ratio = maxValue > 0 ? item.totalExpenses / maxValue : 0.0;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 64,
-                    child: Text(
-                      DateFormat('MM/dd').format(item.date),
-                      style: const TextStyle(
-                        color: Color(0xFF8B8B8B),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Container(
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: ratio,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF3B82F6),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    _formatCurrency(item.totalExpenses),
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
+        return _barChart(
+          bars,
+          period: period,
+          emptyMessage: 'No spending data yet.',
+          labelWidth: period == AnalyticsPeriod.month ? 36 : 52,
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -609,10 +619,153 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _incomeVsExpenseSection(
-    AsyncValue<Result<List<IncomeVsExpenseEntity>>> data,
-  ) {
-    return data.when(
+  Widget _barChart(
+    List<AnalyticsChartBar> bars, {
+    required AnalyticsPeriod period,
+    required String emptyMessage,
+    double labelWidth = 52,
+  }) {
+    if (bars.isEmpty || bars.every((bar) => bar.value <= 0)) {
+      return Center(
+        child: Text(
+          emptyMessage,
+          style: const TextStyle(color: Color(0xFF8B8B8B)),
+        ),
+      );
+    }
+
+    if (period == AnalyticsPeriod.week || period == AnalyticsPeriod.year) {
+      return AnalyticsVerticalBarChart(
+        bars: bars,
+        formatValue: _formatShortCurrency,
+      );
+    }
+
+    final maxValue = bars.fold<double>(
+      0,
+      (max, bar) => math.max(max, bar.value),
+    );
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: bars.map((bar) {
+        final ratio = maxValue > 0 ? (bar.value / maxValue).clamp(0.0, 1.0) : 0.0;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              SizedBox(
+                width: labelWidth,
+                child: Text(
+                  bar.label,
+                  style: const TextStyle(
+                    color: Color(0xFF8B8B8B),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: ratio,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B82F6),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                _formatCurrency(bar.value),
+                style: const TextStyle(
+                  color: Color(0xFF111111),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _incomeVsExpenseSection({
+    required AnalyticsPeriod period,
+    required AsyncValue<Result<List<IncomeVsExpenseEntity>>> monthlyData,
+    required AsyncValue<Result<List<YearlyComparison>>> yearlyData,
+    required AsyncValue<Result<List<TransactionEntity>>> transactions,
+  }) {
+    if (period == AnalyticsPeriod.week) {
+      return transactions.when(
+        data: (result) {
+          if (result.isFailure) {
+            return Text(
+              result.message,
+              style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            );
+          }
+          final bars = incomeVsExpenseBarsForPeriod(
+            monthlyItems: const [],
+            yearlyItems: const [],
+            weeklyTransactions: result.data ?? const [],
+            period: period,
+            now: DateTime.now(),
+          );
+          return _comparisonChart(
+            bars,
+            period: period,
+            emptyMessage: 'No weekly comparison data yet.',
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Text(
+          _errorText(error),
+          style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        ),
+      );
+    }
+
+    if (period == AnalyticsPeriod.year) {
+      return yearlyData.when(
+        data: (result) {
+          if (result.isFailure) {
+            return Text(
+              result.message,
+              style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            );
+          }
+          final bars = incomeVsExpenseBarsForPeriod(
+            monthlyItems: const [],
+            yearlyItems: result.data ?? const [],
+            weeklyTransactions: const [],
+            period: period,
+            now: DateTime.now(),
+          );
+          return _comparisonChart(
+            bars,
+            period: period,
+            emptyMessage: 'No yearly comparison data yet.',
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Text(
+          _errorText(error),
+          style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        ),
+      );
+    }
+
+    return monthlyData.when(
       data: (result) {
         if (result.isFailure) {
           return Text(
@@ -620,91 +773,123 @@ class AnalyticsScreen extends ConsumerWidget {
             style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
           );
         }
-        final items = result.data ?? const [];
-        if (items.isEmpty) {
-          return const Center(
-            child: Text(
-              'No yearly data yet.',
-              style: TextStyle(color: Color(0xFF8B8B8B)),
-            ),
-          );
-        }
-        final maxValue = items.fold<double>(
-          0,
-          (max, item) => math.max(max, math.max(item.income, item.expenses)),
+        final bars = incomeVsExpenseBarsForPeriod(
+          monthlyItems: result.data ?? const [],
+          yearlyItems: const [],
+          weeklyTransactions: const [],
+          period: period,
+          now: DateTime.now(),
         );
-        return Column(
-          children: items.map((item) {
-            final ratioIncome = maxValue > 0 ? (item.income / maxValue) : 0.0;
-            final ratioExpense = maxValue > 0
-                ? (item.expenses / maxValue)
-                : 0.0;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 32,
-                    child: Text(
-                      item.month.toString().padLeft(2, '0'),
-                      style: const TextStyle(
-                        color: Color(0xFF8B8B8B),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Container(
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: ratioIncome,
-                          child: Container(
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEF4444),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                          ),
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: ratioExpense,
-                          child: Container(
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${_formatShort(item.income)} / ${_formatShort(item.expenses)}',
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
+        return _comparisonChart(
+          bars,
+          period: period,
+          emptyMessage: 'No monthly comparison data yet.',
+          labelWidth: 36,
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Text(
         _errorText(error),
         style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+      ),
+    );
+  }
+
+  Widget _comparisonChart(
+    List<AnalyticsComparisonBar> bars, {
+    required AnalyticsPeriod period,
+    required String emptyMessage,
+    double labelWidth = 36,
+  }) {
+    if (bars.isEmpty ||
+        bars.every((bar) => bar.income <= 0 && bar.expenses <= 0)) {
+      return Center(
+        child: Text(
+          emptyMessage,
+          style: const TextStyle(color: Color(0xFF8B8B8B)),
+        ),
+      );
+    }
+
+    if (period == AnalyticsPeriod.week || period == AnalyticsPeriod.year) {
+      return AnalyticsVerticalGroupedBarChart(bars: bars);
+    }
+
+    final maxValue = bars.fold<double>(
+      0,
+      (max, bar) => math.max(max, math.max(bar.income, bar.expenses)),
+    );
+
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: const [
+            _LegendDot(color: Color(0xFF10B981), label: 'Income'),
+            SizedBox(width: 12),
+            _LegendDot(color: Color(0xFFEF4444), label: 'Expense'),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...bars.map((bar) {
+          final ratioIncome = maxValue > 0 ? (bar.income / maxValue) : 0.0;
+          final ratioExpense = maxValue > 0 ? (bar.expenses / maxValue) : 0.0;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: labelWidth,
+                  child: Text(
+                    bar.label,
+                    style: const TextStyle(
+                      color: Color(0xFF8B8B8B),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      _comparisonBar(ratioIncome, const Color(0xFF10B981)),
+                      const SizedBox(height: 4),
+                      _comparisonBar(ratioExpense, const Color(0xFFEF4444)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${_formatShort(bar.income)} / ${_formatShort(bar.expenses)}',
+                  style: const TextStyle(
+                    color: Color(0xFF111111),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _comparisonBar(double ratio, Color color) {
+    return Container(
+      height: 5,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: ratio.clamp(0.0, 1.0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
       ),
     );
   }
@@ -775,6 +960,13 @@ class AnalyticsScreen extends ConsumerWidget {
     return NumberFormat.currency(symbol: '\$').format(value);
   }
 
+  String _formatShortCurrency(double value) {
+    if (value >= 1000) {
+      return NumberFormat.compactCurrency(symbol: '\$').format(value);
+    }
+    return NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(value);
+  }
+
   String _formatShort(double value) {
     if (value == value.truncateToDouble()) {
       return value.toInt().toString();
@@ -787,6 +979,36 @@ class AnalyticsScreen extends ConsumerWidget {
       return error.message;
     }
     return 'Failed to load data.';
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF8B8B8B),
+            fontSize: 11,
+            fontFamily: 'Inter',
+          ),
+        ),
+      ],
+    );
   }
 }
 

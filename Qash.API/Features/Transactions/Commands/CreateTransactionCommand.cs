@@ -12,6 +12,8 @@ public class CreateTransactionCommand : IRequest<ApiResponse<TransactionDto>>
 
     public Guid WalletId { get; set; }
 
+    public Guid? ToWalletId { get; set; }
+
     public decimal Amount { get; set; }
 
     public CategoryType TransactionType { get; set; }

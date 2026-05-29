@@ -27,7 +27,37 @@ class TransactionsRepositoryImpl implements TransactionsRepository {
   }
 
   @override
-  Future<Result<String>> createTransaction(TransactionCreateData data) async {
+  Future<Result<TransactionEntity>> getTransactionById(
+    String transactionId,
+  ) async {
+    final response = await _remoteDataSource.getTransactionById(transactionId);
+
+    if (response.success && response.data != null) {
+      return Result.success(response.data!);
+    }
+
+    return Result.failure(
+      AppFailure(message: response.message, errors: response.errors),
+    );
+  }
+
+  @override
+  Future<Result<String>> deleteTransaction(String transactionId) async {
+    final response = await _remoteDataSource.deleteTransaction(transactionId);
+
+    if (response.success) {
+      return Result.success(response.message);
+    }
+
+    return Result.failure(
+      AppFailure(message: response.message, errors: response.errors),
+    );
+  }
+
+  @override
+  Future<Result<TransactionEntity>> createTransaction(
+    TransactionCreateData data,
+  ) async {
     final resolvedUserId = data.userId.isNotEmpty
         ? data.userId
         : await _storage.getUserId() ?? '';
@@ -43,6 +73,7 @@ class TransactionsRepositoryImpl implements TransactionsRepository {
         TransactionCreateData(
           userId: resolvedUserId,
           walletId: data.walletId,
+          toWalletId: data.toWalletId,
           amount: data.amount,
           transactionType: data.transactionType,
           categoryId: data.categoryId,
@@ -52,8 +83,8 @@ class TransactionsRepositoryImpl implements TransactionsRepository {
       ),
     );
 
-    if (response.success) {
-      return Result.success(response.data ?? response.message);
+    if (response.success && response.data != null) {
+      return Result.success(response.data!);
     }
 
     return Result.failure(

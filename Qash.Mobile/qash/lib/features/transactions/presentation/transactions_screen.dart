@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +9,8 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
+import '../../wallets/domain/entities/wallet.dart';
+import '../../wallets/providers/wallets_providers.dart';
 import '../domain/entities/transaction.dart';
 import '../providers/transactions_providers.dart';
 
@@ -18,6 +21,7 @@ class TransactionsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(transactionsSummaryProvider);
     final filter = ref.watch(transactionsFilterProvider);
+    final listOptions = ref.watch(transactionListOptionsProvider);
     final transactions = ref.watch(filteredTransactionsProvider);
     final categories = ref.watch(categoriesProvider);
 
@@ -52,12 +56,10 @@ class TransactionsScreen extends ConsumerWidget {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            Row(
-                              children: [
-                                _iconButton(Icons.search),
-                                const SizedBox(width: 8),
-                                _iconButton(Icons.tune),
-                              ],
+                            _filterButton(
+                              context,
+                              ref,
+                              listOptions.hasActiveFilters,
                             ),
                           ],
                         ),
@@ -132,7 +134,13 @@ class TransactionsScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 24),
                         transactions.when(
-                          data: (items) => _transactionsList(items, categories),
+                          data: (items) => _transactionsList(
+                            context,
+                            items,
+                            categories,
+                            listOptions.sort,
+                            listOptions.walletId,
+                          ),
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
                             child: Center(child: CircularProgressIndicator()),
@@ -267,15 +275,21 @@ class TransactionsScreen extends ConsumerWidget {
   }
 
   Widget _transactionsList(
+    BuildContext context,
     List<TransactionEntity> items,
     AsyncValue<Result<List<CategoryEntity>>> categories,
+    TransactionListSort sort,
+    String? walletId,
   ) {
     if (items.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
+      final message = walletId != null && walletId.isNotEmpty
+          ? 'No transactions for this wallet.'
+          : 'No transactions yet.';
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
         child: Text(
-          'No transactions yet.',
-          style: TextStyle(
+          message,
+          style: const TextStyle(
             color: Color(0xFF8B8B8B),
             fontSize: 12,
             fontFamily: 'Inter',
@@ -285,28 +299,323 @@ class TransactionsScreen extends ConsumerWidget {
     }
 
     final categoryMap = _buildCategoryMap(categories);
-    final sorted = [...items]
-      ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
-    final grouped = <String, List<TransactionEntity>>{};
-    for (final item in sorted) {
-      final label = _formatSectionLabel(item.transactionDate);
-      grouped.putIfAbsent(label, () => []).add(item);
+    final groupByDate = sort == TransactionListSort.dateNewest ||
+        sort == TransactionListSort.dateOldest;
+
+    if (!groupByDate) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final item in items) ...[
+            _transactionItem(context, item, categoryMap),
+            const SizedBox(height: 8),
+          ],
+        ],
+      );
     }
 
-    final sections = grouped.entries.toList();
+    final grouped = <DateTime, List<TransactionEntity>>{};
+    for (final item in items) {
+      final day = transactionLocalDate(item.transactionDate);
+      grouped.putIfAbsent(day, () => []).add(item);
+    }
+
+    final sectionDays = grouped.keys.toList()
+      ..sort(
+        (a, b) => sort == TransactionListSort.dateOldest
+            ? a.compareTo(b)
+            : b.compareTo(a),
+      );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final entry in sections) ...[
-          _sectionLabel(entry.key),
+        for (final day in sectionDays) ...[
+          _sectionLabel(_formatSectionLabel(day)),
           const SizedBox(height: 8),
-          for (final item in entry.value) ...[
-            _transactionItem(item, categoryMap),
+          for (final item in grouped[day]!) ...[
+            _transactionItem(context, item, categoryMap),
             const SizedBox(height: 8),
           ],
           const SizedBox(height: 16),
         ],
       ],
+    );
+  }
+
+  void _showFilterSheet(BuildContext context, WidgetRef ref) {
+    final current = ref.read(transactionListOptionsProvider);
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        var selectedSort = current.sort;
+        String? selectedWalletId = current.walletId;
+
+        return Consumer(
+          builder: (context, ref, _) {
+            final walletsAsync = ref.watch(walletsProvider);
+
+            return StatefulBuilder(
+              builder: (context, setSheetState) {
+                final wallets = walletsAsync.maybeWhen(
+                  data: (result) => result.data ?? const <WalletEntity>[],
+                  orElse: () => const <WalletEntity>[],
+                );
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5E5E5),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Filter & Sort',
+                      style: TextStyle(
+                        color: Color(0xFF111111),
+                        fontSize: 18,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Sort by',
+                      style: TextStyle(
+                        color: Color(0xFF8B8B8B),
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _sortOption(
+                      label: 'Date (newest first)',
+                      selected: selectedSort == TransactionListSort.dateNewest,
+                      onTap: () => setSheetState(
+                        () => selectedSort = TransactionListSort.dateNewest,
+                      ),
+                    ),
+                    _sortOption(
+                      label: 'Date (oldest first)',
+                      selected: selectedSort == TransactionListSort.dateOldest,
+                      onTap: () => setSheetState(
+                        () => selectedSort = TransactionListSort.dateOldest,
+                      ),
+                    ),
+                    _sortOption(
+                      label: 'Amount (low to high)',
+                      selected:
+                          selectedSort == TransactionListSort.amountLowToHigh,
+                      onTap: () => setSheetState(
+                        () => selectedSort = TransactionListSort.amountLowToHigh,
+                      ),
+                    ),
+                    _sortOption(
+                      label: 'Amount (high to low)',
+                      selected:
+                          selectedSort == TransactionListSort.amountHighToLow,
+                      onTap: () => setSheetState(
+                        () => selectedSort = TransactionListSort.amountHighToLow,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Wallet',
+                      style: TextStyle(
+                        color: Color(0xFF8B8B8B),
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _walletOption(
+                      label: 'All wallets',
+                      selected: selectedWalletId == null,
+                      onTap: () =>
+                          setSheetState(() => selectedWalletId = null),
+                    ),
+                    if (walletsAsync.isLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      )
+                    else if (wallets.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          'No wallets yet.',
+                          style: TextStyle(
+                            color: Color(0xFF8B8B8B),
+                            fontSize: 12,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      )
+                    else
+                      ...wallets.map(
+                        (wallet) => _walletOption(
+                          label: wallet.name,
+                          selected:
+                              normalizeTransactionId(selectedWalletId) ==
+                              normalizeTransactionId(wallet.walletId),
+                          onTap: () => setSheetState(
+                            () => selectedWalletId = wallet.walletId,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              ref
+                                  .read(transactionListOptionsProvider.notifier)
+                                  .state = const TransactionListOptions();
+                              Navigator.pop(sheetContext);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF111111),
+                              side: const BorderSide(color: Color(0xFFE5E5E5)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text(
+                              'Reset',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              ref
+                                  .read(transactionListOptionsProvider.notifier)
+                                  .state = TransactionListOptions(
+                                sort: selectedSort,
+                                walletId:
+                                    selectedWalletId != null &&
+                                        selectedWalletId!.isNotEmpty
+                                    ? selectedWalletId
+                                    : null,
+                              );
+                              Navigator.pop(sheetContext);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF4D93A),
+                              foregroundColor: const Color(0xFF111111),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text(
+                              'Apply',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _sortOption({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return _filterSheetOption(label: label, selected: selected, onTap: onTap);
+  }
+
+  Widget _walletOption({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return _filterSheetOption(label: label, selected: selected, onTap: onTap);
+  }
+
+  Widget _filterSheetOption({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
+              size: 20,
+              color: selected
+                  ? const Color(0xFF111111)
+                  : const Color(0xFF8B8B8B),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: selected
+                      ? const Color(0xFF111111)
+                      : const Color(0xFF8B8B8B),
+                  fontSize: 14,
+                  fontFamily: 'Inter',
+                  fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -322,11 +631,9 @@ class TransactionsScreen extends ConsumerWidget {
     );
   }
 
-  String _formatSectionLabel(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final target = DateTime(date.year, date.month, date.day);
-    final difference = today.difference(target).inDays;
+  String _formatSectionLabel(DateTime day) {
+    final today = transactionLocalDate(DateTime.now());
+    final difference = today.difference(day).inDays;
 
     if (difference == 0) {
       return 'Today';
@@ -335,35 +642,48 @@ class TransactionsScreen extends ConsumerWidget {
       return 'Yesterday';
     }
 
-    return DateFormat('MMM d').format(date);
+    return DateFormat('MMM d, yyyy').format(day);
   }
 
   String _formatCurrency(double value) {
     return NumberFormat.currency(symbol: '\$').format(value);
   }
 
-  Widget _iconButton(IconData icon) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-            spreadRadius: -1,
-          ),
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
-        ],
+  Widget _filterButton(
+    BuildContext context,
+    WidgetRef ref,
+    bool hasActiveFilters,
+  ) {
+    return GestureDetector(
+      onTap: () => _showFilterSheet(context, ref),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: hasActiveFilters
+              ? const Color(0xFFF4D93A)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x19000000),
+              blurRadius: 2,
+              offset: Offset(0, 1),
+              spreadRadius: -1,
+            ),
+            BoxShadow(
+              color: Color(0x19000000),
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.tune,
+          size: 20,
+          color: Color(0xFF111111),
+        ),
       ),
-      child: Icon(icon, size: 20, color: const Color(0xFF111111)),
     );
   }
 
@@ -421,6 +741,7 @@ class TransactionsScreen extends ConsumerWidget {
   }
 
   Widget _transactionItem(
+    BuildContext context,
     TransactionEntity item,
     Map<String, CategoryEntity> categoryMap,
   ) {
@@ -458,75 +779,78 @@ class TransactionsScreen extends ConsumerWidget {
     }
     final subtitle = subtitleParts.join(' · ');
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-            spreadRadius: -1,
-          ),
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(iconText, style: const TextStyle(fontSize: 16)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+    return GestureDetector(
+      onTap: () => context.push('/transactions/${item.id}'),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x19000000),
+              blurRadius: 2,
+              offset: Offset(0, 1),
+              spreadRadius: -1,
+            ),
+            BoxShadow(
+              color: Color(0x19000000),
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  if (subtitle.isNotEmpty)
+                  child: Center(
+                    child: Text(iconText, style: const TextStyle(fontSize: 16)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      subtitle,
+                      title,
                       style: const TextStyle(
-                        color: Color(0xFF8B8B8B),
-                        fontSize: 12,
+                        color: Color(0xFF111111),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                ],
-              ),
-            ],
-          ),
-          Text(
-            '$amountSign${_formatCurrency(item.amount)}',
-            style: TextStyle(
-              color: amountColor,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+                    if (subtitle.isNotEmpty)
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: Color(0xFF8B8B8B),
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
-          ),
-        ],
+            Text(
+              '$amountSign${_formatCurrency(item.amount)}',
+              style: TextStyle(
+                color: amountColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

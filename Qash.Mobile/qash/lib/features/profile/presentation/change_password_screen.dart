@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/providers/auth_providers.dart';
@@ -12,7 +13,8 @@ class ProfileChangePasswordScreen extends ConsumerStatefulWidget {
       _ChangePasswordScreenState();
 }
 
-class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScreen> {
+class _ChangePasswordScreenState
+    extends ConsumerState<ProfileChangePasswordScreen> {
   final TextEditingController _currentController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _nextController = TextEditingController();
@@ -204,6 +206,7 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
             label: 'Verification Code',
             controller: _codeController,
             showPassword: false,
+            obscure: false,
             hintText: '00000',
           ),
           const SizedBox(height: 16),
@@ -211,12 +214,20 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
             label: 'New Password',
             controller: _nextController,
             showPassword: _showPassword,
+            toggleVisibility: () => setState(() {
+              _showPassword = !_showPassword;
+            }),
+            showToggle: true,
           ),
           const SizedBox(height: 16),
           _PasswordField(
             label: 'Confirm New Password',
             controller: _confirmController,
             showPassword: _showPassword,
+            toggleVisibility: () => setState(() {
+              _showPassword = !_showPassword;
+            }),
+            showToggle: true,
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -248,6 +259,7 @@ class _PasswordField extends StatelessWidget {
     this.toggleVisibility,
     this.showToggle = false,
     this.hintText = '********',
+    this.obscure = true,
   });
 
   final String label;
@@ -256,6 +268,7 @@ class _PasswordField extends StatelessWidget {
   final VoidCallback? toggleVisibility;
   final bool showToggle;
   final String hintText;
+  final bool obscure;
 
   @override
   Widget build(BuildContext context) {
@@ -269,7 +282,7 @@ class _PasswordField extends StatelessWidget {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          obscureText: showToggle ? !showPassword : label != 'Verification Code',
+          obscureText: obscure ? (showToggle ? !showPassword : true) : false,
           decoration: InputDecoration(
             hintText: hintText,
             filled: true,
@@ -286,7 +299,9 @@ class _PasswordField extends StatelessWidget {
                 ? IconButton(
                     onPressed: toggleVisibility,
                     icon: Icon(
-                      showPassword ? Icons.visibility_off : Icons.visibility,
+                      showPassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
                       color: const Color(0xFF8B8B8B),
                     ),
                   )

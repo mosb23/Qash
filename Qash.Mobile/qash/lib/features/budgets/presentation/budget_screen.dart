@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -100,7 +101,13 @@ class BudgetScreen extends ConsumerWidget {
                   ...items.map(
                     (budget) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: BudgetCard(budget: budget),
+                      child: GestureDetector(
+                        onTap: () => context.push(
+                          '/budgets/${budget.budgetId}',
+                          extra: budget,
+                        ),
+                        child: BudgetCard(budget: budget),
+                      ),
                     ),
                   ),
                 const SizedBox(height: 16),
