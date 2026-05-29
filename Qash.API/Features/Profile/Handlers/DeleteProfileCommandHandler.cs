@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Qash.API.Common.Responses;
 using Qash.API.Features.Profile.Commands;
 using Qash.API.Infrastructure.Data;
+using Qash.API.Infrastructure.Services;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,10 +13,14 @@ namespace Qash.API.Features.Profile.Handlers;
 public class DeleteProfileCommandHandler : IRequestHandler<DeleteProfileCommand, ApiResponse<string>>
 {
     private readonly ApplicationDbContext _context;
+    private readonly IPasswordHasherService _passwordHasherService;
 
-    public DeleteProfileCommandHandler(ApplicationDbContext context)
+    public DeleteProfileCommandHandler(
+        ApplicationDbContext context,
+        IPasswordHasherService passwordHasherService)
     {
         _context = context;
+        _passwordHasherService = passwordHasherService;
     }
 
     public async Task<ApiResponse<string>> Handle(DeleteProfileCommand request, CancellationToken cancellationToken)
@@ -28,6 +33,17 @@ public class DeleteProfileCommandHandler : IRequestHandler<DeleteProfileCommand,
             return ApiResponse<string>.FailResponse(
                 "Delete profile failed.",
                 ["User profile was not found."]);
+        }
+
+        var validPassword = _passwordHasherService.VerifyPassword(
+            request.Password,
+            user.PasswordHash);
+
+        if (!validPassword)
+        {
+            return ApiResponse<string>.FailResponse(
+                "Delete profile failed.",
+                ["Incorrect password."]);
         }
 
         user.IsDeleted = true;

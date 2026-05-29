@@ -1,86 +1,89 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class SettingsScreen extends StatefulWidget {
+import '../../../core/theme/qash_theme_extension.dart';
+import '../../../core/theme/theme_provider.dart';
+
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  bool _darkMode = false;
-  bool _biometrics = true;
-  bool _autoBackup = true;
+  static const _appVersion = '1.0.0';
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final qash = context.qash;
+    final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
-        elevation: 0,
-        centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => Navigator.pop(context),
             ),
           ),
         ),
-        title: const Text(
-          'Settings',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-          ),
-        ),
+        title: const Text('Settings'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
         children: [
           _SectionCard(
-            title: 'Appearance',
+            title: 'Account',
             children: [
-              _ToggleRow(
-                icon: Icons.nightlight_round,
+              _LinkRow(
+                icon: Icons.person_outline,
+                iconBg: const Color(0xFFEFF6FF),
+                iconColor: const Color(0xFF3B82F6),
+                label: 'Edit Profile',
+                sublabel: 'Update your personal info',
+                onTap: () => context.push('/profile/edit'),
+              ),
+              _LinkRow(
+                icon: Icons.lock_outline,
                 iconBg: const Color(0xFFEDE9FE),
                 iconColor: const Color(0xFF8B5CF6),
-                label: 'Dark Mode',
-                sublabel: 'Switch to dark theme',
-                value: _darkMode,
-                onChanged: (value) => setState(() => _darkMode = value),
+                label: 'Change Password',
+                sublabel: 'Update your password',
+                onTap: () => context.push('/profile/change-verify'),
               ),
             ],
           ),
           const SizedBox(height: 12),
           _SectionCard(
-            title: 'Security',
+            title: 'Appearance',
             children: [
               _ToggleRow(
-                icon: Icons.shield_outlined,
+                icon: Icons.dark_mode_outlined,
+                iconBg: const Color(0xFFEDE9FE),
+                iconColor: const Color(0xFF8B5CF6),
+                label: 'Dark Mode',
+                sublabel: 'Use dark theme across the app',
+                value: isDark,
+                onChanged: (value) {
+                  ref.read(themeModeProvider.notifier).setDarkMode(value);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _SectionCard(
+            title: 'Support',
+            children: [
+              _LinkRow(
+                icon: Icons.help_outline,
                 iconBg: const Color(0xFFD9F0C8),
                 iconColor: const Color(0xFF10B981),
-                label: 'Biometric Login',
-                sublabel: 'Face ID or Fingerprint',
-                value: _biometrics,
-                onChanged: (value) => setState(() => _biometrics = value),
-              ),
-              _ToggleRow(
-                icon: Icons.public,
-                iconBg: const Color(0xFFEFF6FF),
-                iconColor: const Color(0xFF3B82F6),
-                label: 'Auto Backup',
-                sublabel: 'Backup data to cloud',
-                value: _autoBackup,
-                onChanged: (value) => setState(() => _autoBackup = value),
+                label: 'Help and FAQ',
+                sublabel: 'Answers to common questions',
+                onTap: () => context.push('/profile/help'),
               ),
             ],
           ),
@@ -96,7 +99,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () => context.push('/profile/terms'),
               ),
               _LinkRow(
-                icon: Icons.lock_outline,
+                icon: Icons.privacy_tip_outlined,
                 iconBg: const Color(0xFFEDE9FE),
                 iconColor: const Color(0xFF8B5CF6),
                 label: 'Privacy Policy',
@@ -106,12 +109,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           _SectionCard(
+            title: 'About',
+            children: [
+              _InfoRow(
+                icon: Icons.info_outline,
+                iconBg: const Color(0xFFEFF6FF),
+                iconColor: const Color(0xFF3B82F6),
+                label: 'App Version',
+                value: _appVersion,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _SectionCard(
             title: 'Danger Zone',
             children: [
               _LinkRow(
+                icon: Icons.logout,
+                iconBg: const Color(0xFFFEE2E2),
+                iconColor: qash.danger,
+                label: 'Sign Out',
+                sublabel: 'Log out of your account',
+                onTap: () => context.push('/profile/logout'),
+                danger: true,
+              ),
+              _LinkRow(
                 icon: Icons.delete_outline,
                 iconBg: const Color(0xFFFEE2E2),
-                iconColor: const Color(0xFFEF4444),
+                iconColor: qash.danger,
                 label: 'Delete Account',
                 sublabel: 'Permanently delete all data',
                 onTap: () => context.push('/profile/delete'),
@@ -123,7 +148,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
 }
 
 class _SectionCard extends StatelessWidget {
@@ -134,14 +158,16 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: qash.cardShadow,
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -152,9 +178,9 @@ class _SectionCard extends StatelessWidget {
         children: [
           Text(
             title.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Color(0xFF8B8B8B),
+              color: qash.textSecondary,
               letterSpacing: 1.2,
             ),
           ),
@@ -187,6 +213,8 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -207,26 +235,16 @@ class _ToggleRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF111111),
-                  ),
+                  style: TextStyle(fontSize: 14, color: qash.textPrimary),
                 ),
                 Text(
                   sublabel,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8B8B8B),
-                  ),
+                  style: TextStyle(fontSize: 12, color: qash.textSecondary),
                 ),
               ],
             ),
           ),
-          Switch(
-            value: value,
-            activeThumbColor: const Color(0xFF111111),
-            onChanged: onChanged,
-          ),
+          Switch(value: value, onChanged: onChanged),
         ],
       ),
     );
@@ -254,7 +272,8 @@ class _LinkRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labelColor = danger ? const Color(0xFFEF4444) : const Color(0xFF111111);
+    final qash = context.qash;
+    final labelColor = danger ? qash.danger : qash.textPrimary;
 
     return InkWell(
       onTap: onTap,
@@ -283,17 +302,63 @@ class _LinkRow extends StatelessWidget {
                   if (sublabel != null)
                     Text(
                       sublabel!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF8B8B8B),
-                      ),
+                      style: TextStyle(fontSize: 12, color: qash.textSecondary),
                     ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Color(0xFF8B8B8B)),
+            Icon(Icons.chevron_right, color: qash.iconMuted),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.iconBg,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final Color iconBg;
+  final Color iconColor;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final qash = context.qash;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 14, color: qash.textPrimary),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(fontSize: 14, color: qash.textSecondary),
+          ),
+        ],
       ),
     );
   }

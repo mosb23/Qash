@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 class AuthPasswordField extends StatefulWidget {
   const AuthPasswordField({
@@ -17,31 +18,29 @@ class AuthPasswordField extends StatefulWidget {
 class _AuthPasswordFieldState extends State<AuthPasswordField> {
   bool _obscureText = true;
 
-  static const _fieldShadows = [
-    BoxShadow(
-      color: Color(0x19000000),
-      blurRadius: 2,
-      offset: Offset(0, 1),
-      spreadRadius: -1,
-    ),
-    BoxShadow(
-      color: Color(0x19000000),
-      blurRadius: 3,
-      offset: Offset(0, 1),
-      spreadRadius: 0,
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Container(
       width: double.infinity,
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: ShapeDecoration(
-        color: Colors.white,
+        color: qash.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        shadows: _fieldShadows,
+        shadows: [
+          BoxShadow(
+            color: qash.cardShadow,
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+            spreadRadius: -1,
+          ),
+          BoxShadow(
+            color: qash.cardShadow,
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: TextField(
         controller: widget.controller,
@@ -49,8 +48,8 @@ class _AuthPasswordFieldState extends State<AuthPasswordField> {
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: widget.hintText,
-          hintStyle: const TextStyle(
-            color: Color(0xFFC4C4C4),
+          hintStyle: TextStyle(
+            color: qash.textHint,
             fontSize: 16,
             fontFamily: 'Inter',
             fontWeight: FontWeight.w400,
@@ -61,7 +60,7 @@ class _AuthPasswordFieldState extends State<AuthPasswordField> {
               _obscureText
                   ? Icons.visibility_off_outlined
                   : Icons.visibility_outlined,
-              color: const Color(0xFFC4C4C4),
+              color: qash.textHint,
               size: 20,
             ),
             padding: EdgeInsets.zero,
@@ -69,8 +68,8 @@ class _AuthPasswordFieldState extends State<AuthPasswordField> {
             splashRadius: 20,
           ),
         ),
-        style: const TextStyle(
-          color: Color(0xFF111111),
+        style: TextStyle(
+          color: qash.textPrimary,
           fontSize: 16,
           fontFamily: 'Inter',
           fontWeight: FontWeight.w400,

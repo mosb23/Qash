@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_response.dart';
 import 'datasources/profile_remote_data_source.dart';
+import 'models/delete_profile_request_model.dart';
 import 'models/profile_model.dart';
 import 'models/profile_update_request_model.dart';
 
@@ -41,9 +42,14 @@ class ProfileApi implements ProfileRemoteDataSource {
   }
 
   @override
-  Future<ApiResponse<String>> deleteProfile() async {
+  Future<ApiResponse<String>> deleteProfile(
+    DeleteProfileRequestModel request,
+  ) async {
     try {
-      final response = await _dio.delete('/api/profile');
+      final response = await _dio.delete(
+        '/api/profile',
+        data: request.toJson(),
+      );
       final data = response.data as Map<String, dynamic>;
       return ApiResponse<String>.fromJson(
         data,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../../../core/errors/app_failure.dart';
@@ -16,13 +17,13 @@ class TransactionsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final qash = context.qash;
     final summary = ref.watch(transactionsSummaryProvider);
     final filter = ref.watch(transactionsFilterProvider);
     final transactions = ref.watch(filteredTransactionsProvider);
     final categories = ref.watch(categoriesProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
         child: Column(
           children: [
@@ -43,10 +44,10 @@ class TransactionsScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Transactions',
                               style: TextStyle(
-                                color: Color(0xFF111111),
+                                color: qash.textPrimary,
                                 fontSize: 24,
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w500,
@@ -54,21 +55,22 @@ class TransactionsScreen extends ConsumerWidget {
                             ),
                             Row(
                               children: [
-                                _iconButton(Icons.search),
+                                _iconButton(context, Icons.search),
                                 const SizedBox(width: 8),
-                                _iconButton(Icons.tune),
+                                _iconButton(context, Icons.tune),
                               ],
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
-                        _summaryRow(summary),
+                        _summaryRow(context, summary),
                         const SizedBox(height: 12),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
                               _filterTab(
+                                context,
                                 label: 'All',
                                 isActive: filter == TransactionFilter.all,
                                 onTap: () =>
@@ -76,6 +78,7 @@ class TransactionsScreen extends ConsumerWidget {
                               ),
                               const SizedBox(width: 8),
                               _filterTab(
+                                context,
                                 label: 'Income',
                                 isActive: filter == TransactionFilter.income,
                                 onTap: () => _updateFilter(
@@ -85,6 +88,7 @@ class TransactionsScreen extends ConsumerWidget {
                               ),
                               const SizedBox(width: 8),
                               _filterTab(
+                                context,
                                 label: 'Expense',
                                 isActive: filter == TransactionFilter.expense,
                                 onTap: () => _updateFilter(
@@ -94,6 +98,7 @@ class TransactionsScreen extends ConsumerWidget {
                               ),
                               const SizedBox(width: 8),
                               _filterTab(
+                                context,
                                 label: 'Transfer',
                                 isActive: filter == TransactionFilter.transfer,
                                 onTap: () => _updateFilter(
@@ -114,14 +119,14 @@ class TransactionsScreen extends ConsumerWidget {
                             width: double.infinity,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF4D93A),
+                              color: qash.accent,
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Center(
+                            child: Center(
                               child: Text(
                                 '+ Add Transaction',
                                 style: TextStyle(
-                                  color: Color(0xFF111111),
+                                  color: qash.onAccent,
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w500,
@@ -132,7 +137,8 @@ class TransactionsScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 24),
                         transactions.when(
-                          data: (items) => _transactionsList(items, categories),
+                          data: (items) =>
+                              _transactionsList(context, items, categories),
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
                             child: Center(child: CircularProgressIndicator()),
@@ -143,8 +149,8 @@ class TransactionsScreen extends ConsumerWidget {
                               error is AppFailure
                                   ? error.message
                                   : 'Failed to load transactions.',
-                              style: const TextStyle(
-                                color: Color(0xFF8B8B8B),
+                              style: TextStyle(
+                                color: qash.textSecondary,
                                 fontSize: 12,
                                 fontFamily: 'Inter',
                               ),
@@ -203,11 +209,15 @@ class TransactionsScreen extends ConsumerWidget {
     }
   }
 
-  Widget _summaryRow(AsyncValue<TransactionsSummary> summary) {
+  Widget _summaryRow(
+    BuildContext context,
+    AsyncValue<TransactionsSummary> summary,
+  ) {
     return Row(
       children: [
         Expanded(
           child: _summaryCard(
+            context: context,
             label: 'Income',
             color: const Color(0xFFD9F0C8),
             summary: summary,
@@ -217,6 +227,7 @@ class TransactionsScreen extends ConsumerWidget {
         const SizedBox(width: 12),
         Expanded(
           child: _summaryCard(
+            context: context,
             label: 'Expenses',
             color: const Color(0xFFFFE3E3),
             summary: summary,
@@ -228,11 +239,13 @@ class TransactionsScreen extends ConsumerWidget {
   }
 
   Widget _summaryCard({
+    required BuildContext context,
     required String label,
     required Color color,
     required AsyncValue<TransactionsSummary> summary,
     required double Function(TransactionsSummary summary) selector,
   }) {
+    final qash = context.qash;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -244,21 +257,24 @@ class TransactionsScreen extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(color: Color(0x99111111), fontSize: 12),
+            style: TextStyle(
+              color: qash.textPrimary.withValues(alpha: 0.6),
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 4),
           summary.when(
             data: (value) => Text(
               _formatCurrency(selector(value)),
-              style: const TextStyle(color: Color(0xFF111111), fontSize: 14),
+              style: TextStyle(color: qash.textPrimary, fontSize: 14),
             ),
-            loading: () => const Text(
+            loading: () => Text(
               '--',
-              style: TextStyle(color: Color(0xFF111111), fontSize: 14),
+              style: TextStyle(color: qash.textPrimary, fontSize: 14),
             ),
-            error: (_, __) => const Text(
+            error: (_, _) => Text(
               '--',
-              style: TextStyle(color: Color(0xFF111111), fontSize: 14),
+              style: TextStyle(color: qash.textPrimary, fontSize: 14),
             ),
           ),
         ],
@@ -267,16 +283,18 @@ class TransactionsScreen extends ConsumerWidget {
   }
 
   Widget _transactionsList(
+    BuildContext context,
     List<TransactionEntity> items,
     AsyncValue<Result<List<CategoryEntity>>> categories,
   ) {
+    final qash = context.qash;
     if (items.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
         child: Text(
           'No transactions yet.',
           style: TextStyle(
-            color: Color(0xFF8B8B8B),
+            color: qash.textSecondary,
             fontSize: 12,
             fontFamily: 'Inter',
           ),
@@ -298,10 +316,10 @@ class TransactionsScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (final entry in sections) ...[
-          _sectionLabel(entry.key),
+          _sectionLabel(context, entry.key),
           const SizedBox(height: 8),
           for (final item in entry.value) ...[
-            _transactionItem(item, categoryMap),
+            _transactionItem(context, item, categoryMap),
             const SizedBox(height: 8),
           ],
           const SizedBox(height: 16),
@@ -342,63 +360,66 @@ class TransactionsScreen extends ConsumerWidget {
     return NumberFormat.currency(symbol: '\$').format(value);
   }
 
-  Widget _iconButton(IconData icon) {
+  Widget _iconButton(BuildContext context, IconData icon) {
+    final qash = context.qash;
     return Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(999),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
-      child: Icon(icon, size: 20, color: const Color(0xFF111111)),
+      child: Icon(icon, size: 20, color: qash.textPrimary),
     );
   }
 
-  Widget _filterTab({
+  Widget _filterTab(
+    BuildContext context, {
     required String label,
     required bool isActive,
     required VoidCallback onTap,
   }) {
+    final qash = context.qash;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF111111) : Colors.white,
+          color: isActive ? qash.primaryButton : qash.surface,
           borderRadius: BorderRadius.circular(14),
           boxShadow: isActive
               ? null
               : [
-                  const BoxShadow(
-                    color: Color(0x19000000),
+                  BoxShadow(
+                    color: qash.cardShadow,
                     blurRadius: 2,
-                    offset: Offset(0, 1),
+                    offset: const Offset(0, 1),
                     spreadRadius: -1,
                   ),
-                  const BoxShadow(
-                    color: Color(0x19000000),
+                  BoxShadow(
+                    color: qash.cardShadow,
                     blurRadius: 3,
-                    offset: Offset(0, 1),
+                    offset: const Offset(0, 1),
                   ),
                 ],
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isActive ? Colors.white : const Color(0xFF8B8B8B),
+            color: isActive ? qash.onPrimaryButton : qash.textSecondary,
             fontSize: 14,
             fontFamily: 'Inter',
             fontWeight: FontWeight.w500,
@@ -408,11 +429,12 @@ class TransactionsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _sectionLabel(String label) {
+  Widget _sectionLabel(BuildContext context, String label) {
+    final qash = context.qash;
     return Text(
       label,
-      style: const TextStyle(
-        color: Color(0xFF8B8B8B),
+      style: TextStyle(
+        color: qash.textSecondary,
         fontSize: 12,
         fontFamily: 'Inter',
         fontWeight: FontWeight.w400,
@@ -421,9 +443,11 @@ class TransactionsScreen extends ConsumerWidget {
   }
 
   Widget _transactionItem(
+    BuildContext context,
     TransactionEntity item,
     Map<String, CategoryEntity> categoryMap,
   ) {
+    final qash = context.qash;
     final isTransfer = item.isTransfer;
     final amountColor = isTransfer
         ? const Color(0xFF2B7FFF)
@@ -462,19 +486,19 @@ class TransactionsScreen extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -500,8 +524,8 @@ class TransactionsScreen extends ConsumerWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -509,8 +533,8 @@ class TransactionsScreen extends ConsumerWidget {
                   if (subtitle.isNotEmpty)
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF8B8B8B),
+                      style: TextStyle(
+                        color: qash.textSecondary,
                         fontSize: 12,
                       ),
                     ),

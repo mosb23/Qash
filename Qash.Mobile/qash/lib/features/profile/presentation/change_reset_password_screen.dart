@@ -110,7 +110,6 @@ class _ProfileChangeResetPasswordScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Container(

@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Qash.API.Features.Profile.Commands;
+using Qash.API.Features.Profile.DTOs;
 using Qash.API.Features.Profile.Queries;
 using System;
 using System.Security.Claims;
@@ -48,14 +49,15 @@ public class ProfileController : ControllerBase
     }
 
     [HttpDelete]
-    public async Task<IActionResult> DeleteProfile()
+    public async Task<IActionResult> DeleteProfile([FromBody] DeleteProfileRequestDto request)
     {
         var userId = GetCurrentUserId();
 
         if (userId is null)
             return Unauthorized();
 
-        var response = await _mediator.Send(new DeleteProfileCommand(userId.Value));
+        var response = await _mediator.Send(
+            new DeleteProfileCommand(userId.Value, request.Password));
         return response.Success ? Ok(response) : BadRequest(response);
     }
 

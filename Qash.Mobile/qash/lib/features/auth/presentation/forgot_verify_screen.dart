@@ -61,7 +61,6 @@ class _ForgotVerifyScreenState extends State<ForgotVerifyScreen> {
     final demoCode = widget.demoCode ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Container(

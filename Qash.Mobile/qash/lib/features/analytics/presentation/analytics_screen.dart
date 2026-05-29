@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
@@ -33,6 +34,7 @@ class AnalyticsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final qash = context.qash;
     final period = ref.watch(analyticsPeriodProvider);
     final summary = ref.watch(analyticsSummaryProvider);
     final breakdown = period == AnalyticsPeriod.month
@@ -48,7 +50,6 @@ class AnalyticsScreen extends ConsumerWidget {
     final spendingTrend = ref.watch(spendingTrendProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
         child: Column(
           children: [
@@ -69,21 +70,22 @@ class AnalyticsScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 24),
-                      const Text(
+                      Text(
                         'Analytics',
                         style: TextStyle(
-                          color: Color(0xFF111111),
+                          color: qash.textPrimary,
                           fontSize: 24,
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _periodSelector(period, ref),
+                      _periodSelector(context, period, ref),
                       const SizedBox(height: 16),
-                      _summaryCards(summary),
+                      _summaryCards(context, summary),
                       const SizedBox(height: 16),
                       _categoryBreakdownSection(
+                        context,
                         period: period,
                         breakdown: breakdown,
                         categories: categories,
@@ -91,21 +93,27 @@ class AnalyticsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 16),
                       _card(
+                        context,
                         title: 'Cash Flow Summary',
                         height: 180,
-                        child: _cashFlowSummary(summary),
+                        child: _cashFlowSummary(context, summary),
                       ),
                       const SizedBox(height: 16),
                       _card(
+                        context,
                         title: 'Spending Trend',
                         height: 180,
-                        child: _spendingTrendSection(spendingTrend),
+                        child: _spendingTrendSection(context, spendingTrend),
                       ),
                       const SizedBox(height: 16),
                       if (period == AnalyticsPeriod.year)
                         _card(
+                          context,
                           title: 'Income vs Expense',
-                          child: _incomeVsExpenseSection(incomeVsExpense),
+                          child: _incomeVsExpenseSection(
+                            context,
+                            incomeVsExpense,
+                          ),
                         ),
                       const SizedBox(height: 24),
                     ],
@@ -123,24 +131,29 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _periodSelector(AnalyticsPeriod period, WidgetRef ref) {
+  Widget _periodSelector(
+    BuildContext context,
+    AnalyticsPeriod period,
+    WidgetRef ref,
+  ) {
+    final qash = context.qash;
     final labels = ['Week', 'Month', 'Year'];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -157,16 +170,14 @@ class AnalyticsScreen extends ConsumerWidget {
                 duration: const Duration(milliseconds: 200),
                 height: 36,
                 decoration: BoxDecoration(
-                  color: isActive
-                      ? const Color(0xFF111111)
-                      : Colors.transparent,
+                  color: isActive ? qash.primaryButton : Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   labels[i],
                   style: TextStyle(
-                    color: isActive ? Colors.white : const Color(0xFF8B8B8B),
+                    color: isActive ? qash.onPrimaryButton : qash.textSecondary,
                     fontSize: 14,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,
@@ -180,13 +191,17 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryCards(AsyncValue<AnalyticsSummary> summary) {
+  Widget _summaryCards(
+    BuildContext context,
+    AsyncValue<AnalyticsSummary> summary,
+  ) {
     return summary.when(
       data: (value) {
         return Row(
           children: [
             Expanded(
               child: _summaryCard(
+                context,
                 'Income',
                 _formatCurrency(value.totalIncome),
                 const Color(0xFFD9F0C8),
@@ -195,6 +210,7 @@ class AnalyticsScreen extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _summaryCard(
+                context,
                 'Expenses',
                 _formatCurrency(value.totalExpenses),
                 const Color(0xFFFFE3E3),
@@ -203,6 +219,7 @@ class AnalyticsScreen extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _summaryCard(
+                context,
                 'Net',
                 _formatCurrency(value.netBalance),
                 const Color(0xFFFEF3C7),
@@ -217,12 +234,13 @@ class AnalyticsScreen extends ConsumerWidget {
       ),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: context.qash.textSecondary, fontSize: 12),
       ),
     );
   }
 
-  Widget _summaryCard(String label, String value, Color bg) {
+  Widget _summaryCard(BuildContext context, String label, String value, Color bg) {
+    final qash = context.qash;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
@@ -234,8 +252,8 @@ class AnalyticsScreen extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: Color(0x99111111),
+            style: TextStyle(
+              color: qash.textPrimary.withValues(alpha: 0.6),
               fontSize: 12,
               fontFamily: 'Inter',
             ),
@@ -243,8 +261,8 @@ class AnalyticsScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              color: Color(0xFF111111),
+            style: TextStyle(
+              color: qash.textPrimary,
               fontSize: 14,
               fontFamily: 'Inter',
               fontWeight: FontWeight.w500,
@@ -255,7 +273,8 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _categoryBreakdownSection({
+  Widget _categoryBreakdownSection(
+    BuildContext context, {
     required AnalyticsPeriod period,
     required AsyncValue<Result<List<CategoryBreakdownEntity>>> breakdown,
     required AsyncValue<Result<List<CategoryEntity>>> categories,
@@ -265,26 +284,28 @@ class AnalyticsScreen extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
+    final qash = context.qash;
     return breakdown.when(
       data: (result) {
         if (result.isFailure) {
           return Text(
             result.message,
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           );
         }
         final items = result.data ?? const [];
         if (items.isEmpty) {
-          return const Text(
+          return Text(
             'No category data yet.',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           );
         }
         final categoryMap = _buildCategoryNameMap(categories, transactions);
         return _card(
+          context,
           title: 'Spending by Category',
           height: 200,
-          child: _categoryChart(items, categoryMap),
+          child: _categoryChart(context, items, categoryMap),
         );
       },
       loading: () => const SizedBox(
@@ -293,7 +314,7 @@ class AnalyticsScreen extends ConsumerWidget {
       ),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
@@ -330,15 +351,17 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _categoryChart(
+    BuildContext context,
     List<CategoryBreakdownEntity> items,
     Map<String, String> categoryMap,
   ) {
+    final qash = context.qash;
     final total = items.fold<double>(0, (sum, item) => sum + item.totalAmount);
     if (total <= 0) {
-      return const Center(
+      return Center(
         child: Text(
           'No expense data yet',
-          style: TextStyle(color: Color(0xFF8B8B8B)),
+          style: TextStyle(color: qash.textSecondary),
         ),
       );
     }
@@ -393,8 +416,8 @@ class AnalyticsScreen extends ConsumerWidget {
                           Expanded(
                             child: Text(
                               categoryName,
-                              style: const TextStyle(
-                                color: Color(0xFF8B8B8B),
+                              style: TextStyle(
+                                color: qash.textSecondary,
                                 fontSize: 12,
                                 fontFamily: 'Inter',
                               ),
@@ -406,8 +429,8 @@ class AnalyticsScreen extends ConsumerWidget {
                     ),
                     Text(
                       _formatCurrency(item.totalAmount),
-                      style: const TextStyle(
-                        color: Color(0xFF111111),
+                      style: TextStyle(
+                        color: qash.textPrimary,
                         fontSize: 12,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w500,
@@ -423,7 +446,11 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _cashFlowSummary(AsyncValue<AnalyticsSummary> summary) {
+  Widget _cashFlowSummary(
+    BuildContext context,
+    AsyncValue<AnalyticsSummary> summary,
+  ) {
+    final qash = context.qash;
     return summary.when(
       data: (value) {
         final maxVal = math.max(
@@ -434,6 +461,7 @@ class AnalyticsScreen extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _cashFlowRow(
+              context,
               'Total Income',
               value.totalIncome,
               maxVal,
@@ -441,6 +469,7 @@ class AnalyticsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             _cashFlowRow(
+              context,
               'Total Expenses',
               value.totalExpenses,
               maxVal,
@@ -448,6 +477,7 @@ class AnalyticsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             _cashFlowRow(
+              context,
               'Net Savings',
               value.netBalance,
               maxVal,
@@ -459,12 +489,19 @@ class AnalyticsScreen extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
 
-  Widget _cashFlowRow(String label, double value, double maxVal, Color color) {
+  Widget _cashFlowRow(
+    BuildContext context,
+    String label,
+    double value,
+    double maxVal,
+    Color color,
+  ) {
+    final qash = context.qash;
     final ratio = maxVal > 0 ? (value.abs() / maxVal).clamp(0.0, 1.0) : 0.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,16 +511,16 @@ class AnalyticsScreen extends ConsumerWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(
-                color: Color(0xFF8B8B8B),
+              style: TextStyle(
+                color: qash.textSecondary,
                 fontSize: 12,
                 fontFamily: 'Inter',
               ),
             ),
             Text(
               _formatCurrency(value),
-              style: const TextStyle(
-                color: Color(0xFF111111),
+              style: TextStyle(
+                color: qash.textPrimary,
                 fontSize: 13,
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w500,
@@ -498,7 +535,7 @@ class AnalyticsScreen extends ConsumerWidget {
               height: 6,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
+                color: qash.border,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Align(
@@ -522,22 +559,24 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _spendingTrendSection(
+    BuildContext context,
     AsyncValue<Result<List<SpendingTrendEntity>>> trend,
   ) {
+    final qash = context.qash;
     return trend.when(
       data: (result) {
         if (result.isFailure) {
           return Text(
             result.message,
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           );
         }
         final items = result.data ?? const [];
         if (items.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No spending data yet.',
-              style: TextStyle(color: Color(0xFF8B8B8B)),
+              style: TextStyle(color: qash.textSecondary),
             ),
           );
         }
@@ -561,8 +600,8 @@ class AnalyticsScreen extends ConsumerWidget {
                     width: 64,
                     child: Text(
                       DateFormat('MM/dd').format(item.date),
-                      style: const TextStyle(
-                        color: Color(0xFF8B8B8B),
+                      style: TextStyle(
+                        color: qash.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -571,7 +610,7 @@ class AnalyticsScreen extends ConsumerWidget {
                     child: Container(
                       height: 6,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
+                        color: qash.border,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: FractionallySizedBox(
@@ -589,8 +628,8 @@ class AnalyticsScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Text(
                     _formatCurrency(item.totalExpenses),
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -604,28 +643,30 @@ class AnalyticsScreen extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
 
   Widget _incomeVsExpenseSection(
+    BuildContext context,
     AsyncValue<Result<List<IncomeVsExpenseEntity>>> data,
   ) {
+    final qash = context.qash;
     return data.when(
       data: (result) {
         if (result.isFailure) {
           return Text(
             result.message,
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           );
         }
         final items = result.data ?? const [];
         if (items.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No yearly data yet.',
-              style: TextStyle(color: Color(0xFF8B8B8B)),
+              style: TextStyle(color: qash.textSecondary),
             ),
           );
         }
@@ -647,8 +688,8 @@ class AnalyticsScreen extends ConsumerWidget {
                     width: 32,
                     child: Text(
                       item.month.toString().padLeft(2, '0'),
-                      style: const TextStyle(
-                        color: Color(0xFF8B8B8B),
+                      style: TextStyle(
+                        color: qash.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -659,7 +700,7 @@ class AnalyticsScreen extends ConsumerWidget {
                         Container(
                           height: 6,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF3F4F6),
+                            color: qash.border,
                             borderRadius: BorderRadius.circular(999),
                           ),
                         ),
@@ -689,8 +730,8 @@ class AnalyticsScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Text(
                     '${_formatShort(item.income)} / ${_formatShort(item.expenses)}',
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                     ),
@@ -704,33 +745,35 @@ class AnalyticsScreen extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
 
-  Widget _card({
+  Widget _card(
+    BuildContext context, {
     required String title,
     double? height,
     required Widget child,
   }) {
+    final qash = context.qash;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -739,8 +782,8 @@ class AnalyticsScreen extends ConsumerWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Color(0xFF111111),
+            style: TextStyle(
+              color: qash.textPrimary,
               fontSize: 14,
               fontFamily: 'Inter',
               fontWeight: FontWeight.w500,

@@ -7,5 +7,5 @@ abstract class ProfileRepository {
 
   Future<Result<ProfileEntity>> updateProfile(ProfileUpdateData data);
 
-  Future<Result<String>> deleteProfile();
+  Future<Result<String>> deleteProfile(String password);
 }

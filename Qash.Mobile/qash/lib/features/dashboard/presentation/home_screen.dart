@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
@@ -23,6 +24,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final qash = context.qash;
     final profile = _resolveResult<ProfileEntity>(ref.watch(profileProvider));
     final dashboard = _resolveResult<DashboardEntity>(
       ref.watch(dashboardProvider),
@@ -39,7 +41,6 @@ class HomeScreen extends ConsumerWidget {
     final recents = _resolveRecentTransactions(ref.watch(transactionsProvider));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
         child: Column(
           children: [
@@ -69,22 +70,22 @@ class HomeScreen extends ConsumerWidget {
                           children: [
                             Row(
                               children: [
-                                _profileAvatar(profile),
+                                _profileAvatar(context, profile),
                                 const SizedBox(width: 12),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'Welcome back,',
                                       style: TextStyle(
-                                        color: Color(0xFF8B8B8B),
+                                        color: qash.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
                                     Text(
                                       _profileName(profile),
-                                      style: const TextStyle(
-                                        color: Color(0xFF111111),
+                                      style: TextStyle(
+                                        color: qash.textPrimary,
                                         fontSize: 14,
                                       ),
                                     ),
@@ -103,16 +104,16 @@ class HomeScreen extends ConsumerWidget {
                           width: double.infinity,
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF111111),
+                            color: qash.primaryButton,
                             borderRadius: BorderRadius.circular(24),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Total Balance',
                                 style: TextStyle(
-                                  color: Color(0xFF8B8B8B),
+                                  color: qash.textSecondary,
                                   fontSize: 12,
                                 ),
                               ),
@@ -121,16 +122,16 @@ class HomeScreen extends ConsumerWidget {
                                 children: [
                                   Text(
                                     _formatCurrency(_walletsTotal(wallets)),
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: qash.onPrimaryButton,
                                       fontSize: 30,
                                       fontWeight: FontWeight.w400,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  const Icon(
+                                  Icon(
                                     Icons.visibility_outlined,
-                                    color: Color(0xFF8B8B8B),
+                                    color: qash.textSecondary,
                                     size: 20,
                                   ),
                                 ],
@@ -160,10 +161,10 @@ class HomeScreen extends ConsumerWidget {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          const Text(
+                                          Text(
                                             'Income',
                                             style: TextStyle(
-                                              color: Color(0xFF8B8B8B),
+                                              color: qash.textSecondary,
                                               fontSize: 12,
                                             ),
                                           ),
@@ -174,8 +175,8 @@ class HomeScreen extends ConsumerWidget {
                                                 (value) => value.monthlyIncome,
                                               ),
                                             ),
-                                            style: const TextStyle(
-                                              color: Colors.white,
+                                            style: TextStyle(
+                                              color: qash.onPrimaryButton,
                                               fontSize: 14,
                                             ),
                                           ),
@@ -206,10 +207,10 @@ class HomeScreen extends ConsumerWidget {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          const Text(
+                                          Text(
                                             'Expenses',
                                             style: TextStyle(
-                                              color: Color(0xFF8B8B8B),
+                                              color: qash.textSecondary,
                                               fontSize: 12,
                                             ),
                                           ),
@@ -221,8 +222,8 @@ class HomeScreen extends ConsumerWidget {
                                                     value.monthlyExpenses,
                                               ),
                                             ),
-                                            style: const TextStyle(
-                                              color: Colors.white,
+                                            style: TextStyle(
+                                              color: qash.onPrimaryButton,
                                               fontSize: 14,
                                             ),
                                           ),
@@ -243,20 +244,20 @@ class HomeScreen extends ConsumerWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Wallets',
                               style: TextStyle(
-                                color: Color(0xFF111111),
+                                color: qash.textPrimary,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                             GestureDetector(
                               onTap: () => context.push('/wallets'),
-                              child: const Text(
+                              child: Text(
                                 'See all >',
                                 style: TextStyle(
-                                  color: Color(0xFF8B8B8B),
+                                  color: qash.textSecondary,
                                   fontSize: 14,
                                 ),
                               ),
@@ -273,10 +274,10 @@ class HomeScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Quick Actions',
                               style: TextStyle(
-                                color: Color(0xFF111111),
+                                color: qash.textPrimary,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -286,6 +287,7 @@ class HomeScreen extends ConsumerWidget {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 _quickAction(
+                                  context,
                                   'Income',
                                   '\u2199',
                                   const Color(0xFFD9F0C8),
@@ -293,6 +295,7 @@ class HomeScreen extends ConsumerWidget {
                                       context.push('/transactions/add?type=1'),
                                 ),
                                 _quickAction(
+                                  context,
                                   'Expense',
                                   '\u2197',
                                   const Color(0xFFFEE2E2),
@@ -300,6 +303,7 @@ class HomeScreen extends ConsumerWidget {
                                       context.push('/transactions/add?type=2'),
                                 ),
                                 _quickAction(
+                                  context,
                                   'Transfer',
                                   '\u21c4',
                                   const Color(0xFFEFF6FF),
@@ -307,6 +311,7 @@ class HomeScreen extends ConsumerWidget {
                                       context.push('/transactions/add?type=3'),
                                 ),
                                 _quickAction(
+                                  context,
                                   'Wallets',
                                   '\u25a4',
                                   const Color(0xFFF3F4F6),
@@ -327,20 +332,20 @@ class HomeScreen extends ConsumerWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
+                                Text(
                                   'Budget',
                                   style: TextStyle(
-                                    color: Color(0xFF111111),
+                                    color: qash.textPrimary,
                                     fontSize: 20,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 GestureDetector(
                                   onTap: () => context.push('/budgets'),
-                                  child: const Text(
+                                  child: Text(
                                     'See all >',
                                     style: TextStyle(
-                                      color: Color(0xFF8B8B8B),
+                                      color: qash.textSecondary,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -348,7 +353,7 @@ class HomeScreen extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            _budgetSection(budgets),
+                            _budgetSection(context, budgets),
                           ],
                         ),
                       ),
@@ -359,16 +364,16 @@ class HomeScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Top Categories',
                               style: TextStyle(
-                                color: Color(0xFF111111),
+                                color: qash.textPrimary,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                             const SizedBox(height: 12),
-                            _topCategoriesSection(dashboard),
+                            _topCategoriesSection(context, dashboard),
                           ],
                         ),
                       ),
@@ -382,20 +387,20 @@ class HomeScreen extends ConsumerWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
+                                Text(
                                   'Goals',
                                   style: TextStyle(
-                                    color: Color(0xFF111111),
+                                    color: qash.textPrimary,
                                     fontSize: 20,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 GestureDetector(
                                   onTap: () => context.push('/goals'),
-                                  child: const Text(
+                                  child: Text(
                                     'See all >',
                                     style: TextStyle(
-                                      color: Color(0xFF8B8B8B),
+                                      color: qash.textSecondary,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -403,7 +408,7 @@ class HomeScreen extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            _goalsSection(goals),
+                            _goalsSection(context, goals),
                           ],
                         ),
                       ),
@@ -417,20 +422,20 @@ class HomeScreen extends ConsumerWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
+                                Text(
                                   'Recent Transactions',
                                   style: TextStyle(
-                                    color: Color(0xFF111111),
+                                    color: qash.textPrimary,
                                     fontSize: 20,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 GestureDetector(
                                   onTap: () => context.push('/transactions'),
-                                  child: const Text(
+                                  child: Text(
                                     'See all >',
                                     style: TextStyle(
-                                      color: Color(0xFF8B8B8B),
+                                      color: qash.textSecondary,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -438,7 +443,7 @@ class HomeScreen extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            _recentSection(recents),
+                            _recentSection(context, recents),
                           ],
                         ),
                       ),
@@ -514,7 +519,10 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _profileAvatar(AsyncValue<ProfileEntity> profile) {
+  Widget _profileAvatar(
+    BuildContext context,
+    AsyncValue<ProfileEntity> profile,
+  ) {
     final alias = profile.maybeWhen(
       data: (value) => value.alias,
       orElse: () => 'UN',
@@ -545,11 +553,14 @@ class HomeScreen extends ConsumerWidget {
     return wallets.when(
       data: (items) {
         if (items.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
               'No wallets yet.',
-              style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+              style: TextStyle(
+                color: context.qash.textSecondary,
+                fontSize: 12,
+              ),
             ),
           );
         }
@@ -561,7 +572,7 @@ class HomeScreen extends ConsumerWidget {
             padding: const EdgeInsets.only(left: 24),
             children: [
               for (final wallet in items) ...[
-                _walletCard(wallet),
+                _walletCard(context, wallet),
                 const SizedBox(width: 12),
               ],
               _addWalletCard(context),
@@ -580,13 +591,17 @@ class HomeScreen extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Text(
           _errorText(error),
-          style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+          style: TextStyle(color: context.qash.textSecondary, fontSize: 12),
         ),
       ),
     );
   }
 
-  Widget _budgetSection(AsyncValue<List<BudgetStatusEntity>> budgets) {
+  Widget _budgetSection(
+    BuildContext context,
+    AsyncValue<List<BudgetStatusEntity>> budgets,
+  ) {
+    final qash = context.qash;
     return budgets.when(
       data: (items) {
         if (items.isEmpty) {
@@ -596,9 +611,9 @@ class HomeScreen extends ConsumerWidget {
               color: const Color(0xFFF3F4F6),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Text(
+            child: Text(
               'No budgets for this month.',
-              style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+              style: TextStyle(color: qash.textSecondary, fontSize: 12),
             ),
           );
         }
@@ -606,10 +621,10 @@ class HomeScreen extends ConsumerWidget {
         final cards = items.take(2).toList();
         return Row(
           children: [
-            Expanded(child: _budgetStatusCard(cards.first)),
+            Expanded(child: _budgetStatusCard(context, cards.first)),
             if (cards.length > 1) ...[
               const SizedBox(width: 12),
-              Expanded(child: _budgetStatusCard(cards.last)),
+              Expanded(child: _budgetStatusCard(context, cards.last)),
             ],
           ],
         );
@@ -620,24 +635,28 @@ class HomeScreen extends ConsumerWidget {
       ),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
 
-  Widget _topCategoriesSection(AsyncValue<DashboardEntity> dashboard) {
+  Widget _topCategoriesSection(
+    BuildContext context,
+    AsyncValue<DashboardEntity> dashboard,
+  ) {
+    final qash = context.qash;
     return dashboard.when(
       data: (value) {
         if (value.topCategories.isEmpty) {
-          return const Text(
+          return Text(
             'No category spendings yet.',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           );
         }
         return Column(
           children: [
             for (final category in value.topCategories) ...[
-              _topCategoryRow(category),
+              _topCategoryRow(context, category),
               const SizedBox(height: 12),
             ],
           ],
@@ -649,25 +668,29 @@ class HomeScreen extends ConsumerWidget {
       ),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
 
-  Widget _goalsSection(AsyncValue<List<SavingGoalEntity>> goals) {
+  Widget _goalsSection(
+    BuildContext context,
+    AsyncValue<List<SavingGoalEntity>> goals,
+  ) {
+    final qash = context.qash;
     return goals.when(
       data: (items) {
         if (items.isEmpty) {
-          return const Text(
+          return Text(
             'No goals yet.',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           );
         }
         final list = items.take(2).toList();
         return Column(
           children: [
             for (final goal in list) ...[
-              _goalCardFromData(goal),
+              _goalCardFromData(context, goal),
               const SizedBox(height: 12),
             ],
           ],
@@ -679,24 +702,28 @@ class HomeScreen extends ConsumerWidget {
       ),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
 
-  Widget _recentSection(AsyncValue<List<TransactionEntity>> transactions) {
+  Widget _recentSection(
+    BuildContext context,
+    AsyncValue<List<TransactionEntity>> transactions,
+  ) {
+    final qash = context.qash;
     return transactions.when(
       data: (items) {
         if (items.isEmpty) {
-          return const Text(
+          return Text(
             'No recent transactions.',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           );
         }
         return Column(
           children: [
             for (final item in items) ...[
-              _transactionCard(item),
+              _transactionCard(context, item),
               const SizedBox(height: 8),
             ],
           ],
@@ -708,7 +735,7 @@ class HomeScreen extends ConsumerWidget {
       ),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
@@ -720,24 +747,25 @@ class HomeScreen extends ConsumerWidget {
     return 'Failed to load data.';
   }
 
-  Widget _walletCard(WalletEntity wallet) {
+  Widget _walletCard(BuildContext context, WalletEntity wallet) {
+    final qash = context.qash;
     return Container(
       width: 240,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -772,8 +800,8 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Text(
                     wallet.name,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -783,14 +811,15 @@ class HomeScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: qash.border,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   wallet.currency,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
+                    color: qash.textPrimary,
                   ),
                 ),
               ),
@@ -799,8 +828,8 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Text(
             _formatCurrency(wallet.balance),
-            style: const TextStyle(
-              color: Color(0xFF111111),
+            style: TextStyle(
+              color: qash.textPrimary,
               fontSize: 24,
               fontWeight: FontWeight.w500,
             ),
@@ -808,7 +837,7 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             wallet.currency,
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
         ],
       ),
@@ -816,23 +845,24 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _addWalletCard(BuildContext context) {
+    final qash = context.qash;
     return GestureDetector(
       onTap: () => context.push('/wallets/create'),
       child: Container(
         width: 80,
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 1.4),
+          border: Border.all(color: qash.border, width: 1.4),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.add, color: Color(0xFF8B8B8B)),
-            SizedBox(height: 8),
+          children: [
+            Icon(Icons.add, color: qash.textSecondary),
+            const SizedBox(height: 8),
             Text(
               'Add',
               style: TextStyle(
-                color: Color(0xFF8B8B8B),
+                color: qash.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -843,23 +873,24 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _budgetStatusCard(BudgetStatusEntity budget) {
+  Widget _budgetStatusCard(BuildContext context, BudgetStatusEntity budget) {
+    final qash = context.qash;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -868,8 +899,8 @@ class HomeScreen extends ConsumerWidget {
         children: [
           Text(
             budget.categoryName,
-            style: const TextStyle(
-              color: Color(0xFF111111),
+            style: TextStyle(
+              color: qash.textPrimary,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
@@ -877,14 +908,14 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             '${_formatCurrency(budget.spentAmount)} / ${_formatCurrency(budget.budgetAmount)}',
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: budget.progress,
-            backgroundColor: const Color(0xFFF3F4F6),
+            backgroundColor: qash.border,
             color: budget.isOverBudget
-                ? const Color(0xFFEF4444)
+                ? qash.danger
                 : const Color(0xFF10B981),
             minHeight: 6,
             borderRadius: BorderRadius.circular(999),
@@ -901,23 +932,24 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _topCategoryRow(TopCategoryEntity category) {
+  Widget _topCategoryRow(BuildContext context, TopCategoryEntity category) {
+    final qash = context.qash;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -929,16 +961,16 @@ class HomeScreen extends ConsumerWidget {
             children: [
               Text(
                 category.categoryName,
-                style: const TextStyle(
-                  color: Color(0xFF111111),
+                style: TextStyle(
+                  color: qash.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               Text(
                 _formatCurrency(category.totalAmount),
-                style: const TextStyle(
-                  color: Color(0xFF111111),
+                style: TextStyle(
+                  color: qash.textPrimary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -948,8 +980,8 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: (category.percentage / 100).clamp(0, 1),
-            backgroundColor: const Color(0xFFF3F4F6),
-            color: const Color(0xFF111111),
+            backgroundColor: qash.border,
+            color: qash.textPrimary,
             minHeight: 6,
             borderRadius: BorderRadius.circular(999),
           ),
@@ -958,23 +990,24 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _goalCardFromData(SavingGoalEntity goal) {
+  Widget _goalCardFromData(BuildContext context, SavingGoalEntity goal) {
+    final qash = context.qash;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -985,12 +1018,13 @@ class HomeScreen extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  const Text('G', style: TextStyle(fontSize: 20)),
+                  Text('G',
+                      style: TextStyle(fontSize: 20, color: qash.textPrimary)),
                   const SizedBox(width: 8),
                   Text(
                     goal.name,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -999,15 +1033,15 @@ class HomeScreen extends ConsumerWidget {
               ),
               Text(
                 '${goal.progressPercent.toStringAsFixed(0)}%',
-                style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+                style: TextStyle(color: qash.textSecondary, fontSize: 12),
               ),
             ],
           ),
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: goal.progress,
-            backgroundColor: const Color(0xFFF3F4F6),
-            color: const Color(0xFF111111),
+            backgroundColor: qash.border,
+            color: qash.textPrimary,
             minHeight: 8,
             borderRadius: BorderRadius.circular(999),
           ),
@@ -1017,11 +1051,11 @@ class HomeScreen extends ConsumerWidget {
             children: [
               Text(
                 _formatCurrency(goal.currentAmount),
-                style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+                style: TextStyle(color: qash.textSecondary, fontSize: 12),
               ),
               Text(
                 _formatCurrency(goal.targetAmount),
-                style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+                style: TextStyle(color: qash.textSecondary, fontSize: 12),
               ),
             ],
           ),
@@ -1030,7 +1064,8 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _transactionCard(TransactionEntity item) {
+  Widget _transactionCard(BuildContext context, TransactionEntity item) {
+    final qash = context.qash;
     final isTransfer = item.isTransfer;
     final amountColor = isTransfer
         ? const Color(0xFF2B7FFF)
@@ -1054,19 +1089,19 @@ class HomeScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -1094,16 +1129,16 @@ class HomeScreen extends ConsumerWidget {
                     item.description.isNotEmpty
                         ? item.description
                         : item.categoryName,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   Text(
                     _formatDate(item.transactionDate),
-                    style: const TextStyle(
-                      color: Color(0xFF8B8B8B),
+                    style: TextStyle(
+                      color: qash.textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -1151,11 +1186,13 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _quickAction(
+    BuildContext context,
     String label,
     String icon,
     Color color, {
     VoidCallback? onTap,
   }) {
+    final qash = context.qash;
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -1174,7 +1211,7 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
         ],
       ),

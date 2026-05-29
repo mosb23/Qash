@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
@@ -16,10 +17,10 @@ class GoalsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final qash = context.qash;
     final goals = ref.watch(savingGoalsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
         child: Column(
           children: [
@@ -39,10 +40,10 @@ class GoalsScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Goals',
                             style: TextStyle(
-                              color: Color(0xFF111111),
+                              color: qash.textPrimary,
                               fontSize: 24,
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.w500,
@@ -54,38 +55,38 @@ class GoalsScreen extends ConsumerWidget {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF4D93A),
+                                color: qash.accent,
                                 borderRadius: BorderRadius.circular(999),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.add,
                                 size: 20,
-                                color: Color(0xFF111111),
+                                color: qash.onAccent,
                               ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _summaryCard(goals),
+                      _summaryCard(context, goals),
                       const SizedBox(height: 20),
                       goals.when(
                         data: (result) {
                           if (result.isFailure) {
                             return Text(
                               result.message,
-                              style: const TextStyle(
-                                color: Color(0xFF8B8B8B),
+                              style: TextStyle(
+                                color: qash.textSecondary,
                                 fontSize: 12,
                               ),
                             );
                           }
                           final items = result.data ?? const [];
                           if (items.isEmpty) {
-                            return const Text(
+                            return Text(
                               'No saving goals yet.',
                               style: TextStyle(
-                                color: Color(0xFF8B8B8B),
+                                color: qash.textSecondary,
                                 fontSize: 12,
                               ),
                             );
@@ -105,8 +106,8 @@ class GoalsScreen extends ConsumerWidget {
                         ),
                         error: (error, stack) => Text(
                           _errorText(error),
-                          style: const TextStyle(
-                            color: Color(0xFF8B8B8B),
+                          style: TextStyle(
+                            color: qash.textSecondary,
                             fontSize: 12,
                           ),
                         ),
@@ -129,11 +130,15 @@ class GoalsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryCard(AsyncValue<Result<List<SavingGoalEntity>>> goals) {
+  Widget _summaryCard(
+    BuildContext context,
+    AsyncValue<Result<List<SavingGoalEntity>>> goals,
+  ) {
     return goals.when(
       data: (result) {
         if (result.isFailure) {
           return _summaryCardShell(
+            context,
             totalSaved: 0,
             totalTarget: 0,
             completed: 0,
@@ -159,6 +164,7 @@ class GoalsScreen extends ConsumerWidget {
             .length;
         final progress = totalTarget > 0 ? (totalSaved / totalTarget) : 0.0;
         return _summaryCardShell(
+          context,
           totalSaved: totalSaved,
           totalTarget: totalTarget,
           completed: completed,
@@ -167,13 +173,15 @@ class GoalsScreen extends ConsumerWidget {
         );
       },
       loading: () => _summaryCardShell(
+        context,
         totalSaved: 0,
         totalTarget: 0,
         completed: 0,
         totalGoals: 0,
         progress: 0,
       ),
-      error: (_, __) => _summaryCardShell(
+      error: (_, _) => _summaryCardShell(
+        context,
         totalSaved: 0,
         totalTarget: 0,
         completed: 0,
@@ -183,32 +191,34 @@ class GoalsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryCardShell({
+  Widget _summaryCardShell(
+    BuildContext context, {
     required double totalSaved,
     required double totalTarget,
     required int completed,
     required int totalGoals,
     required double progress,
   }) {
+    final qash = context.qash;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: qash.primaryButton,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Total Saved',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 4),
           Text(
             _formatCurrency(totalSaved),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: qash.onPrimaryButton,
               fontSize: 24,
               fontWeight: FontWeight.w400,
             ),
@@ -216,13 +226,13 @@ class GoalsScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             'of ${_formatCurrency(totalTarget)} goal',
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 16),
           Container(
             height: 8,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: qash.onPrimaryButton.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(999),
             ),
             child: FractionallySizedBox(
@@ -230,7 +240,7 @@ class GoalsScreen extends ConsumerWidget {
               widthFactor: progress,
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF4D93A),
+                  color: qash.accent,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -239,7 +249,7 @@ class GoalsScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             '$completed/$totalGoals goals completed',
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
         ],
       ),
@@ -247,6 +257,7 @@ class GoalsScreen extends ConsumerWidget {
   }
 
   Widget _goalCard(BuildContext context, SavingGoalEntity goal) {
+    final qash = context.qash;
     final color = _goalColor(goal);
     final percent = (goal.progress * 100).round();
 
@@ -258,17 +269,17 @@ class GoalsScreen extends ConsumerWidget {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(24),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color(0x19000000),
+              color: qash.cardShadow,
               blurRadius: 2,
-              offset: Offset(0, 1),
+              offset: const Offset(0, 1),
               spreadRadius: -1,
             ),
             BoxShadow(
-              color: Color(0x19000000),
+              color: qash.cardShadow,
               blurRadius: 3,
-              offset: Offset(0, 1),
+              offset: const Offset(0, 1),
             ),
           ],
         ),
@@ -285,12 +296,12 @@ class GoalsScreen extends ConsumerWidget {
                       height: 36,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: qash.surface.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.flag_rounded,
-                        color: Color(0xFF111111),
+                        color: qash.textPrimary,
                         size: 20,
                       ),
                     ),
@@ -300,16 +311,16 @@ class GoalsScreen extends ConsumerWidget {
                       children: [
                         Text(
                           goal.name,
-                          style: const TextStyle(
-                            color: Color(0xFF111111),
+                          style: TextStyle(
+                            color: qash.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                         Text(
                           '${_daysLeft(goal.deadline)} days left',
-                          style: const TextStyle(
-                            color: Color(0x99111111),
+                          style: TextStyle(
+                            color: qash.textPrimary.withValues(alpha: 0.6),
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -320,8 +331,8 @@ class GoalsScreen extends ConsumerWidget {
                 ),
                 Text(
                   '$percent%',
-                  style: const TextStyle(
-                    color: Color(0xFF111111),
+                  style: TextStyle(
+                    color: qash.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -332,7 +343,7 @@ class GoalsScreen extends ConsumerWidget {
             Container(
               height: 8,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.5),
+                color: qash.surface.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: FractionallySizedBox(
@@ -340,7 +351,7 @@ class GoalsScreen extends ConsumerWidget {
                 widthFactor: goal.progress,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF111111),
+                    color: qash.primaryButton,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -352,16 +363,16 @@ class GoalsScreen extends ConsumerWidget {
               children: [
                 Text(
                   '${_formatCurrency(goal.currentAmount)} saved',
-                  style: const TextStyle(
-                    color: Color(0xB2111111),
+                  style: TextStyle(
+                    color: qash.textPrimary.withValues(alpha: 0.7),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
                   'Target: ${_formatCurrency(goal.targetAmount)}',
-                  style: const TextStyle(
-                    color: Color(0xB2111111),
+                  style: TextStyle(
+                    color: qash.textPrimary.withValues(alpha: 0.7),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -379,6 +390,7 @@ class GoalsScreen extends ConsumerWidget {
   }
 
   Widget _addGoalButton(BuildContext context) {
+    final qash = context.qash;
     return GestureDetector(
       onTap: () => context.push('/goals/create'),
       child: Container(
@@ -386,13 +398,13 @@ class GoalsScreen extends ConsumerWidget {
         height: 56,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 1.4),
+          border: Border.all(color: qash.border, width: 1.4),
         ),
-        child: const Center(
+        child: Center(
           child: Text(
             'Add New Goal',
             style: TextStyle(
-              color: Color(0xFF8B8B8B),
+              color: qash.textSecondary,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),

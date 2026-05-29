@@ -39,9 +39,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     final cardColor = _goalColor(_goal);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
         elevation: 0,
         centerTitle: true,
         leading: Padding(

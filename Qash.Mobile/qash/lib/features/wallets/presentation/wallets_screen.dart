@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
@@ -14,31 +15,30 @@ class WalletsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final qash = context.qash;
     final wallets = ref.watch(walletsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
         elevation: 0,
         centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => context.pop(),
             ),
           ),
         ),
-        title: const Text(
+        title: Text(
           'Wallets',
           style: TextStyle(
-            color: Colors.black,
+            color: qash.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -47,13 +47,13 @@ class WalletsScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF4D93A),
+              decoration: BoxDecoration(
+                color: qash.accent,
                 shape: BoxShape.circle,
               ),
               child: IconButton(
                 onPressed: () => context.push('/wallets/create'),
-                icon: const Icon(Icons.add, color: Colors.black),
+                icon: Icon(Icons.add, color: qash.onAccent),
               ),
             ),
           ),
@@ -67,8 +67,8 @@ class WalletsScreen extends ConsumerWidget {
               if (result.isFailure) {
                 return Text(
                   result.message,
-                  style: const TextStyle(
-                    color: Color(0xFF8B8B8B),
+                  style: TextStyle(
+                    color: qash.textSecondary,
                     fontSize: 12,
                   ),
                 );
@@ -77,12 +77,12 @@ class WalletsScreen extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _summaryCard(items),
+                  _summaryCard(context, items),
                   const SizedBox(height: 20),
                   if (items.isEmpty)
-                    const Text(
+                    Text(
                       'No wallets yet.',
-                      style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+                      style: TextStyle(color: qash.textSecondary, fontSize: 12),
                     )
                   else
                     for (final wallet in items) ...[
@@ -95,16 +95,16 @@ class WalletsScreen extends ConsumerWidget {
                     height: 56,
                     child: OutlinedButton.icon(
                       onPressed: () => context.push('/wallets/create'),
-                      icon: const Icon(Icons.add, color: Color(0xFF8B8B8B)),
-                      label: const Text(
+                      icon: Icon(Icons.add, color: qash.textSecondary),
+                      label: Text(
                         'Add New Wallet',
                         style: TextStyle(
-                          color: Color(0xFF8B8B8B),
+                          color: qash.textSecondary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
+                        side: BorderSide(color: qash.border),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -120,7 +120,7 @@ class WalletsScreen extends ConsumerWidget {
             ),
             error: (error, stack) => Text(
               _errorText(error),
-              style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+              style: TextStyle(color: qash.textSecondary, fontSize: 12),
             ),
           ),
         ),
@@ -132,7 +132,8 @@ class WalletsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryCard(List<WalletEntity> wallets) {
+  Widget _summaryCard(BuildContext context, List<WalletEntity> wallets) {
+    final qash = context.qash;
     final total = wallets.fold<double>(
       0,
       (sum, wallet) => sum + wallet.balance,
@@ -141,21 +142,21 @@ class WalletsScreen extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: qash.primaryButton,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Total Assets',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 8),
           Text(
             _formatCurrency(total),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: qash.onPrimaryButton,
               fontSize: 30,
               fontWeight: FontWeight.w400,
             ),
@@ -163,7 +164,7 @@ class WalletsScreen extends ConsumerWidget {
           const SizedBox(height: 6),
           Text(
             '${wallets.length} wallets',
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
         ],
       ),
@@ -171,25 +172,26 @@ class WalletsScreen extends ConsumerWidget {
   }
 
   Widget _walletCard(BuildContext context, WidgetRef ref, WalletEntity wallet) {
+    final qash = context.qash;
     return GestureDetector(
       onTap: () =>
           context.push('/wallets/${wallet.walletId}/edit', extra: wallet),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: qash.surface,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color(0x19000000),
+              color: qash.cardShadow,
               blurRadius: 2,
-              offset: Offset(0, 1),
+              offset: const Offset(0, 1),
               spreadRadius: -1,
             ),
             BoxShadow(
-              color: Color(0x19000000),
+              color: qash.cardShadow,
               blurRadius: 3,
-              offset: Offset(0, 1),
+              offset: const Offset(0, 1),
             ),
           ],
         ),
@@ -202,7 +204,8 @@ class WalletsScreen extends ConsumerWidget {
                 color: const Color(0xFFF3F4F6),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.account_balance_wallet_outlined),
+              child: Icon(Icons.account_balance_wallet_outlined,
+                  color: qash.textPrimary),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -211,8 +214,8 @@ class WalletsScreen extends ConsumerWidget {
                 children: [
                   Text(
                     wallet.name,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
@@ -220,8 +223,8 @@ class WalletsScreen extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     wallet.currency,
-                    style: const TextStyle(
-                      color: Color(0xFF8B8B8B),
+                    style: TextStyle(
+                      color: qash.textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -233,16 +236,16 @@ class WalletsScreen extends ConsumerWidget {
               children: [
                 Text(
                   _formatCurrency(wallet.balance),
-                  style: const TextStyle(
-                    color: Color(0xFF111111),
+                  style: TextStyle(
+                    color: qash.textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   wallet.currency,
-                  style: const TextStyle(
-                    color: Color(0xFF8B8B8B),
+                  style: TextStyle(
+                    color: qash.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -250,7 +253,7 @@ class WalletsScreen extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: Color(0xFFFB2C36)),
+              icon: Icon(Icons.delete_outline, color: qash.danger),
               onPressed: () => _confirmDelete(context, ref, wallet),
             ),
           ],

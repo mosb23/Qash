@@ -117,9 +117,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
     final saved = _savedController.text.isEmpty ? '0' : _savedController.text;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
         elevation: 0,
         centerTitle: true,
         leading: Padding(

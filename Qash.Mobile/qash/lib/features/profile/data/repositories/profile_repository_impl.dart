@@ -4,6 +4,7 @@ import '../../domain/entities/profile.dart';
 import '../../domain/entities/profile_update.dart';
 import '../../domain/repositories/profile_repository.dart';
 import '../datasources/profile_remote_data_source.dart';
+import '../models/delete_profile_request_model.dart';
 import '../models/profile_update_request_model.dart';
 
 class ProfileRepositoryImpl implements ProfileRepository {
@@ -40,8 +41,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
-  Future<Result<String>> deleteProfile() async {
-    final response = await _remoteDataSource.deleteProfile();
+  Future<Result<String>> deleteProfile(String password) async {
+    final response = await _remoteDataSource.deleteProfile(
+      DeleteProfileRequestModel(password: password),
+    );
 
     if (response.success) {
       return Result.success(response.data ?? response.message);

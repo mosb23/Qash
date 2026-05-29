@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../domain/entities/auth_requests.dart';
 import '../providers/auth_providers.dart';
@@ -70,14 +71,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            decoration: const BoxDecoration(color: Color(0xFFF7F6F3)),
+            color: qash.scaffoldBackground,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,14 +88,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF4D93A),
+                    color: qash.accent,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
                       'Q',
                       style: TextStyle(
-                        color: Color(0xFF111111),
+                        color: qash.onAccent,
                         fontSize: 24,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w700,
@@ -103,30 +104,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                const Text(
+                Text(
                   'Welcome back 👋',
                   style: TextStyle(
-                    color: Color(0xFF111111),
+                    color: qash.textPrimary,
                     fontSize: 24,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Sign in to your Qash account',
                   style: TextStyle(
-                    color: Color(0xFF8B8B8B),
+                    color: qash.textSecondary,
                     fontSize: 16,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w400,
                   ),
                 ),
                 const SizedBox(height: 40),
-                const Text(
+                Text(
                   'Phone number',
                   style: TextStyle(
-                    color: Color(0xFF111111),
+                    color: qash.textPrimary,
                     fontSize: 14,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,
@@ -138,38 +139,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   height: 56,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: qash.surface,
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Color(0x19000000),
+                        color: qash.cardShadow,
                         blurRadius: 2,
-                        offset: Offset(0, 1),
+                        offset: const Offset(0, 1),
                         spreadRadius: -1,
                       ),
                       BoxShadow(
-                        color: Color(0x19000000),
+                        color: qash.cardShadow,
                         blurRadius: 3,
-                        offset: Offset(0, 1),
-                        spreadRadius: 0,
+                        offset: const Offset(0, 1),
                       ),
                     ],
                   ),
                   child: TextField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       border: InputBorder.none,
                       hintText: '+20 1xx xxx xxxx',
                       hintStyle: TextStyle(
-                        color: Color(0xFFC4C4C4),
+                        color: qash.textHint,
                         fontSize: 16,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w400,
                       ),
                     ),
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontSize: 16,
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w400,
@@ -177,10 +177,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Password',
                   style: TextStyle(
-                    color: Color(0xFF111111),
+                    color: qash.textPrimary,
                     fontSize: 14,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,
@@ -196,10 +196,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
                     onTap: () => context.go('/forgot-password'),
-                    child: const Text(
+                    child: Text(
                       'Forgot password?',
                       style: TextStyle(
-                        color: Color(0xFF111111),
+                        color: qash.textPrimary,
                         fontSize: 14,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w500,
@@ -214,7 +214,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     width: double.infinity,
                     height: 56,
                     decoration: ShapeDecoration(
-                      color: const Color(0xFF111111),
+                      color: qash.primaryButton,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -222,8 +222,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Center(
                       child: Text(
                         _isLoading ? 'Signing in...' : 'Sign In',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: qash.onPrimaryButton,
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
@@ -235,10 +235,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       "Don't have an account? ",
                       style: TextStyle(
-                        color: Color(0xFF8B8B8B),
+                        color: qash.textSecondary,
                         fontSize: 14,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w400,
@@ -248,10 +248,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onTap: () {
                         context.push('/register');
                       },
-                      child: const Text(
+                      child: Text(
                         'Sign Up',
                         style: TextStyle(
-                          color: Color(0xFF111111),
+                          color: qash.textPrimary,
                           fontSize: 16,
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w500,

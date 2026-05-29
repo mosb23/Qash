@@ -47,9 +47,7 @@ class _DeleteGoalScreenState extends ConsumerState<DeleteGoalScreen> {
     final color = _goalColor(widget.goal);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
