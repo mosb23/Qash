@@ -14,7 +14,6 @@ import '../../categories/providers/categories_providers.dart';
 import '../../transactions/domain/entities/transaction.dart';
 import '../../transactions/providers/transactions_providers.dart';
 import '../domain/entities/category_breakdown.dart';
-import '../domain/entities/income_vs_expense.dart';
 import '../domain/entities/spending_trend.dart';
 import '../providers/analytics_providers.dart';
 
@@ -37,16 +36,10 @@ class AnalyticsScreen extends ConsumerWidget {
     final qash = context.qash;
     final period = ref.watch(analyticsPeriodProvider);
     final summary = ref.watch(analyticsSummaryProvider);
-    final breakdown = period == AnalyticsPeriod.month
-        ? ref.watch(categoryBreakdownProvider)
-        : AsyncValue.data(Result.success(<CategoryBreakdownEntity>[]));
-    final categories = period == AnalyticsPeriod.month
-        ? ref.watch(categoriesProvider)
-        : AsyncValue.data(Result.success(<CategoryEntity>[]));
-    final transactions = period == AnalyticsPeriod.month
-      ? ref.watch(transactionsProvider)
-      : AsyncValue.data(Result.success(<TransactionEntity>[]));
-    final incomeVsExpense = ref.watch(incomeVsExpenseProvider);
+    final breakdown = ref.watch(periodCategoryBreakdownProvider);
+    final categories = ref.watch(categoriesProvider);
+    final transactions = ref.watch(transactionsProvider);
+    final periodComparison = ref.watch(periodComparisonProvider);
     final spendingTrend = ref.watch(spendingTrendProvider);
 
     return Scaffold(
@@ -58,10 +51,13 @@ class AnalyticsScreen extends ConsumerWidget {
                 onRefresh: () async {
                   ref.invalidate(monthlySummaryProvider);
                   ref.invalidate(categoryBreakdownProvider);
+                  ref.invalidate(periodCategoryBreakdownProvider);
                   ref.invalidate(incomeVsExpenseProvider);
+                  ref.invalidate(periodComparisonProvider);
                   ref.invalidate(spendingTrendProvider);
                   ref.invalidate(dateRangeSummaryProvider);
                   ref.invalidate(categoriesProvider);
+                  ref.invalidate(transactionsProvider);
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -101,18 +97,26 @@ class AnalyticsScreen extends ConsumerWidget {
                       const SizedBox(height: 16),
                       _card(
                         context,
-                        title: 'Spending Trend',
-                        height: 180,
-                        child: _spendingTrendSection(context, spendingTrend),
+                        title: _spendingTrendTitle(period),
+                        height: _spendingTrendHeight(period),
+                        child: _spendingTrendSection(
+                          context,
+                          period: period,
+                          trend: spendingTrend,
+                        ),
                       ),
                       const SizedBox(height: 16),
-                      if (period == AnalyticsPeriod.year)
+                      if (period == AnalyticsPeriod.week ||
+                          period == AnalyticsPeriod.year)
                         _card(
                           context,
-                          title: 'Income vs Expense',
-                          child: _incomeVsExpenseSection(
+                          title: period == AnalyticsPeriod.year
+                              ? 'Income vs Expense (Yearly)'
+                              : 'Income vs Expense (Weekly)',
+                          height: _comparisonChartHeight(period),
+                          child: _periodComparisonSection(
                             context,
-                            incomeVsExpense,
+                            periodComparison,
                           ),
                         ),
                       const SizedBox(height: 24),
@@ -273,6 +277,45 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
+  String _spendingTrendTitle(AnalyticsPeriod period) {
+    switch (period) {
+      case AnalyticsPeriod.week:
+        return 'Weekly Spending';
+      case AnalyticsPeriod.month:
+        return 'Spending Trend';
+      case AnalyticsPeriod.year:
+        return 'Yearly Spending';
+    }
+  }
+
+  double _spendingTrendHeight(AnalyticsPeriod period) {
+    switch (period) {
+      case AnalyticsPeriod.week:
+        return 200;
+      case AnalyticsPeriod.month:
+        return 220;
+      case AnalyticsPeriod.year:
+        return 280;
+    }
+  }
+
+  double? _comparisonChartHeight(AnalyticsPeriod period) {
+    if (period == AnalyticsPeriod.year) return 320;
+    if (period == AnalyticsPeriod.week) return 200;
+    return null;
+  }
+
+  String _categorySectionTitle(AnalyticsPeriod period) {
+    switch (period) {
+      case AnalyticsPeriod.week:
+        return 'Weekly Spending by Category';
+      case AnalyticsPeriod.month:
+        return 'Spending by Category';
+      case AnalyticsPeriod.year:
+        return 'Yearly Spending by Category';
+    }
+  }
+
   Widget _categoryBreakdownSection(
     BuildContext context, {
     required AnalyticsPeriod period,
@@ -280,10 +323,6 @@ class AnalyticsScreen extends ConsumerWidget {
     required AsyncValue<Result<List<CategoryEntity>>> categories,
     required AsyncValue<Result<List<TransactionEntity>>> transactions,
   }) {
-    if (period != AnalyticsPeriod.month) {
-      return const SizedBox.shrink();
-    }
-
     final qash = context.qash;
     return breakdown.when(
       data: (result) {
@@ -303,7 +342,7 @@ class AnalyticsScreen extends ConsumerWidget {
         final categoryMap = _buildCategoryNameMap(categories, transactions);
         return _card(
           context,
-          title: 'Spending by Category',
+          title: _categorySectionTitle(period),
           height: 200,
           child: _categoryChart(context, items, categoryMap),
         );
@@ -559,9 +598,10 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _spendingTrendSection(
-    BuildContext context,
-    AsyncValue<Result<List<SpendingTrendEntity>>> trend,
-  ) {
+    BuildContext context, {
+    required AnalyticsPeriod period,
+    required AsyncValue<Result<List<SpendingTrendEntity>>> trend,
+  }) {
     final qash = context.qash;
     return trend.when(
       data: (result) {
@@ -571,8 +611,8 @@ class AnalyticsScreen extends ConsumerWidget {
             style: TextStyle(color: qash.textSecondary, fontSize: 12),
           );
         }
-        final items = result.data ?? const [];
-        if (items.isEmpty) {
+        final raw = result.data ?? const [];
+        if (raw.isEmpty) {
           return Center(
             child: Text(
               'No spending data yet.',
@@ -580,26 +620,28 @@ class AnalyticsScreen extends ConsumerWidget {
             ),
           );
         }
-        final slice = items.length > 7
-            ? items.sublist(items.length - 7)
-            : items;
-        final maxValue = slice.fold<double>(
+
+        final items = period == AnalyticsPeriod.year
+            ? _aggregateSpendingByMonth(raw, DateTime.now().year)
+            : raw;
+
+        final maxValue = items.fold<double>(
           0,
           (max, item) => math.max(max, item.totalExpenses),
         );
 
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: slice.map((item) {
+          children: items.map((item) {
             final ratio = maxValue > 0 ? item.totalExpenses / maxValue : 0.0;
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
                   SizedBox(
-                    width: 64,
+                    width: period == AnalyticsPeriod.year ? 40 : 48,
                     child: Text(
-                      DateFormat('MM/dd').format(item.date),
+                      _spendingTrendLabel(item.date, period),
                       style: TextStyle(
                         color: qash.textSecondary,
                         fontSize: 12,
@@ -648,9 +690,40 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _incomeVsExpenseSection(
+  List<SpendingTrendEntity> _aggregateSpendingByMonth(
+    List<SpendingTrendEntity> daily,
+    int year,
+  ) {
+    final totals = List<double>.filled(12, 0);
+    for (final item in daily) {
+      if (item.date.year == year) {
+        totals[item.date.month - 1] += item.totalExpenses;
+      }
+    }
+
+    return List.generate(
+      12,
+      (index) => SpendingTrendEntity(
+        date: DateTime(year, index + 1, 1),
+        totalExpenses: totals[index],
+      ),
+    );
+  }
+
+  String _spendingTrendLabel(DateTime date, AnalyticsPeriod period) {
+    switch (period) {
+      case AnalyticsPeriod.week:
+        return DateFormat('EEE').format(date);
+      case AnalyticsPeriod.month:
+        return DateFormat('d MMM').format(date);
+      case AnalyticsPeriod.year:
+        return DateFormat('MMM').format(date);
+    }
+  }
+
+  Widget _periodComparisonSection(
     BuildContext context,
-    AsyncValue<Result<List<IncomeVsExpenseEntity>>> data,
+    AsyncValue<Result<List<PeriodComparisonPoint>>> data,
   ) {
     final qash = context.qash;
     return data.when(
@@ -665,7 +738,7 @@ class AnalyticsScreen extends ConsumerWidget {
         if (items.isEmpty) {
           return Center(
             child: Text(
-              'No yearly data yet.',
+              'No comparison data yet.',
               style: TextStyle(color: qash.textSecondary),
             ),
           );
@@ -675,77 +748,111 @@ class AnalyticsScreen extends ConsumerWidget {
           (max, item) => math.max(max, math.max(item.income, item.expenses)),
         );
         return Column(
-          children: items.map((item) {
-            final ratioIncome = maxValue > 0 ? (item.income / maxValue) : 0.0;
-            final ratioExpense = maxValue > 0
-                ? (item.expenses / maxValue)
-                : 0.0;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 32,
-                    child: Text(
-                      item.month.toString().padLeft(2, '0'),
-                      style: TextStyle(
-                        color: qash.textSecondary,
-                        fontSize: 12,
+          children: [
+            Row(
+              children: [
+                _legendDot(const Color(0xFF10B981), 'Income'),
+                const SizedBox(width: 16),
+                _legendDot(const Color(0xFFEF4444), 'Expense'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...items.map((item) {
+              final ratioIncome = maxValue > 0 ? item.income / maxValue : 0.0;
+              final ratioExpense =
+                  maxValue > 0 ? item.expenses / maxValue : 0.0;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 40,
+                      child: Text(
+                        item.label,
+                        style: TextStyle(
+                          color: qash.textSecondary,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Container(
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: qash.border,
-                            borderRadius: BorderRadius.circular(999),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _comparisonBar(
+                            context,
+                            ratio: ratioIncome,
+                            color: const Color(0xFF10B981),
                           ),
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: ratioIncome,
-                          child: Container(
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEF4444),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
+                          const SizedBox(height: 4),
+                          _comparisonBar(
+                            context,
+                            ratio: ratioExpense,
+                            color: const Color(0xFFEF4444),
                           ),
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: ratioExpense,
-                          child: Container(
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${_formatShort(item.income)} / ${_formatShort(item.expenses)}',
-                    style: TextStyle(
-                      color: qash.textPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(width: 8),
+                    Text(
+                      '${_formatShort(item.income)} / ${_formatShort(item.expenses)}',
+                      style: TextStyle(
+                        color: qash.textPrimary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
+                  ],
+                ),
+              );
+            }),
+          ],
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Text(
         _errorText(error),
         style: TextStyle(color: qash.textSecondary, fontSize: 12),
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontSize: 11)),
+      ],
+    );
+  }
+
+  Widget _comparisonBar(
+    BuildContext context, {
+    required double ratio,
+    required Color color,
+  }) {
+    final qash = context.qash;
+    return Container(
+      height: 5,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: qash.border,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: ratio.clamp(0.0, 1.0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
       ),
     );
   }

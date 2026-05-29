@@ -13,36 +13,6 @@ class HelpFaqScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
               children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.search, color: Color(0xFF111111)),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Browse categories below or contact us',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF8B8B8B),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
                 ..._faqSections.map((section) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 20),

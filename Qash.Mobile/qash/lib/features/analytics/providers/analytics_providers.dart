@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../config/providers.dart';
+import '../../transactions/domain/entities/transaction.dart';
+import '../../transactions/providers/transactions_providers.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../data/analytics_api.dart';
@@ -29,6 +32,18 @@ class AnalyticsSummary {
     required this.totalIncome,
     required this.totalExpenses,
     required this.netBalance,
+  });
+}
+
+class PeriodComparisonPoint {
+  final String label;
+  final double income;
+  final double expenses;
+
+  const PeriodComparisonPoint({
+    required this.label,
+    required this.income,
+    required this.expenses,
   });
 }
 
@@ -173,6 +188,169 @@ final dateRangeSummaryProvider = FutureProvider<Result<DateRangeSummaryEntity>>(
     return useCase(config.fromUtc, config.toUtcExclusive);
   },
 );
+
+bool _isInRange(DateTime date, DateTime from, DateTime toExclusive) {
+  final day = DateTime(date.year, date.month, date.day);
+  return !day.isBefore(from) && day.isBefore(toExclusive);
+}
+
+List<CategoryBreakdownEntity> _breakdownFromTransactions(
+  List<TransactionEntity> transactions,
+  DateTime from,
+  DateTime toExclusive,
+) {
+  final totals = <String, double>{};
+  for (final tx in transactions) {
+    if (!tx.isExpense || tx.isTransfer) continue;
+    final date = tx.transactionDate;
+    if (!_isInRange(date, from, toExclusive)) continue;
+    final key = tx.categoryId.isNotEmpty ? tx.categoryId : tx.categoryName;
+    if (key.isEmpty) continue;
+    totals[key] = (totals[key] ?? 0) + tx.amount;
+  }
+
+  final items = totals.entries
+      .map(
+        (entry) => CategoryBreakdownEntity(
+          categoryId: entry.key,
+          totalAmount: entry.value,
+        ),
+      )
+      .toList();
+  items.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
+  return items;
+}
+
+List<PeriodComparisonPoint> _comparisonFromTransactions(
+  List<TransactionEntity> transactions,
+  DateTime from,
+  DateTime toExclusive,
+) {
+  final incomeByDay = <DateTime, double>{};
+  final expenseByDay = <DateTime, double>{};
+
+  for (final tx in transactions) {
+    if (tx.isTransfer) continue;
+    final day = DateTime(
+      tx.transactionDate.year,
+      tx.transactionDate.month,
+      tx.transactionDate.day,
+    );
+    if (!_isInRange(day, from, toExclusive)) continue;
+
+    if (tx.isIncome) {
+      incomeByDay[day] = (incomeByDay[day] ?? 0) + tx.amount;
+    } else if (tx.isExpense) {
+      expenseByDay[day] = (expenseByDay[day] ?? 0) + tx.amount;
+    }
+  }
+
+  final points = <PeriodComparisonPoint>[];
+  for (
+    var day = from;
+    day.isBefore(toExclusive);
+    day = day.add(const Duration(days: 1))
+  ) {
+    points.add(
+      PeriodComparisonPoint(
+        label: DateFormat('EEE').format(day),
+        income: incomeByDay[day] ?? 0,
+        expenses: expenseByDay[day] ?? 0,
+      ),
+    );
+  }
+  return points;
+}
+
+final periodCategoryBreakdownProvider =
+    FutureProvider<Result<List<CategoryBreakdownEntity>>>((ref) async {
+      final period = ref.watch(analyticsPeriodProvider);
+      final config = ref.watch(analyticsPeriodConfigProvider);
+
+      if (period == AnalyticsPeriod.month) {
+        return ref.watch(categoryBreakdownProvider.future);
+      }
+
+      final transactionsResult = await ref.watch(transactionsProvider.future);
+      if (transactionsResult.isFailure) {
+        return Result.failure(
+          transactionsResult.failure ??
+              const AppFailure(message: 'Failed to load transactions.'),
+        );
+      }
+
+      final transactions = transactionsResult.data ?? const [];
+      final from = DateTime(
+        config.fromUtc.year,
+        config.fromUtc.month,
+        config.fromUtc.day,
+      );
+      final toExclusive = DateTime(
+        config.toUtcExclusive.year,
+        config.toUtcExclusive.month,
+        config.toUtcExclusive.day,
+      );
+
+      return Result.success(
+        _breakdownFromTransactions(transactions, from, toExclusive),
+      );
+    });
+
+final periodComparisonProvider =
+    FutureProvider<Result<List<PeriodComparisonPoint>>>((ref) async {
+      final period = ref.watch(analyticsPeriodProvider);
+      final config = ref.watch(analyticsPeriodConfigProvider);
+
+      if (period == AnalyticsPeriod.year) {
+        final result = await ref.watch(incomeVsExpenseProvider.future);
+        if (result.isFailure) {
+          return Result.failure(
+            result.failure ??
+                const AppFailure(message: 'Failed to load comparison.'),
+          );
+        }
+        final items = result.data ?? const [];
+        return Result.success(
+          items
+              .map(
+                (item) => PeriodComparisonPoint(
+                  label: DateFormat('MMM').format(
+                    DateTime(config.year, item.month),
+                  ),
+                  income: item.income,
+                  expenses: item.expenses,
+                ),
+              )
+              .toList(),
+        );
+      }
+
+      if (period == AnalyticsPeriod.week) {
+        final transactionsResult = await ref.watch(transactionsProvider.future);
+        if (transactionsResult.isFailure) {
+          return Result.failure(
+            transactionsResult.failure ??
+                const AppFailure(message: 'Failed to load transactions.'),
+          );
+        }
+        final transactions = transactionsResult.data ?? const [];
+        final from = DateTime(
+          config.fromUtc.year,
+          config.fromUtc.month,
+          config.fromUtc.day,
+        );
+        final toExclusive = DateTime(
+          config.toUtcExclusive.year,
+          config.toUtcExclusive.month,
+          config.toUtcExclusive.day,
+        );
+        return Result.success(
+          _comparisonFromTransactions(transactions, from, toExclusive),
+        );
+      }
+
+      return Result.success([]);
+    });
 
 final analyticsSummaryProvider = Provider<AsyncValue<AnalyticsSummary>>((ref) {
   final period = ref.watch(analyticsPeriodProvider);
