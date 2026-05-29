@@ -288,19 +288,19 @@ class AnalyticsScreen extends ConsumerWidget {
     }
   }
 
-  double _spendingTrendHeight(AnalyticsPeriod period) {
+  double? _spendingTrendHeight(AnalyticsPeriod period) {
     switch (period) {
       case AnalyticsPeriod.week:
         return 200;
       case AnalyticsPeriod.month:
-        return 220;
+        return 240;
       case AnalyticsPeriod.year:
-        return 280;
+        return 260;
     }
   }
 
   double? _comparisonChartHeight(AnalyticsPeriod period) {
-    if (period == AnalyticsPeriod.year) return 320;
+    if (period == AnalyticsPeriod.year) return 280;
     if (period == AnalyticsPeriod.week) return 200;
     return null;
   }
@@ -631,7 +631,7 @@ class AnalyticsScreen extends ConsumerWidget {
         );
 
         return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: items.map((item) {
             final ratio = maxValue > 0 ? item.totalExpenses / maxValue : 0.0;
             return Padding(
@@ -762,11 +762,11 @@ class AnalyticsScreen extends ConsumerWidget {
               final ratioExpense =
                   maxValue > 0 ? item.expenses / maxValue : 0.0;
               return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
                   children: [
                     SizedBox(
-                      width: 40,
+                      width: 36,
                       child: Text(
                         item.label,
                         style: TextStyle(
@@ -776,28 +776,32 @@ class AnalyticsScreen extends ConsumerWidget {
                       ),
                     ),
                     Expanded(
-                      child: Column(
+                      child: Row(
                         children: [
-                          _comparisonBar(
-                            context,
-                            ratio: ratioIncome,
-                            color: const Color(0xFF10B981),
+                          Expanded(
+                            child: _comparisonBar(
+                              context,
+                              ratio: ratioIncome,
+                              color: const Color(0xFF10B981),
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          _comparisonBar(
-                            context,
-                            ratio: ratioExpense,
-                            color: const Color(0xFFEF4444),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: _comparisonBar(
+                              context,
+                              ratio: ratioExpense,
+                              color: const Color(0xFFEF4444),
+                            ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '${_formatShort(item.income)} / ${_formatShort(item.expenses)}',
+                      '${_formatShort(item.income)}/${_formatShort(item.expenses)}',
                       style: TextStyle(
                         color: qash.textPrimary,
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -897,7 +901,16 @@ class AnalyticsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          if (height != null) SizedBox(height: height, child: child) else child,
+          if (height != null)
+            SizedBox(
+              height: height,
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: child,
+              ),
+            )
+          else
+            child,
         ],
       ),
     );

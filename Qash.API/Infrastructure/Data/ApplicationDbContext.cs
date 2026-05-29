@@ -175,6 +175,12 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(x => x.WalletId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasOne(x => x.ToWallet)
+                .WithMany()
+                .HasForeignKey(x => x.ToWalletId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
+
             entity.HasOne(x => x.Category)
                 .WithMany(x => x.Transactions)
                 .HasForeignKey(x => x.CategoryId)

@@ -37,6 +37,11 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
                 ["Wallet was not found."]);
         }
 
+        if (request.TransactionType == CategoryType.Transfer)
+        {
+            return await CreateTransferAsync(request, wallet, cancellationToken);
+        }
+
         var category = await _context.Categories
             .FirstOrDefaultAsync(
                 x => x.Id == request.CategoryId && x.ApplicationUserId == request.UserId,
@@ -82,6 +87,95 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
         return ApiResponse<TransactionDto>.SuccessResponse(
             dto,
             "Transaction created successfully.");
+    }
+
+    private async Task<ApiResponse<TransactionDto>> CreateTransferAsync(
+        CreateTransactionCommand request,
+        WalletEntity fromWallet,
+        CancellationToken cancellationToken)
+    {
+        var toWallet = await _context.Wallets
+            .FirstOrDefaultAsync(
+                x => x.Id == request.ToWalletId && x.ApplicationUserId == request.UserId,
+                cancellationToken);
+
+        if (toWallet is null)
+        {
+            return ApiResponse<TransactionDto>.FailResponse(
+                "Create transaction failed.",
+                ["Destination wallet was not found."]);
+        }
+
+        if (toWallet.Id == fromWallet.Id)
+        {
+            return ApiResponse<TransactionDto>.FailResponse(
+                "Create transaction failed.",
+                ["Source and destination wallets must be different."]);
+        }
+
+        if (fromWallet.Balance < request.Amount)
+        {
+            return ApiResponse<TransactionDto>.FailResponse(
+                "Create transaction failed.",
+                ["Insufficient balance in source wallet."]);
+        }
+
+        var transferCategory = await GetOrCreateTransferCategoryAsync(request.UserId, cancellationToken);
+
+        fromWallet.Balance -= request.Amount;
+        toWallet.Balance += request.Amount;
+
+        var transaction = new Transaction
+        {
+            ApplicationUserId = request.UserId,
+            WalletId = fromWallet.Id,
+            ToWalletId = toWallet.Id,
+            CategoryId = transferCategory.Id,
+            Amount = request.Amount,
+            TransactionType = CategoryType.Transfer,
+            Description = request.Description.Trim(),
+            TransactionDate = request.TransactionDate == default
+                ? DateTime.UtcNow
+                : request.TransactionDate
+        };
+
+        await _context.Transactions.AddAsync(transaction, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        await _context.Entry(transaction).Reference(x => x.Wallet).LoadAsync(cancellationToken);
+        await _context.Entry(transaction).Reference(x => x.Category).LoadAsync(cancellationToken);
+        await _context.Entry(transaction).Reference(x => x.ToWallet).LoadAsync(cancellationToken);
+
+        var dto = _mapper.Map<TransactionDto>(transaction);
+
+        return ApiResponse<TransactionDto>.SuccessResponse(
+            dto,
+            "Transfer completed successfully.");
+    }
+
+    private async Task<Category> GetOrCreateTransferCategoryAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var existing = await _context.Categories
+            .FirstOrDefaultAsync(
+                x => x.ApplicationUserId == userId && x.Type == CategoryType.Transfer,
+                cancellationToken);
+
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var category = new Category
+        {
+            ApplicationUserId = userId,
+            Name = "Transfer",
+            Type = CategoryType.Transfer
+        };
+
+        await _context.Categories.AddAsync(category, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return category;
     }
 
     private static void ApplyEffect(WalletEntity wallet, CategoryType transactionType, decimal amount)

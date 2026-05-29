@@ -9,6 +9,10 @@ public class Transaction : BaseEntity
 
     public Wallet Wallet { get; set; } = null!;
 
+    public Guid? ToWalletId { get; set; }
+
+    public Wallet? ToWallet { get; set; }
+
     public Guid ApplicationUserId { get; set; }
 
     public ApplicationUser ApplicationUser { get; set; } = null!;

@@ -9,6 +9,8 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
+import '../../wallets/domain/entities/wallet.dart';
+import '../../wallets/providers/wallets_providers.dart';
 import '../domain/entities/transaction.dart';
 import '../providers/transactions_providers.dart';
 
@@ -20,6 +22,7 @@ class TransactionsScreen extends ConsumerWidget {
     final qash = context.qash;
     final summary = ref.watch(transactionsSummaryProvider);
     final filter = ref.watch(transactionsFilterProvider);
+    final searchQuery = ref.watch(transactionsSearchQueryProvider);
     final transactions = ref.watch(filteredTransactionsProvider);
     final categories = ref.watch(categoriesProvider);
 
@@ -55,13 +58,50 @@ class TransactionsScreen extends ConsumerWidget {
                             ),
                             Row(
                               children: [
-                                _iconButton(context, Icons.search),
+                                _iconButton(
+                                  context,
+                                  Icons.search,
+                                  onTap: () => _openSearch(context, ref, searchQuery),
+                                ),
                                 const SizedBox(width: 8),
-                                _iconButton(context, Icons.tune),
+                                _iconButton(
+                                  context,
+                                  Icons.tune,
+                                  onTap: () => _openFilters(context, ref),
+                                ),
                               ],
                             ),
                           ],
                         ),
+                        if (searchQuery.trim().isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Search: "${searchQuery.trim()}"',
+                                  style: TextStyle(
+                                    color: qash.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => ref
+                                    .read(transactionsSearchQueryProvider.notifier)
+                                    .state = '',
+                                child: Text(
+                                  'Clear',
+                                  style: TextStyle(
+                                    color: qash.textPrimary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 16),
                         _summaryRow(context, summary),
                         const SizedBox(height: 12),
@@ -176,6 +216,100 @@ class TransactionsScreen extends ConsumerWidget {
 
   void _updateFilter(WidgetRef ref, TransactionFilter filter) {
     ref.read(transactionsFilterProvider.notifier).state = filter;
+  }
+
+  Future<void> _openSearch(
+    BuildContext context,
+    WidgetRef ref,
+    String currentQuery,
+  ) async {
+    final controller = TextEditingController(text: currentQuery);
+    final query = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Search transactions'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Description, category, wallet, amount...',
+            ),
+            onSubmitted: (value) => Navigator.pop(context, value),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, ''),
+              child: const Text('Clear'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('Search'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (query != null) {
+      ref.read(transactionsSearchQueryProvider.notifier).state = query;
+    }
+    controller.dispose();
+  }
+
+  Future<void> _openFilters(BuildContext context, WidgetRef ref) async {
+    final walletsResult = await ref.read(walletsProvider.future);
+    final wallets = walletsResult.data ?? const <WalletEntity>[];
+    final selectedWalletId = ref.read(transactionsWalletFilterProvider);
+
+    if (!context.mounted) {
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Filter by wallet',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  title: const Text('All wallets'),
+                  trailing: selectedWalletId == null
+                      ? const Icon(Icons.check)
+                      : null,
+                  onTap: () {
+                    ref.read(transactionsWalletFilterProvider.notifier).state =
+                        null;
+                    Navigator.pop(context);
+                  },
+                ),
+                for (final wallet in wallets)
+                  ListTile(
+                    title: Text(wallet.name),
+                    trailing: selectedWalletId == wallet.walletId
+                        ? const Icon(Icons.check)
+                        : null,
+                    onTap: () {
+                      ref.read(transactionsWalletFilterProvider.notifier).state =
+                          wallet.walletId;
+                      Navigator.pop(context);
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   int _initialTypeFromFilter(TransactionFilter filter) {
@@ -360,9 +494,15 @@ class TransactionsScreen extends ConsumerWidget {
     return NumberFormat.currency(symbol: '\$').format(value);
   }
 
-  Widget _iconButton(BuildContext context, IconData icon) {
+  Widget _iconButton(
+    BuildContext context,
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
     final qash = context.qash;
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
@@ -383,6 +523,7 @@ class TransactionsScreen extends ConsumerWidget {
         ],
       ),
       child: Icon(icon, size: 20, color: qash.textPrimary),
+      ),
     );
   }
 
@@ -477,12 +618,16 @@ class TransactionsScreen extends ConsumerWidget {
     if (resolvedCategoryName.isNotEmpty && resolvedCategoryName != title) {
       subtitleParts.add(resolvedCategoryName);
     }
-    if (item.walletName.isNotEmpty) {
+    if (isTransfer && item.toWalletName.isNotEmpty) {
+      subtitleParts.add('${item.walletName} → ${item.toWalletName}');
+    } else if (item.walletName.isNotEmpty) {
       subtitleParts.add(item.walletName);
     }
     final subtitle = subtitleParts.join(' · ');
 
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push('/transactions/${item.id}'),
+      child: Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -551,6 +696,7 @@ class TransactionsScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

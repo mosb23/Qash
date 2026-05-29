@@ -12,6 +12,10 @@ public class TransactionDto
 
     public string WalletName { get; set; } = string.Empty;
 
+    public Guid? ToWalletId { get; set; }
+
+    public string ToWalletName { get; set; } = string.Empty;
+
     public Guid UserId { get; set; }
 
     public decimal Amount { get; set; }

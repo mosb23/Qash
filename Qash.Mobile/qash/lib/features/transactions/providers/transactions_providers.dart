@@ -9,6 +9,7 @@ import '../data/repositories/transactions_repository_impl.dart';
 import '../domain/entities/transaction.dart';
 import '../domain/repositories/transactions_repository.dart';
 import '../domain/usecases/create_transaction_use_case.dart';
+import '../domain/usecases/get_transaction_by_id_use_case.dart';
 import '../domain/usecases/get_transactions_use_case.dart';
 
 enum TransactionFilter { all, income, expense, transfer }
@@ -39,6 +40,12 @@ final getTransactionsUseCaseProvider = Provider<GetTransactionsUseCase>((ref) {
   return GetTransactionsUseCase(ref.read(transactionsRepositoryProvider));
 });
 
+final getTransactionByIdUseCaseProvider = Provider<GetTransactionByIdUseCase>((
+  ref,
+) {
+  return GetTransactionByIdUseCase(ref.read(transactionsRepositoryProvider));
+});
+
 final createTransactionUseCaseProvider = Provider<CreateTransactionUseCase>((
   ref,
 ) {
@@ -49,6 +56,10 @@ final transactionsFilterProvider = StateProvider<TransactionFilter>((ref) {
   return TransactionFilter.all;
 });
 
+final transactionsSearchQueryProvider = StateProvider<String>((ref) => '');
+
+final transactionsWalletFilterProvider = StateProvider<String?>((ref) => null);
+
 final transactionsProvider = FutureProvider<Result<List<TransactionEntity>>>((
   ref,
 ) async {
@@ -56,10 +67,67 @@ final transactionsProvider = FutureProvider<Result<List<TransactionEntity>>>((
   return useCase();
 });
 
+final transactionDetailProvider = FutureProvider.family<
+    Result<TransactionEntity>,
+    String
+>((ref, transactionId) async {
+  final useCase = ref.read(getTransactionByIdUseCaseProvider);
+  return useCase(transactionId);
+});
+
+List<TransactionEntity> _applyFilters({
+  required List<TransactionEntity> items,
+  required TransactionFilter filter,
+  required String searchQuery,
+  required String? walletFilterId,
+}) {
+  Iterable<TransactionEntity> filtered = items;
+
+  switch (filter) {
+    case TransactionFilter.income:
+      filtered = filtered.where((item) => item.isIncome);
+      break;
+    case TransactionFilter.expense:
+      filtered = filtered.where((item) => item.isExpense);
+      break;
+    case TransactionFilter.transfer:
+      filtered = filtered.where((item) => item.isTransfer);
+      break;
+    case TransactionFilter.all:
+      break;
+  }
+
+  if (walletFilterId != null && walletFilterId.isNotEmpty) {
+    filtered = filtered.where(
+      (item) =>
+          item.walletId == walletFilterId ||
+          item.toWalletId == walletFilterId,
+    );
+  }
+
+  final query = searchQuery.trim().toLowerCase();
+  if (query.isNotEmpty) {
+    filtered = filtered.where((item) {
+      final haystack = [
+        item.description,
+        item.categoryName,
+        item.walletName,
+        item.toWalletName,
+        item.amount.toString(),
+      ].join(' ').toLowerCase();
+      return haystack.contains(query);
+    });
+  }
+
+  return filtered.toList();
+}
+
 final filteredTransactionsProvider =
     Provider<AsyncValue<List<TransactionEntity>>>((ref) {
       final transactionsAsync = ref.watch(transactionsProvider);
       final filter = ref.watch(transactionsFilterProvider);
+      final searchQuery = ref.watch(transactionsSearchQueryProvider);
+      final walletFilterId = ref.watch(transactionsWalletFilterProvider);
 
       return transactionsAsync.whenData((result) {
         if (result.isFailure) {
@@ -68,16 +136,12 @@ final filteredTransactionsProvider =
         }
 
         final items = result.data ?? const [];
-        switch (filter) {
-          case TransactionFilter.income:
-            return items.where((item) => item.isIncome).toList();
-          case TransactionFilter.expense:
-            return items.where((item) => item.isExpense).toList();
-          case TransactionFilter.transfer:
-            return items.where((item) => item.isTransfer).toList();
-          case TransactionFilter.all:
-            return items;
-        }
+        return _applyFilters(
+          items: items,
+          filter: filter,
+          searchQuery: searchQuery,
+          walletFilterId: walletFilterId,
+        );
       });
     });
 

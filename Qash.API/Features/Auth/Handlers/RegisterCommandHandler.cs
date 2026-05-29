@@ -81,6 +81,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, ApiRespon
         new() { Name = "Health", Type = CategoryType.Expense, ApplicationUserId = userId },
         new() { Name = "Education", Type = CategoryType.Expense, ApplicationUserId = userId },
         new() { Name = "Entertainment", Type = CategoryType.Expense, ApplicationUserId = userId },
+        new() { Name = "Transfer", Type = CategoryType.Transfer, ApplicationUserId = userId },
 
         // Income
         new() { Name = "Salary", Type = CategoryType.Income, ApplicationUserId = userId },

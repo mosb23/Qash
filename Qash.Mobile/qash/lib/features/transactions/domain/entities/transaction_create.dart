@@ -1,6 +1,7 @@
 class TransactionCreateData {
   final String userId;
   final String walletId;
+  final String? toWalletId;
   final double amount;
   final int transactionType;
   final String categoryId;
@@ -10,6 +11,7 @@ class TransactionCreateData {
   const TransactionCreateData({
     required this.userId,
     required this.walletId,
+    this.toWalletId,
     required this.amount,
     required this.transactionType,
     required this.categoryId,

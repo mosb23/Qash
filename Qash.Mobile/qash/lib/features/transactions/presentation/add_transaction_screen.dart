@@ -30,6 +30,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   List<CategoryEntity> _allCategories = [];
   List<CategoryEntity> _categories = [];
   String? _walletId;
+  String? _toWalletId;
   String? _categoryId;
   bool _loadingData = true;
   bool _submitting = false;
@@ -70,6 +71,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _categories = filteredCategories;
       _walletId =
           _walletId ?? (wallets.isNotEmpty ? wallets.first.walletId : null);
+      _toWalletId = _toWalletId ?? _defaultToWalletId(wallets, _walletId);
       _categoryId = _transactionType == 3
           ? null
           : (filteredCategories.isNotEmpty
@@ -91,6 +93,17 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       return categoriesResult.failure?.message ?? 'Failed to load categories.';
     }
     return null;
+  }
+
+  String? _defaultToWalletId(List<WalletEntity> wallets, String? fromWalletId) {
+    if (wallets.length < 2) {
+      return null;
+    }
+    final other = wallets.firstWhere(
+      (wallet) => wallet.walletId != fromWalletId,
+      orElse: () => wallets[1],
+    );
+    return other.walletId;
   }
 
   List<CategoryEntity> _filterCategories(List<CategoryEntity> categories) {
@@ -185,6 +198,25 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       );
       return;
     }
+    if (_transactionType == 3) {
+      if (_wallets.length < 2) {
+        setState(
+          () => _errorMessage = 'Add at least two wallets to make a transfer.',
+        );
+        return;
+      }
+      if (_toWalletId == null || _toWalletId!.isEmpty) {
+        setState(() => _errorMessage = 'Select a destination wallet.');
+        return;
+      }
+      if (_toWalletId == _walletId) {
+        setState(
+          () =>
+              _errorMessage = 'Source and destination wallets must be different.',
+        );
+        return;
+      }
+    }
     if (_categoryId == null && _transactionType != 3) {
       setState(() => _errorMessage = 'Select a category.');
       return;
@@ -199,9 +231,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       TransactionCreateData(
         userId: '',
         walletId: _walletId!,
+        toWalletId: _transactionType == 3 ? _toWalletId : null,
         amount: amount,
         transactionType: _transactionType,
-        categoryId: _transactionType == 3 ? _walletId! : _categoryId!,
+        categoryId: _transactionType == 3 ? '' : _categoryId!,
         description: _descriptionController.text.trim(),
         transactionDate: _date,
       ),
@@ -423,7 +456,68 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 ),
                               ),
                             )
-                          else
+                          else if (_transactionType == 3) ...[
+                            if (_wallets.length < 2)
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 16),
+                                child: Text(
+                                  'You need at least two wallets to transfer money.',
+                                  style: TextStyle(
+                                    color: Color(0xFF8B8B8B),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              )
+                            else ...[
+                              _dropdown<String>(
+                                label: 'From wallet',
+                                value: _walletId,
+                                items: _wallets.map((wallet) {
+                                  return DropdownMenuItem<String>(
+                                    value: wallet.walletId,
+                                    child: Text(
+                                      wallet.name,
+                                      style: const TextStyle(
+                                        color: Color(0xFF111111),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) => setState(() {
+                                  _walletId = value;
+                                  if (_toWalletId == value) {
+                                    _toWalletId = _defaultToWalletId(
+                                      _wallets,
+                                      value,
+                                    );
+                                  }
+                                }),
+                              ),
+                              const SizedBox(height: 16),
+                              _dropdown<String>(
+                                label: 'To wallet',
+                                value: _toWalletId,
+                                items: _wallets
+                                    .where((wallet) => wallet.walletId != _walletId)
+                                    .map((wallet) {
+                                      return DropdownMenuItem<String>(
+                                        value: wallet.walletId,
+                                        child: Text(
+                                          wallet.name,
+                                          style: const TextStyle(
+                                            color: Color(0xFF111111),
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      );
+                                    })
+                                    .toList(),
+                                onChanged: (value) =>
+                                    setState(() => _toWalletId = value),
+                              ),
+                            ],
+                          ] else
                             _dropdown<String>(
                               label: 'Wallet',
                               value: _walletId,
@@ -570,7 +664,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         onTap: _submitting
             ? null
             : () {
-                setState(() => _transactionType = type);
+                setState(() {
+                  _transactionType = type;
+                  if (type == 3) {
+                    _toWalletId ??= _defaultToWalletId(_wallets, _walletId);
+                  }
+                });
                 _applyCategoryFilter();
               },
         child: Container(

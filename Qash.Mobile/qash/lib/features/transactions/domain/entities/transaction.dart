@@ -1,9 +1,11 @@
-enum TransactionType { income, expense }
+enum TransactionType { income, expense, transfer }
 
 class TransactionEntity {
   final String id;
   final String walletId;
   final String walletName;
+  final String? toWalletId;
+  final String toWalletName;
   final String userId;
   final double amount;
   final TransactionType type;
@@ -16,6 +18,8 @@ class TransactionEntity {
     required this.id,
     required this.walletId,
     required this.walletName,
+    this.toWalletId,
+    this.toWalletName = '',
     required this.userId,
     required this.amount,
     required this.type,
@@ -27,10 +31,5 @@ class TransactionEntity {
 
   bool get isIncome => type == TransactionType.income;
   bool get isExpense => type == TransactionType.expense;
-
-  bool get isTransfer {
-    final haystack =
-        '${categoryName.toLowerCase()} ${description.toLowerCase()}';
-    return haystack.contains('transfer');
-  }
+  bool get isTransfer => type == TransactionType.transfer;
 }

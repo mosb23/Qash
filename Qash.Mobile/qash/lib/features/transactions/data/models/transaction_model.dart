@@ -5,6 +5,8 @@ class TransactionModel extends TransactionEntity {
     required super.id,
     required super.walletId,
     required super.walletName,
+    super.toWalletId,
+    super.toWalletName,
     required super.userId,
     required super.amount,
     required super.type,
@@ -19,6 +21,8 @@ class TransactionModel extends TransactionEntity {
       id: json['transactionId']?.toString() ?? '',
       walletId: json['walletId']?.toString() ?? '',
       walletName: json['walletName']?.toString() ?? '',
+      toWalletId: json['toWalletId']?.toString(),
+      toWalletName: json['toWalletName']?.toString() ?? '',
       userId: json['userId']?.toString() ?? '',
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       type: _parseTransactionType(json['transactionType']),
@@ -31,14 +35,22 @@ class TransactionModel extends TransactionEntity {
 
   static TransactionType _parseTransactionType(dynamic value) {
     if (value is num) {
-      return value.toInt() == 1
-          ? TransactionType.income
-          : TransactionType.expense;
+      switch (value.toInt()) {
+        case 1:
+          return TransactionType.income;
+        case 3:
+          return TransactionType.transfer;
+        default:
+          return TransactionType.expense;
+      }
     }
     if (value is String) {
       final normalized = value.toLowerCase();
       if (normalized == 'income') {
         return TransactionType.income;
+      }
+      if (normalized == 'transfer') {
+        return TransactionType.transfer;
       }
       if (normalized == 'expense') {
         return TransactionType.expense;
@@ -46,6 +58,9 @@ class TransactionModel extends TransactionEntity {
       final asInt = int.tryParse(value);
       if (asInt == 1) {
         return TransactionType.income;
+      }
+      if (asInt == 3) {
+        return TransactionType.transfer;
       }
     }
     return TransactionType.expense;

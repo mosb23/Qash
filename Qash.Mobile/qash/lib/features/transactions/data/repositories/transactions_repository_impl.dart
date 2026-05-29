@@ -27,6 +27,21 @@ class TransactionsRepositoryImpl implements TransactionsRepository {
   }
 
   @override
+  Future<Result<TransactionEntity>> getTransactionById(
+    String transactionId,
+  ) async {
+    final response = await _remoteDataSource.getTransactionById(transactionId);
+
+    if (response.success && response.data != null) {
+      return Result.success(response.data!);
+    }
+
+    return Result.failure(
+      AppFailure(message: response.message, errors: response.errors),
+    );
+  }
+
+  @override
   Future<Result<String>> createTransaction(TransactionCreateData data) async {
     final resolvedUserId = data.userId.isNotEmpty
         ? data.userId
@@ -43,6 +58,7 @@ class TransactionsRepositoryImpl implements TransactionsRepository {
         TransactionCreateData(
           userId: resolvedUserId,
           walletId: data.walletId,
+          toWalletId: data.toWalletId,
           amount: data.amount,
           transactionType: data.transactionType,
           categoryId: data.categoryId,

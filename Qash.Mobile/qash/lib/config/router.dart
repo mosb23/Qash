@@ -23,6 +23,7 @@ import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 import '../features/transactions/presentation/transactions_screen.dart';
 import '../features/transactions/presentation/add_transaction_screen.dart';
+import '../features/transactions/presentation/transaction_detail_screen.dart';
 import '../features/wallets/presentation/add_wallet_screen.dart';
 import '../features/wallets/presentation/wallets_screen.dart';
 import '../features/wallets/domain/entities/wallet.dart';
@@ -111,6 +112,13 @@ final appRouter = GoRouter(
             ? parsed
             : 2;
         return AddTransactionScreen(initialType: initialType);
+      },
+    ),
+    GoRoute(
+      path: '/transactions/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id'] ?? '';
+        return TransactionDetailScreen(transactionId: id);
       },
     ),
     GoRoute(

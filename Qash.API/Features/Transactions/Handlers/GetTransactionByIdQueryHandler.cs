@@ -26,6 +26,8 @@ public class GetTransactionByIdQueryHandler : IRequestHandler<GetTransactionById
         var transaction = await _context.Transactions
             .AsNoTracking()
             .Include(x => x.Wallet)
+            .Include(x => x.Category)
+            .Include(x => x.ToWallet)
             .FirstOrDefaultAsync(x => x.Id == request.TransactionId && x.ApplicationUserId == request.UserId, cancellationToken);
 
         if (transaction is null)

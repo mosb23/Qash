@@ -35,7 +35,9 @@ public class MappingProfile : Profile
         CreateMap<TransactionEntity, TransactionDtoModel>()
             .ForMember(dest => dest.TransactionId, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.WalletId, opt => opt.MapFrom(src => src.WalletId))
-            .ForMember(dest => dest.WalletName, opt => opt.MapFrom(src => src.Wallet.Name))
+            .ForMember(dest => dest.WalletName, opt => opt.MapFrom(src => src.Wallet != null ? src.Wallet.Name : string.Empty))
+            .ForMember(dest => dest.ToWalletName, opt => opt.MapFrom(src => src.ToWallet != null ? src.ToWallet.Name : string.Empty))
+            .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : string.Empty))
             .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.ApplicationUserId));
 
         CreateMap<Category, CategoryDto>();

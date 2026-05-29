@@ -33,7 +33,27 @@ public class DeleteTransactionCommandHandler : IRequestHandler<DeleteTransaction
                 ["Transaction was not found."]);
         }
 
-        ReverseEffect(transaction.Wallet, transaction.TransactionType, transaction.Amount);
+        if (transaction.TransactionType == CategoryType.Transfer && transaction.ToWalletId.HasValue)
+        {
+            var toWallet = await _context.Wallets
+                .FirstOrDefaultAsync(
+                    x => x.Id == transaction.ToWalletId && x.ApplicationUserId == request.UserId,
+                    cancellationToken);
+
+            if (toWallet is null)
+            {
+                return ApiResponse<string>.FailResponse(
+                    "Delete transaction failed.",
+                    ["Destination wallet was not found."]);
+            }
+
+            transaction.Wallet.Balance += transaction.Amount;
+            toWallet.Balance -= transaction.Amount;
+        }
+        else
+        {
+            ReverseEffect(transaction.Wallet, transaction.TransactionType, transaction.Amount);
+        }
 
         transaction.IsDeleted = true;
         transaction.DeletedAt = DateTime.UtcNow;

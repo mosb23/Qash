@@ -43,7 +43,7 @@ class AppBottomNavBar extends StatelessWidget {
           ),
           _navItem(
             context: context,
-            label: 'Transfers',
+            label: 'Transactions',
             icon: Icons.swap_horiz_rounded,
             isActive: currentTab == AppTab.transactions,
             onTap: () => onSelected(AppTab.transactions),

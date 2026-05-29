@@ -29,6 +29,21 @@ class TransactionsApi implements TransactionsRemoteDataSource {
   }
 
   @override
+  Future<ApiResponse<TransactionModel>> getTransactionById(
+    String transactionId,
+  ) async {
+    try {
+      final response = await _dio.get('/api/transactions/$transactionId');
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<TransactionModel>.fromJson(data, (json) {
+        return TransactionModel.fromJson(json as Map<String, dynamic>);
+      });
+    } on DioException catch (error) {
+      return _handleError<TransactionModel>(error);
+    }
+  }
+
+  @override
   Future<ApiResponse<String>> createTransaction(
     TransactionCreateRequestModel request,
   ) async {

@@ -18,6 +18,8 @@ public class CreateTransactionCommand : IRequest<ApiResponse<TransactionDto>>
 
     public Guid CategoryId { get; set; }
 
+    public Guid? ToWalletId { get; set; }
+
     public string Description { get; set; } = string.Empty;
 
     public DateTime TransactionDate { get; set; } = DateTime.UtcNow;
