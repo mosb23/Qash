@@ -401,7 +401,9 @@ class TransactionsScreen extends ConsumerWidget {
     required String displayCurrency,
     required double Function(TransactionsSummary summary) selector,
   }) {
-    final qash = context.qash;
+    final textColor = ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+        ? Colors.white
+        : const Color(0xFF111111);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -414,7 +416,7 @@ class TransactionsScreen extends ConsumerWidget {
           Text(
             label,
             style: TextStyle(
-              color: qash.textPrimary.withValues(alpha: 0.6),
+              color: textColor.withValues(alpha: 0.62),
               fontSize: 12,
             ),
           ),
@@ -422,15 +424,15 @@ class TransactionsScreen extends ConsumerWidget {
           summary.when(
             data: (value) => Text(
               _formatCurrency(selector(value), displayCurrency),
-              style: TextStyle(color: qash.textPrimary, fontSize: 14),
+              style: TextStyle(color: textColor, fontSize: 14),
             ),
             loading: () => Text(
               '--',
-              style: TextStyle(color: qash.textPrimary, fontSize: 14),
+              style: TextStyle(color: textColor, fontSize: 14),
             ),
             error: (_, _) => Text(
               '--',
-              style: TextStyle(color: qash.textPrimary, fontSize: 14),
+              style: TextStyle(color: textColor, fontSize: 14),
             ),
           ),
         ],

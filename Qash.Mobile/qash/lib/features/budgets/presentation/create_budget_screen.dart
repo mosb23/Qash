@@ -212,20 +212,23 @@ class _CreateBudgetScreenState extends ConsumerState<CreateBudgetScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4D93A),
+                color: qash.accent,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     'Setting budget for',
-                    style: TextStyle(color: Colors.black54, fontSize: 12),
+                    style: TextStyle(
+                      color: qash.onAccent.withValues(alpha: 0.65),
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     _periodLabel(editPeriod),
-                    style: const TextStyle(
-                      color: Colors.black,
+                    style: TextStyle(
+                      color: qash.onAccent,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
@@ -399,9 +402,9 @@ class _CreateBudgetScreenState extends ConsumerState<CreateBudgetScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
+            child: Text(
               'Delete',
-              style: TextStyle(color: Color(0xFFFB2C36)),
+              style: TextStyle(color: context.qash.danger),
             ),
           ),
         ],

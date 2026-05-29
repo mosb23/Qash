@@ -308,12 +308,12 @@ const List<_FaqSection> _faqSections = [
       _FaqItemData(
         question: 'How do I reset my password?',
         answer:
-            'On the Login screen, tap "Forgot password?". Enter your email address, and we will send a verification code. Enter the code, then create a new password.',
+            'On the Login screen, tap "Forgot password?". Enter your phone number, use the demo verification code, then create a new password.',
       ),
       _FaqItemData(
         question: 'Is my financial data secure?',
         answer:
-            'Yes. Qash uses end-to-end encryption for all data. We never store your raw banking credentials. You can also enable biometric login in Settings for an extra layer of protection.',
+            'Qash protects your session token with secure storage on supported devices and does not connect to or store raw banking credentials.',
       ),
       _FaqItemData(
         question: 'How do I delete my account?',

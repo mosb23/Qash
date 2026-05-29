@@ -134,7 +134,8 @@ class HomeScreen extends ConsumerWidget {
                                   Text(
                                     'Total Balance',
                                     style: TextStyle(
-                                      color: qash.textSecondary,
+                                      color: qash.onPrimaryButton
+                                          .withValues(alpha: 0.7),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -149,14 +150,16 @@ class HomeScreen extends ConsumerWidget {
                                         Text(
                                           displayCurrency,
                                           style: TextStyle(
-                                            color: qash.textSecondary,
+                                            color: qash.onPrimaryButton
+                                                .withValues(alpha: 0.7),
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                         Icon(
                                           Icons.keyboard_arrow_down,
-                                          color: qash.textSecondary,
+                                          color: qash.onPrimaryButton
+                                              .withValues(alpha: 0.7),
                                           size: 18,
                                         ),
                                       ],
@@ -195,7 +198,8 @@ class HomeScreen extends ConsumerWidget {
                                       hideBalance
                                           ? Icons.visibility_off_outlined
                                           : Icons.visibility_outlined,
-                                      color: qash.textSecondary,
+                                      color: qash.onPrimaryButton
+                                          .withValues(alpha: 0.7),
                                       size: 22,
                                     ),
                                   ),
@@ -229,7 +233,8 @@ class HomeScreen extends ConsumerWidget {
                                           Text(
                                             'Income',
                                             style: TextStyle(
-                                              color: qash.textSecondary,
+                                              color: qash.onPrimaryButton
+                                                  .withValues(alpha: 0.7),
                                               fontSize: 12,
                                             ),
                                           ),
@@ -279,7 +284,8 @@ class HomeScreen extends ConsumerWidget {
                                           Text(
                                             'Expenses',
                                             style: TextStyle(
-                                              color: qash.textSecondary,
+                                              color: qash.onPrimaryButton
+                                                  .withValues(alpha: 0.7),
                                               fontSize: 12,
                                             ),
                                           ),

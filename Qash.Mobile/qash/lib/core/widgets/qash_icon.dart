@@ -25,6 +25,8 @@ class QashIcon extends StatelessWidget {
         width: size,
         height: size,
         fit: fit,
+        color: color,
+        colorBlendMode: color == null ? null : BlendMode.srcIn,
         errorBuilder: (context, error, stackTrace) => _fallbackIcon(),
       );
     }

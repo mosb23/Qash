@@ -158,6 +158,7 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
   }
 
   Future<void> _delete() async {
+    final qash = context.qash;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -170,7 +171,7 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text('Delete', style: TextStyle(color: qash.danger)),
           ),
         ],
       ),

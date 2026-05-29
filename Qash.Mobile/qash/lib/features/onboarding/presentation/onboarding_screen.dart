@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/onboarding_preferences.dart';
+import '../../../core/theme/qash_theme_extension.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -59,15 +60,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget buildIndicator(int index) {
+    final qash = context.qash;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(horizontal: 4),
       width: currentPage == index ? 24 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: currentPage == index
-            ? const Color(0xFF111111)
-            : const Color(0xFFD1D5DB),
+        color: currentPage == index ? qash.primaryButton : qash.border,
         borderRadius: BorderRadius.circular(20),
       ),
     );
@@ -75,7 +75,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Scaffold(
+      backgroundColor: qash.scaffoldBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -85,10 +87,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 alignment: Alignment.topRight,
                 child: TextButton(
                   onPressed: skip,
-                  child: const Text(
+                  child: Text(
                     'Skip',
                     style: TextStyle(
-                      color: Color(0xFF8B8B8B),
+                      color: qash.textSecondary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -135,6 +137,7 @@ class _OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -160,10 +163,10 @@ class _OnboardingPage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               item['title'],
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF111111),
+                color: qash.textPrimary,
               ),
             ),
           ),
@@ -172,9 +175,9 @@ class _OnboardingPage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               item['description'],
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
-                color: Color(0xFF8B8B8B),
+                color: qash.textSecondary,
                 height: 1.6,
               ),
             ),
@@ -186,14 +189,15 @@ class _OnboardingPage extends StatelessWidget {
             child: ElevatedButton(
               onPressed: onContinue,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF111111),
+                backgroundColor: qash.primaryButton,
+                foregroundColor: qash.onPrimaryButton,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
               child: Text(
                 currentPage == 2 ? 'Get Started' : 'Continue',
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+                style: TextStyle(color: qash.onPrimaryButton, fontSize: 16),
               ),
             ),
           ),
@@ -201,18 +205,18 @@ class _OnboardingPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
+              Text(
                 'Already have an account? ',
-                style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 14),
+                style: TextStyle(color: qash.textSecondary, fontSize: 14),
               ),
               GestureDetector(
                 onTap: () {
                   context.go('/login');
                 },
-                child: const Text(
+                child: Text(
                   'Sign In',
                   style: TextStyle(
-                    color: Color(0xFF111111),
+                    color: qash.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),

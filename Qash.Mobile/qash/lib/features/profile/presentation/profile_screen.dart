@@ -302,6 +302,10 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final qash = context.qash;
+    final iconColor =
+        ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+            ? Colors.white
+            : const Color(0xFF111111);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -330,7 +334,7 @@ class _StatCard extends StatelessWidget {
                 assetPath: iconAsset,
                 fallback: icon,
                 size: 20,
-                color: qash.textPrimary,
+                color: iconColor,
               ),
             ),
             const SizedBox(height: 12),

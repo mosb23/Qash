@@ -53,10 +53,10 @@ class BudgetScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: CircleAvatar(
-              backgroundColor: const Color(0xFFF4D93A),
+              backgroundColor: qash.accent,
               child: IconButton(
                 onPressed: () => context.push('/budgets/create'),
-                icon: const Icon(Icons.add, color: Colors.black),
+                icon: Icon(Icons.add, color: qash.onAccent),
               ),
             ),
           ),
@@ -69,7 +69,7 @@ class BudgetScreen extends ConsumerWidget {
             if (result.isFailure) {
               return Text(
                 result.message,
-                style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+                style: TextStyle(color: qash.textSecondary, fontSize: 12),
               );
             }
             final items = result.data ?? const <BudgetStatusEntity>[];
@@ -107,9 +107,9 @@ class BudgetScreen extends ConsumerWidget {
                   const SizedBox(height: 20),
                 ],
                 if (items.isEmpty)
-                  const Text(
+                  Text(
                     'No budgets for this month.',
-                    style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+                    style: TextStyle(color: qash.textSecondary, fontSize: 12),
                   )
                 else
                   ...items.map(
@@ -132,16 +132,16 @@ class BudgetScreen extends ConsumerWidget {
                   height: 56,
                   child: OutlinedButton.icon(
                     onPressed: () => context.push('/budgets/create'),
-                    icon: const Icon(Icons.add, color: Colors.grey),
-                    label: const Text(
+                    icon: Icon(Icons.add, color: qash.iconMuted),
+                    label: Text(
                       'Add Budget Category',
                       style: TextStyle(
-                        color: Colors.grey,
+                        color: qash.textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      side: BorderSide(color: qash.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -154,7 +154,7 @@ class BudgetScreen extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) => Text(
             'Failed to load budgets.',
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
         ),
       ),
@@ -254,7 +254,10 @@ class BudgetSummaryCard extends StatelessWidget {
                 children: [
                   Text(
                     _periodLabel(period),
-                    style: TextStyle(color: qash.textSecondary, fontSize: 12),
+                    style: TextStyle(
+                      color: qash.onPrimaryButton.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -268,7 +271,10 @@ class BudgetSummaryCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'of ${_formatCurrency(totalBudget, displayCurrency)} budgeted',
-                    style: TextStyle(color: qash.textSecondary, fontSize: 12),
+                    style: TextStyle(
+                      color: qash.onPrimaryButton.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -445,14 +451,14 @@ class BudgetCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 '0%',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
+                style: TextStyle(color: qash.textSecondary, fontSize: 12),
               ),
               Text(
                 '${(progress * 100).toInt()}%',
                 style: TextStyle(
-                  color: isOverBudget ? const Color(0xFFFB2C36) : Colors.grey,
+                  color: isOverBudget ? qash.danger : qash.textSecondary,
                   fontSize: 12,
                 ),
               ),
@@ -471,6 +477,7 @@ class _OverBudgetAlert extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     final message = count == 1
         ? 'One category exceeded this month'
         : '$count categories exceeded this month';
@@ -478,25 +485,28 @@ class _OverBudgetAlert extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2),
+        color: qash.danger.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: Color(0xFFFB2C36)),
+          Icon(Icons.warning_amber_rounded, color: qash.danger),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Over budget alert',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: qash.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   message,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: TextStyle(color: qash.textSecondary, fontSize: 12),
                 ),
               ],
             ),

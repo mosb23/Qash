@@ -60,6 +60,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final qash = context.qash;
+    const headerColor = Color(0xFFEDE9FE);
+    const headerTextColor = Color(0xFF111111);
 
     return Scaffold(
       appBar: AppBar(
@@ -100,7 +102,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEDE9FE),
+                        color: headerColor,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -114,8 +116,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   'Last updated: May 2026',
-                                  style: TextStyle(
-                                    color: qash.textPrimary,
+                                  style: const TextStyle(
+                                    color: headerTextColor,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -124,7 +126,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                                 Text(
                                   'Your privacy matters. Here\'s how we handle your data.',
                                   style: TextStyle(
-                                    color: qash.textPrimary.withValues(alpha: 0.6),
+                                    color: headerTextColor.withValues(alpha: 0.6),
                                     fontSize: 12,
                                   ),
                                 ),

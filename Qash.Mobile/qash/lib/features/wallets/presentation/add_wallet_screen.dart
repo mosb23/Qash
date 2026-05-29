@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/assets/qash_icons.dart';
+import '../../../core/theme/qash_theme_extension.dart';
 import '../../../core/widgets/qash_icon.dart';
 import '../domain/entities/wallet.dart';
 import '../domain/entities/wallet_create.dart';
@@ -117,6 +118,8 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     if (!_initializedFromWallet &&
         _resolvedWallet == null &&
         widget.walletId != null) {
@@ -125,9 +128,15 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
         _resolvedWallet = walletAsync.value!.data;
         _hydrateFromWallet(_resolvedWallet);
       } else if (walletAsync.isLoading) {
-        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        return Scaffold(
+          backgroundColor: qash.scaffoldBackground,
+          body: Center(
+            child: CircularProgressIndicator(color: qash.primaryButton),
+          ),
+        );
       } else if (walletAsync.hasValue && walletAsync.value!.isFailure) {
         return Scaffold(
+          backgroundColor: qash.scaffoldBackground,
           appBar: AppBar(title: const Text('Edit Wallet')),
           body: Center(
             child: Padding(
@@ -135,7 +144,11 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(walletAsync.value!.message, textAlign: TextAlign.center),
+                  Text(
+                    walletAsync.value!.message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: qash.textSecondary),
+                  ),
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: () => ref.invalidate(walletByIdProvider(widget.walletId!)),
@@ -149,26 +162,27 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
       }
     }
     return Scaffold(
+      backgroundColor: qash.scaffoldBackground,
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => context.pop(),
             ),
           ),
         ),
         title: Text(
           _isEdit ? 'Edit Wallet' : 'New Wallet',
-          style: const TextStyle(
-            color: Colors.black,
+          style: TextStyle(
+            color: qash.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -223,13 +237,16 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: selected ? Colors.black : Colors.white,
+                      color: selected ? qash.primaryButton : qash.surface,
                       borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: selected ? qash.primaryButton : qash.border,
+                      ),
                       boxShadow: selected
                           ? null
                           : [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
+                                color: qash.cardShadow,
                                 blurRadius: 6,
                               ),
                             ],
@@ -237,7 +254,7 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
                     child: Text(
                       currency,
                       style: TextStyle(
-                        color: selected ? Colors.white : Colors.black,
+                        color: selected ? qash.onPrimaryButton : qash.textPrimary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -264,7 +281,7 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
                   _errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                  style: TextStyle(color: qash.danger, fontSize: 12),
                 ),
               ),
             SizedBox(
@@ -273,25 +290,27 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
               child: ElevatedButton(
                 onPressed: _submitting ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  disabledBackgroundColor: const Color(0xFF111111),
+                  backgroundColor: qash.primaryButton,
+                  disabledBackgroundColor:
+                      qash.primaryButton.withValues(alpha: 0.45),
+                  foregroundColor: qash.onPrimaryButton,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: _submitting
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                          color: Colors.white,
+                          color: qash.onPrimaryButton,
                           strokeWidth: 2,
                         ),
                       )
                     : Text(
                         _isEdit ? 'Save Changes' : 'Create Wallet',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: qash.onPrimaryButton,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -326,20 +345,22 @@ class _WalletTypeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: qash.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? Colors.black : Colors.transparent,
+            color: selected ? qash.primaryButton : qash.border,
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: qash.cardShadow,
               blurRadius: 8,
             ),
           ],
@@ -350,6 +371,7 @@ class _WalletTypeTile extends StatelessWidget {
               assetPath: walletType.iconAsset,
               fallback: Icons.account_balance_wallet_outlined,
               size: 32,
+              color: qash.textPrimary,
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -358,16 +380,16 @@ class _WalletTypeTile extends StatelessWidget {
                 children: [
                   Text(
                     walletType.title,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     walletType.subtitle,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -375,10 +397,10 @@ class _WalletTypeTile extends StatelessWidget {
               ),
             ),
             if (selected)
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 12,
-                backgroundColor: Colors.black,
-                child: Icon(Icons.check, size: 14, color: Colors.white),
+                backgroundColor: qash.primaryButton,
+                child: Icon(Icons.check, size: 14, color: qash.onPrimaryButton),
               ),
           ],
         ),
@@ -400,15 +422,17 @@ class _CustomInputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      style: const TextStyle(color: Color(0xFF111111)),
+      style: TextStyle(color: qash.textPrimary),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFB0B0B0)),
+        hintStyle: TextStyle(color: qash.textHint),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: qash.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 18,
@@ -429,10 +453,12 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return Text(
       title,
-      style: const TextStyle(
-        color: Color(0xFF111111),
+      style: TextStyle(
+        color: qash.textPrimary,
         fontSize: 14,
         fontWeight: FontWeight.w600,
       ),

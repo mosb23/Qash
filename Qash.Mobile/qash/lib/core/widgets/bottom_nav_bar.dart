@@ -39,6 +39,7 @@ class AppBottomNavBar extends StatelessWidget {
           _navItem(
             context: context,
             label: 'Home',
+            assetPath: QashIcons.navHome,
             fallback: Icons.home_rounded,
             isActive: currentTab == AppTab.home,
             onTap: () => onSelected(AppTab.home),
@@ -70,6 +71,7 @@ class AppBottomNavBar extends StatelessWidget {
           _navItem(
             context: context,
             label: 'Profile',
+            assetPath: QashIcons.navProfile,
             fallback: Icons.person_rounded,
             isActive: currentTab == AppTab.profile,
             onTap: () => onSelected(AppTab.profile),

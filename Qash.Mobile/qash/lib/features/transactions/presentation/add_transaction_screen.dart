@@ -436,24 +436,24 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           ),
                           const SizedBox(height: 16),
                           if (_wallets.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 16),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
                               child: Text(
                                 'No wallets found. Create a wallet on the home screen first.',
                                 style: TextStyle(
-                                  color: Color(0xFF8B8B8B),
+                                  color: qash.textSecondary,
                                   fontSize: 14,
                                 ),
                               ),
                             )
                           else if (_transactionType == 3) ...[
                             if (_wallets.length < 2)
-                              const Padding(
-                                padding: EdgeInsets.only(bottom: 16),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
                                 child: Text(
                                   'You need at least two wallets to transfer money.',
                                   style: TextStyle(
-                                    color: Color(0xFF8B8B8B),
+                                    color: qash.textSecondary,
                                     fontSize: 14,
                                   ),
                                 ),
@@ -467,8 +467,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                     value: wallet.walletId,
                                     child: Text(
                                       wallet.name,
-                                      style: const TextStyle(
-                                        color: Color(0xFF111111),
+                                      style: TextStyle(
+                                        color: qash.textPrimary,
                                         fontSize: 14,
                                       ),
                                     ),
@@ -495,8 +495,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                         value: wallet.walletId,
                                         child: Text(
                                           wallet.name,
-                                          style: const TextStyle(
-                                            color: Color(0xFF111111),
+                                          style: TextStyle(
+                                            color: qash.textPrimary,
                                             fontSize: 14,
                                           ),
                                         ),
@@ -516,8 +516,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                   value: wallet.walletId,
                                   child: Text(
                                     wallet.name,
-                                    style: const TextStyle(
-                                      color: Color(0xFF111111),
+                                    style: TextStyle(
+                                      color: qash.textPrimary,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -529,10 +529,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           if (_transactionType != 3) ...[
                             const SizedBox(height: 16),
                             if (_categories.isEmpty)
-                              const Text(
+                              Text(
                                 'No categories available for this type.',
                                 style: TextStyle(
-                                  color: Color(0xFF8B8B8B),
+                                  color: qash.textSecondary,
                                   fontSize: 14,
                                 ),
                               )
@@ -551,13 +551,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                           QashIcon(
                                             assetPath: icon,
                                             size: 22,
+                                            color: qash.textPrimary,
                                           ),
                                           const SizedBox(width: 10),
                                         ],
                                         Text(
                                           category.name,
-                                          style: const TextStyle(
-                                            color: Color(0xFF111111),
+                                          style: TextStyle(
+                                            color: qash.textPrimary,
                                             fontSize: 14,
                                           ),
                                         ),
@@ -581,13 +582,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 horizontal: 16,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: qash.surface,
                                 borderRadius: BorderRadius.circular(16),
-                                boxShadow: const [
+                                boxShadow: [
                                   BoxShadow(
-                                    color: Color(0x19000000),
+                                    color: qash.cardShadow,
                                     blurRadius: 2,
-                                    offset: Offset(0, 1),
+                                    offset: const Offset(0, 1),
                                     spreadRadius: -1,
                                   ),
                                 ],
@@ -598,15 +599,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 children: [
                                   Text(
                                     _formatDateDisplay(_date),
-                                    style: const TextStyle(
-                                      color: Color(0xFF111111),
+                                    style: TextStyle(
+                                      color: qash.textPrimary,
                                       fontSize: 15,
                                     ),
                                   ),
-                                  const Icon(
+                                  Icon(
                                     Icons.access_time_outlined,
                                     size: 20,
-                                    color: Color(0xFF8B8B8B),
+                                    color: qash.iconMuted,
                                   ),
                                 ],
                               ),
@@ -618,8 +619,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               padding: const EdgeInsets.only(bottom: 16),
                               child: Text(
                                 _errorMessage!,
-                                style: const TextStyle(
-                                  color: Colors.red,
+                                style: TextStyle(
+                                  color: qash.danger,
                                   fontSize: 14,
                                 ),
                               ),
@@ -630,18 +631,18 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               width: double.infinity,
                               height: 56,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF4D93A),
+                                color: qash.primaryButton,
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Center(
                                 child: _submitting
-                                    ? const CircularProgressIndicator(
-                                        color: Color(0xFF111111),
+                                    ? CircularProgressIndicator(
+                                        color: qash.onPrimaryButton,
                                       )
                                     : Text(
                                         'Save ${_typeLabel(_transactionType)}',
-                                        style: const TextStyle(
-                                          color: Color(0xFF111111),
+                                        style: TextStyle(
+                                          color: qash.onPrimaryButton,
                                           fontSize: 16,
                                           fontWeight: FontWeight.w500,
                                         ),

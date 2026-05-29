@@ -16,8 +16,6 @@ import '../providers/saving_goals_providers.dart';
 class GoalsScreen extends ConsumerWidget {
   const GoalsScreen({super.key});
 
-  static const _goalCardColor = Color(0xFFE5E7EB);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final qash = context.qash;
@@ -222,7 +220,10 @@ class GoalsScreen extends ConsumerWidget {
         children: [
           Text(
             'Total Saved',
-            style: TextStyle(color: qash.textSecondary, fontSize: 12),
+            style: TextStyle(
+              color: qash.onPrimaryButton.withValues(alpha: 0.7),
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -236,7 +237,10 @@ class GoalsScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             'of ${_formatCurrency(totalTarget, displayCurrency)} goal',
-            style: TextStyle(color: qash.textSecondary, fontSize: 12),
+            style: TextStyle(
+              color: qash.onPrimaryButton.withValues(alpha: 0.7),
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 16),
           Container(
@@ -259,7 +263,10 @@ class GoalsScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             '$completed/$totalGoals goals completed',
-            style: TextStyle(color: qash.textSecondary, fontSize: 12),
+            style: TextStyle(
+              color: qash.onPrimaryButton.withValues(alpha: 0.7),
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -272,7 +279,6 @@ class GoalsScreen extends ConsumerWidget {
     String displayCurrency,
   ) {
     final qash = context.qash;
-    final color = _goalColor(goal);
     final percent = (goal.progress * 100).round();
 
     return GestureDetector(
@@ -281,8 +287,9 @@ class GoalsScreen extends ConsumerWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: color,
+          color: qash.surfaceElevated,
           borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: qash.border),
           boxShadow: [
             BoxShadow(
               color: qash.cardShadow,
@@ -398,10 +405,6 @@ class GoalsScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Color _goalColor(SavingGoalEntity goal) {
-    return _goalCardColor;
   }
 
   Widget _addGoalButton(BuildContext context) {

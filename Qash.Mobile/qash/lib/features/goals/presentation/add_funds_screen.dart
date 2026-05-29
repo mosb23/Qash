@@ -79,6 +79,7 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     final displayCurrency = ref.watch(displayCurrencyProvider);
 
     return Scaffold(
+      backgroundColor: qash.scaffoldBackground,
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
@@ -128,7 +129,7 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                    style: TextStyle(color: qash.danger, fontSize: 12),
                   ),
                 ),
               SizedBox(
@@ -137,26 +138,30 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
                 child: ElevatedButton(
                   onPressed: _submitting ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    disabledBackgroundColor: const Color(0xFF111111),
-                    foregroundColor: Colors.white,
-                    disabledForegroundColor: Colors.white,
+                    backgroundColor: qash.primaryButton,
+                    disabledBackgroundColor:
+                        qash.primaryButton.withValues(alpha: 0.45),
+                    foregroundColor: qash.onPrimaryButton,
+                    disabledForegroundColor: qash.onPrimaryButton,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: qash.onPrimaryButton,
+                          strokeWidth: 2,
+                        ),
+                      )
+                      : Text(
                           'Add Funds',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
+                          style: TextStyle(
+                            color: qash.onPrimaryButton,
+                            fontSize: 16,
+                          ),
                         ),
                 ),
               ),

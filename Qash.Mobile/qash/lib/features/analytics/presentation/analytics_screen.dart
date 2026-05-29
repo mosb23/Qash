@@ -262,7 +262,9 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _summaryCard(BuildContext context, String label, String value, Color bg) {
-    final qash = context.qash;
+    final textColor = ThemeData.estimateBrightnessForColor(bg) == Brightness.dark
+        ? Colors.white
+        : const Color(0xFF111111);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
@@ -275,7 +277,7 @@ class AnalyticsScreen extends ConsumerWidget {
           Text(
             label,
             style: TextStyle(
-              color: qash.textPrimary.withValues(alpha: 0.6),
+              color: textColor.withValues(alpha: 0.62),
               fontSize: 12,
               fontFamily: 'Inter',
             ),
@@ -284,7 +286,7 @@ class AnalyticsScreen extends ConsumerWidget {
           Text(
             value,
             style: TextStyle(
-              color: qash.textPrimary,
+              color: textColor,
               fontSize: 14,
               fontFamily: 'Inter',
               fontWeight: FontWeight.w500,
@@ -782,9 +784,9 @@ class AnalyticsScreen extends ConsumerWidget {
           children: [
             Row(
               children: [
-                _legendDot(const Color(0xFF10B981), 'Income'),
+                _legendDot(context, const Color(0xFF10B981), 'Income'),
                 const SizedBox(width: 16),
-                _legendDot(const Color(0xFFEF4444), 'Expense'),
+                _legendDot(context, const Color(0xFFEF4444), 'Expense'),
               ],
             ),
             const SizedBox(height: 12),
@@ -851,7 +853,8 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _legendDot(Color color, String label) {
+  Widget _legendDot(BuildContext context, Color color, String label) {
+    final qash = context.qash;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -861,7 +864,10 @@ class AnalyticsScreen extends ConsumerWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 11)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: qash.textSecondary),
+        ),
       ],
     );
   }
