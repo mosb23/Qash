@@ -12,6 +12,8 @@ import '../models/change_password_request_model.dart';
 import '../models/forgot_password_code_request_model.dart';
 import '../models/reset_forgot_password_request_model.dart';
 import '../models/login_request_model.dart';
+import '../models/logout_request_model.dart';
+import '../models/refresh_token_request_model.dart';
 import '../models/register_request_model.dart';
 import '../models/verify_phone_request_model.dart';
 
@@ -136,6 +138,39 @@ class AuthRepositoryImpl implements AuthRepository {
     return Result.failure(
       AppFailure(message: response.message, errors: response.errors),
     );
+  }
+
+  @override
+  Future<Result<AuthSession>> refreshSession() async {
+    final refreshToken = await _storage.getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return Result.failure(
+        const AppFailure(message: 'Session expired. Please sign in again.'),
+      );
+    }
+
+    final response = await _remoteDataSource.refreshToken(
+      RefreshTokenRequestModel(refreshToken: refreshToken),
+    );
+
+    final result = _mapAuthResponse(response);
+    final session = result.data;
+    if (result.isSuccess && session != null) {
+      await _saveTokens(session);
+    }
+    return result;
+  }
+
+  @override
+  Future<Result<String>> logout() async {
+    final refreshToken = await _storage.getRefreshToken() ?? '';
+    if (refreshToken.isNotEmpty) {
+      await _remoteDataSource.logout(
+        LogoutRequestModel(refreshToken: refreshToken),
+      );
+    }
+    await _storage.clearTokens();
+    return Result.success('Signed out');
   }
 
   Future<void> _saveTokens(AuthSession session) async {

@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
-import '../../../config/providers.dart';
+import '../../auth/providers/auth_providers.dart';
+import '../../../core/auth/auth_state.dart';
 
 class LogoutConfirmScreen extends ConsumerWidget {
   const LogoutConfirmScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final qash = context.qash;
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -16,20 +20,20 @@ class LogoutConfirmScreen extends ConsumerWidget {
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => Navigator.pop(context),
             ),
           ),
         ),
-        title: const Text(
+        title: Text(
           'Sign Out',
           style: TextStyle(
-            color: Colors.black,
+            color: qash.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -39,9 +43,9 @@ class LogoutConfirmScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
         child: Column(
           children: [
-            const Text(
+            Text(
               'Are you sure you want to sign out?',
-              style: TextStyle(fontSize: 16, color: Color(0xFF111111)),
+              style: TextStyle(fontSize: 16, color: qash.textPrimary),
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -49,14 +53,15 @@ class LogoutConfirmScreen extends ConsumerWidget {
               height: 56,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF111111),
-                  foregroundColor: Colors.white,
+                  backgroundColor: qash.primaryButton,
+                  foregroundColor: qash.onPrimaryButton,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
                 onPressed: () async {
-                  await ref.read(secureStorageProvider).clearTokens();
+                  await ref.read(logoutUseCaseProvider)();
+                  ref.read(authStatusProvider.notifier).setUnauthenticated();
                   if (!context.mounted) return;
                   context.go('/login');
                 },
@@ -69,6 +74,8 @@ class LogoutConfirmScreen extends ConsumerWidget {
               height: 56,
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
+                  foregroundColor: qash.textPrimary,
+                  side: BorderSide(color: qash.border),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),

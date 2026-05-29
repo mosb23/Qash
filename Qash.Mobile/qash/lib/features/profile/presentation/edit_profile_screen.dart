@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../../core/utils/profile_form_validators.dart';
+import '../../auth/presentation/widgets/auth_screen_helpers.dart';
 import '../domain/entities/profile_update.dart';
 import '../providers/profile_providers.dart';
 
@@ -88,6 +90,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     final profileAsync = ref.watch(profileProvider);
 
     return Scaffold(
@@ -97,20 +100,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => Navigator.pop(context),
             ),
           ),
         ),
-        title: const Text(
+        title: Text(
           'Edit Profile',
           style: TextStyle(
-            color: Colors.black,
+            color: qash.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -213,8 +216,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 height: 56,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF111111),
-                    foregroundColor: Colors.white,
+                    backgroundColor: qash.primaryButton,
+                    foregroundColor: qash.onPrimaryButton,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -227,10 +230,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => const Center(
+        error: (error, stack) => Center(
           child: Text(
             'Failed to load profile.',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
         ),
       ),
@@ -259,13 +262,12 @@ class _InputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF111111)),
-        ),
+        Text(label, style: authLabelStyle(context)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -274,14 +276,14 @@ class _InputField extends StatelessWidget {
           onChanged: onChanged,
           style: TextStyle(
             fontSize: 14,
-            color: enabled ? const Color(0xFF111111) : const Color(0xFF6B7280),
+            color: enabled ? qash.textPrimary : qash.textSecondary,
           ),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
+            hintStyle: TextStyle(fontSize: 14, color: qash.textHint),
             errorText: errorText,
             filled: true,
-            fillColor: enabled ? Colors.white : const Color(0xFFF3F4F6),
+            fillColor: enabled ? qash.surface : qash.surfaceElevated,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,
@@ -296,11 +298,11 @@ class _InputField extends StatelessWidget {
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20),
-              borderSide: const BorderSide(color: Color(0xFFEF4444)),
+              borderSide: BorderSide(color: qash.danger),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20),
-              borderSide: const BorderSide(color: Color(0xFFEF4444)),
+              borderSide: BorderSide(color: qash.danger),
             ),
           ),
         ),

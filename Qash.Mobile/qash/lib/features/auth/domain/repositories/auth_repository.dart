@@ -17,4 +17,8 @@ abstract class AuthRepository {
   Future<Result<String>> resetForgotPassword(ResetForgotPasswordData data);
 
   Future<Result<String>> changePassword(ChangePasswordData data);
+
+  Future<Result<AuthSession>> refreshSession();
+
+  Future<Result<String>> logout();
 }

@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
+
+import '../../auth/presentation/widgets/auth_screen_helpers.dart';
 
 class ProfileChangePasswordSuccessScreen extends StatelessWidget {
   const ProfileChangePasswordSuccessScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return Scaffold(
+      backgroundColor: qash.scaffoldBackground,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -21,52 +27,36 @@ class ProfileChangePasswordSuccessScreen extends StatelessWidget {
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD9F0C8),
+                        color: qash.accent.withValues(alpha: 0.35),
                         borderRadius: BorderRadius.circular(18),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.check_circle_outline,
                         size: 32,
-                        color: Color(0xFF111111),
+                        color: qash.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
+                    Text(
                       'Password changed',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
+                      style: authTitleStyle(context).copyWith(
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF111111),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Your password has been updated. You can continue using the app.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF8B8B8B),
-                        height: 1.4,
-                      ),
+                      style: authSubtitleStyle(context).copyWith(height: 1.4),
                     ),
                   ],
                 ),
               ),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF111111),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  onPressed: () => context.go('/profile'),
-                  child: const Text('Back to profile'),
-                ),
+              authPrimaryButton(
+                context: context,
+                label: 'Back to profile',
+                onTap: () => context.go('/profile'),
               ),
               const SizedBox(height: 24),
             ],

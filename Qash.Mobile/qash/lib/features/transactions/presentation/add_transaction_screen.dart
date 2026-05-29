@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
@@ -56,30 +57,40 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _errorMessage = null;
     });
 
-    final walletsResult = await ref.read(walletsProvider.future);
-    final categoriesResult = await ref.read(categoriesProvider.future);
+    try {
+      final walletsResult = await ref.read(walletsProvider.future);
+      final categoriesResult = await ref.read(categoriesProvider.future);
 
-    final wallets = walletsResult.data ?? const <WalletEntity>[];
-    final categories = categoriesResult.data ?? const <CategoryEntity>[];
-    final filteredCategories = _filterCategories(categories);
+      final wallets = walletsResult.data ?? const <WalletEntity>[];
+      final categories = categoriesResult.data ?? const <CategoryEntity>[];
+      final filteredCategories = _filterCategories(categories);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _wallets = wallets;
-      _allCategories = categories;
-      _categories = filteredCategories;
-      _walletId =
-          _walletId ?? (wallets.isNotEmpty ? wallets.first.walletId : null);
-      _toWalletId = _toWalletId ?? _defaultToWalletId(wallets, _walletId);
-      _categoryId = _transactionType == 3
-          ? null
-          : (filteredCategories.isNotEmpty
-                ? filteredCategories.first.id
-                : null);
-      _loadingData = false;
-      _errorMessage = _errorMessageFromResults(walletsResult, categoriesResult);
-    });
+      setState(() {
+        _wallets = wallets;
+        _allCategories = categories;
+        _categories = filteredCategories;
+        _walletId =
+            _walletId ?? (wallets.isNotEmpty ? wallets.first.walletId : null);
+        _toWalletId = _toWalletId ?? _defaultToWalletId(wallets, _walletId);
+        _categoryId = _transactionType == 3
+            ? null
+            : (filteredCategories.isNotEmpty
+                  ? filteredCategories.first.id
+                  : null);
+        _errorMessage = _errorMessageFromResults(walletsResult, categoriesResult);
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Failed to load form data. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _loadingData = false);
+      }
+    }
   }
 
   String? _errorMessageFromResults(
@@ -99,11 +110,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (wallets.length < 2) {
       return null;
     }
-    final other = wallets.firstWhere(
-      (wallet) => wallet.walletId != fromWalletId,
-      orElse: () => wallets[1],
-    );
-    return other.walletId;
+    for (final wallet in wallets) {
+      if (wallet.walletId != fromWalletId) {
+        return wallet.walletId;
+      }
+    }
+    return wallets[1].walletId;
   }
 
   List<CategoryEntity> _filterCategories(List<CategoryEntity> categories) {
@@ -188,10 +200,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       setState(() => _errorMessage = 'Enter a valid amount.');
       return;
     }
-    if (_descriptionController.text.trim().isEmpty) {
-      setState(() => _errorMessage = 'Enter a description.');
-      return;
-    }
     if (_walletId == null) {
       setState(
         () => _errorMessage = 'Create a wallet first to add transactions.',
@@ -255,10 +263,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   Widget _label(String text) {
+    final qash = context.qash;
     return Text(
       text,
-      style: const TextStyle(
-        color: Color(0xFF111111),
+      style: TextStyle(
+        color: qash.textPrimary,
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
@@ -270,33 +279,24 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     required String hint,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    final qash = context.qash;
     return Container(
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-            spreadRadius: -1,
-          ),
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
+        boxShadow: [
+          BoxShadow(color: qash.cardShadow, blurRadius: 2, offset: const Offset(0, 1)),
         ],
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        style: const TextStyle(color: Color(0xFF111111), fontSize: 16),
+        style: TextStyle(color: qash.textPrimary, fontSize: 16),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Color(0xFFC4C4C4), fontSize: 16),
+          hintStyle: TextStyle(color: qash.textHint, fontSize: 16),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -313,6 +313,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?> onChanged,
   }) {
+    final qash = context.qash;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -322,32 +323,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: qash.surface,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x19000000),
-                blurRadius: 2,
-                offset: Offset(0, 1),
-                spreadRadius: -1,
-              ),
-              BoxShadow(
-                color: Color(0x19000000),
-                blurRadius: 3,
-                offset: Offset(0, 1),
-              ),
+            boxShadow: [
+              BoxShadow(color: qash.cardShadow, blurRadius: 2, offset: const Offset(0, 1)),
             ],
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<T>(
               value: value,
               isExpanded: true,
-              dropdownColor: Colors.white,
-              iconEnabledColor: const Color(0xFF111111),
-              style: const TextStyle(color: Color(0xFF111111), fontSize: 15),
+              dropdownColor: qash.surface,
+              iconEnabledColor: qash.textPrimary,
+              style: TextStyle(color: qash.textPrimary, fontSize: 15),
               hint: Text(
                 'Select $label',
-                style: const TextStyle(color: Color(0xFFC4C4C4)),
+                style: TextStyle(color: qash.textHint),
               ),
               items: items,
               onChanged: onChanged,
@@ -360,7 +351,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Scaffold(
+      backgroundColor: qash.scaffoldBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -374,29 +367,24 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: qash.surface,
                         borderRadius: BorderRadius.circular(999),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x19000000),
-                            blurRadius: 2,
-                            offset: Offset(0, 1),
-                            spreadRadius: -1,
-                          ),
+                        boxShadow: [
+                          BoxShadow(color: qash.cardShadow, blurRadius: 2, offset: const Offset(0, 1)),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.arrow_back,
                         size: 20,
-                        color: Color(0xFF111111),
+                        color: qash.textPrimary,
                       ),
                     ),
                   ),
                   const SizedBox(width: 16),
-                  const Text(
+                  Text(
                     'Add Transaction',
                     style: TextStyle(
-                      color: Color(0xFF111111),
+                      color: qash.textPrimary,
                       fontSize: 20,
                       fontWeight: FontWeight.w500,
                     ),
@@ -406,9 +394,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             ),
             Expanded(
               child: _loadingData
-                  ? const Center(
+                  ? Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF111111),
+                        color: qash.primaryButton,
                       ),
                     )
                   : SingleChildScrollView(
@@ -442,7 +430,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           const SizedBox(height: 8),
                           _textField(
                             controller: _descriptionController,
-                            hint: 'What was this for?',
+                            hint: 'What was this for? (optional)',
                           ),
                           const SizedBox(height: 16),
                           if (_wallets.isEmpty)
@@ -658,6 +646,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   Widget _typeChip(int type, String label) {
+    final qash = context.qash;
     final selected = _transactionType == type;
     return Expanded(
       child: GestureDetector(
@@ -675,16 +664,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF111111) : Colors.white,
+            color: selected ? qash.primaryButton : qash.surface,
             borderRadius: BorderRadius.circular(14),
             boxShadow: selected
                 ? null
-                : const [
+                : [
                     BoxShadow(
-                      color: Color(0x19000000),
+                      color: qash.cardShadow,
                       blurRadius: 2,
-                      offset: Offset(0, 1),
-                      spreadRadius: -1,
+                      offset: const Offset(0, 1),
                     ),
                   ],
           ),
@@ -692,7 +680,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             child: Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : const Color(0xFF8B8B8B),
+                color: selected ? qash.onPrimaryButton : qash.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),

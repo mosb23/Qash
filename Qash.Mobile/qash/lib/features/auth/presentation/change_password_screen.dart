@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../domain/entities/auth_requests.dart';
 import '../providers/auth_providers.dart';
+import 'widgets/auth_password_field.dart';
+import 'widgets/auth_screen_helpers.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -83,77 +86,51 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 24),
+            color: qash.scaffoldBackground,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 56),
-                const Text(
-                  'Change password',
-                  style: TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 24,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text('Change password', style: authTitleStyle(context)),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Enter your current password and choose a new one.',
-                  style: TextStyle(
-                    color: Color(0xFF8B8B8B),
-                    fontSize: 16,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
-                  ),
+                  style: authSubtitleStyle(context),
                 ),
                 const SizedBox(height: 32),
-                _buildField(
-                  label: 'Current password',
+                Text('Current password', style: authLabelStyle(context)),
+                const SizedBox(height: 8),
+                AuthPasswordField(
                   controller: _oldPasswordController,
-                  obscure: true,
-                  hint: 'Enter current password',
+                  hintText: 'Enter current password',
                 ),
                 const SizedBox(height: 16),
-                _buildField(
-                  label: 'New password',
+                Text('New password', style: authLabelStyle(context)),
+                const SizedBox(height: 8),
+                AuthPasswordField(
                   controller: _newPasswordController,
-                  obscure: true,
-                  hint: 'Enter new password',
+                  hintText: 'Enter new password',
                 ),
                 const SizedBox(height: 16),
-                _buildField(
-                  label: 'Confirm password',
+                Text('Confirm password', style: authLabelStyle(context)),
+                const SizedBox(height: 8),
+                AuthPasswordField(
                   controller: _confirmController,
-                  obscure: true,
-                  hint: 'Confirm new password',
+                  hintText: 'Confirm new password',
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _changePassword,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF111111),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      _isLoading ? 'Updating...' : 'Update password',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                authPrimaryButton(
+                  context: context,
+                  label: _isLoading ? 'Updating...' : 'Update password',
+                  onTap: _isLoading ? null : _changePassword,
+                  enabled: !_isLoading,
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -162,16 +139,13 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   child: OutlinedButton(
                     onPressed: () => context.go('/home'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF111111),
-                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      foregroundColor: qash.textPrimary,
+                      side: BorderSide(color: qash.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: const Text(
-                      'Back to home',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    child: const Text('Back to home', style: TextStyle(fontSize: 16)),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -180,72 +154,6 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildField({
-    required String label,
-    required TextEditingController controller,
-    String hint = '',
-    bool obscure = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF111111),
-            fontSize: 14,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x19000000),
-                blurRadius: 2,
-                offset: Offset(0, 1),
-                spreadRadius: -1,
-              ),
-              BoxShadow(
-                color: Color(0x19000000),
-                blurRadius: 3,
-                offset: Offset(0, 1),
-                spreadRadius: 0,
-              ),
-            ],
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: obscure,
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: hint,
-              hintStyle: const TextStyle(
-                color: Color(0xFFC4C4C4),
-                fontSize: 16,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            style: const TextStyle(
-              color: Color(0xFF111111),
-              fontSize: 16,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

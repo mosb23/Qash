@@ -4,6 +4,8 @@ import '../models/change_password_request_model.dart';
 import '../models/forgot_password_code_request_model.dart';
 import '../models/forgot_password_code_response_model.dart';
 import '../models/login_request_model.dart';
+import '../models/logout_request_model.dart';
+import '../models/refresh_token_request_model.dart';
 import '../models/register_request_model.dart';
 import '../models/reset_forgot_password_request_model.dart';
 import '../models/verify_phone_request_model.dart';
@@ -27,4 +29,10 @@ abstract class AuthRemoteDataSource {
   Future<ApiResponse<String>> changePassword(
     ChangePasswordRequestModel request,
   );
+
+  Future<ApiResponse<AuthResponseModel>> refreshToken(
+    RefreshTokenRequestModel request,
+  );
+
+  Future<ApiResponse<String>> logout(LogoutRequestModel request);
 }

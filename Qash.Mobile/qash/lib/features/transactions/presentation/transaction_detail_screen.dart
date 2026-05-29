@@ -3,8 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/utils/currency_formatter.dart';
 
 import '../../../core/errors/app_failure.dart';
+import '../../../core/utils/result.dart';
+import '../../dashboard/providers/home_preferences_provider.dart';
+import '../../wallets/domain/entities/wallet.dart';
+import '../../wallets/providers/wallets_providers.dart';
 import '../domain/entities/transaction.dart';
 import '../providers/transactions_providers.dart';
 
@@ -16,6 +21,8 @@ class TransactionDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final qash = context.qash;
+    final displayCurrency = ref.watch(displayCurrencyProvider);
+    final wallets = ref.watch(walletsProvider);
     final detail = ref.watch(transactionDetailProvider(transactionId));
 
     return Scaffold(
@@ -81,7 +88,12 @@ class TransactionDetailScreen extends ConsumerWidget {
                       ),
                     );
                   }
-                  return _detailBody(context, item);
+                  return _detailBody(
+                    context,
+                    item,
+                    displayCurrency,
+                    wallets,
+                  );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) => Center(
@@ -100,14 +112,33 @@ class TransactionDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _detailBody(BuildContext context, TransactionEntity item) {
+  Widget _detailBody(
+    BuildContext context,
+    TransactionEntity item,
+    String displayCurrency,
+    AsyncValue<Result<List<WalletEntity>>> wallets,
+  ) {
     final qash = context.qash;
-    final currency = NumberFormat.currency(symbol: '\$');
     final dateFormat = DateFormat('MMM d, yyyy · h:mm a');
+    final amountCurrency = wallets.maybeWhen(
+      data: (result) {
+        final list = result.data ?? const [];
+        for (final wallet in list) {
+          if (wallet.walletId == item.walletId) {
+            return wallet.currency;
+          }
+        }
+        return displayCurrency;
+      },
+      orElse: () => displayCurrency,
+    );
 
     final rows = <MapEntry<String, String>>[
       MapEntry('Type', _typeLabel(item)),
-      MapEntry('Amount', currency.format(item.amount)),
+      MapEntry(
+        'Amount',
+        CurrencyFormatter.format(item.amount, amountCurrency),
+      ),
       MapEntry('Description', item.description),
       if (item.categoryName.isNotEmpty)
         MapEntry('Category', item.categoryName),

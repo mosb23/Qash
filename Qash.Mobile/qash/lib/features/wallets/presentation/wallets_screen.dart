@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../../core/errors/app_failure.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
+import '../../../core/widgets/currency_badge.dart';
+import '../../dashboard/providers/home_preferences_provider.dart';
 import 'delete_wallet_screen.dart';
 import '../domain/entities/wallet.dart';
 import '../providers/wallets_providers.dart';
@@ -17,6 +19,7 @@ class WalletsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final qash = context.qash;
     final wallets = ref.watch(walletsProvider);
+    final displayCurrency = ref.watch(displayCurrencyProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -77,7 +80,7 @@ class WalletsScreen extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _summaryCard(context, items),
+                  _summaryCard(context, items, displayCurrency),
                   const SizedBox(height: 20),
                   if (items.isEmpty)
                     Text(
@@ -132,12 +135,16 @@ class WalletsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryCard(BuildContext context, List<WalletEntity> wallets) {
+  Widget _summaryCard(
+    BuildContext context,
+    List<WalletEntity> wallets,
+    String displayCurrency,
+  ) {
     final qash = context.qash;
-    final total = wallets.fold<double>(
-      0,
-      (sum, wallet) => sum + wallet.balance,
-    );
+    final code = displayCurrency.toUpperCase();
+    final total = wallets
+        .where((wallet) => wallet.currency.toUpperCase() == code)
+        .fold<double>(0, (sum, wallet) => sum + wallet.balance);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -154,7 +161,7 @@ class WalletsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            _formatCurrency(total),
+            CurrencyFormatter.format(total, displayCurrency),
             style: TextStyle(
               color: qash.onPrimaryButton,
               fontSize: 30,
@@ -163,7 +170,7 @@ class WalletsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '${wallets.length} wallets',
+            '${wallets.length} wallets · $displayCurrency',
             style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
         ],
@@ -197,15 +204,11 @@ class WalletsScreen extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(Icons.account_balance_wallet_outlined,
-                  color: qash.textPrimary),
+            CurrencyBadge(
+              currencyCode: wallet.currency,
+              size: 48,
+              backgroundColor: const Color(0xFFF3F4F6),
+              foregroundColor: qash.textPrimary,
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -235,7 +238,7 @@ class WalletsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  _formatCurrency(wallet.balance),
+                  CurrencyFormatter.format(wallet.balance, wallet.currency),
                   style: TextStyle(
                     color: qash.textPrimary,
                     fontWeight: FontWeight.w600,
@@ -317,10 +320,6 @@ class WalletsScreen extends ConsumerWidget {
       case AppTab.profile:
         context.go('/profile');
     }
-  }
-
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
   }
 
   String _errorText(Object error) {

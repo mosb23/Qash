@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../auth/domain/entities/auth_requests.dart';
+import '../../auth/presentation/widgets/auth_password_field.dart';
+import '../../auth/presentation/widgets/auth_screen_helpers.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../providers/profile_providers.dart';
 
@@ -109,164 +112,45 @@ class _ProfileChangeResetPasswordScreenState
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 24),
+            color: qash.scaffoldBackground,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 56),
-                const Text(
-                  'Create new password',
-                  style: TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 24,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text('Create new password', style: authTitleStyle(context)),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Set a new password for your account.',
-                  style: TextStyle(
-                    color: Color(0xFF8B8B8B),
-                    fontSize: 16,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
-                  ),
+                  style: authSubtitleStyle(context),
                 ),
                 const SizedBox(height: 40),
-                const Text(
-                  'New password',
-                  style: TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text('New password', style: authLabelStyle(context)),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                        spreadRadius: -1,
-                      ),
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'Enter new password',
-                      hintStyle: TextStyle(
-                        color: Color(0xFFC4C4C4),
-                        fontSize: 16,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 16,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
+                AuthPasswordField(
+                  controller: _passwordController,
+                  hintText: 'Enter new password',
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Confirm password',
-                  style: TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text('Confirm password', style: authLabelStyle(context)),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                        spreadRadius: -1,
-                      ),
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _confirmController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'Confirm new password',
-                      hintStyle: TextStyle(
-                        color: Color(0xFFC4C4C4),
-                        fontSize: 16,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 16,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
+                AuthPasswordField(
+                  controller: _confirmController,
+                  hintText: 'Confirm new password',
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _resetPassword,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF111111),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      _isLoading ? 'Updating...' : 'Update password',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                authPrimaryButton(
+                  context: context,
+                  label: _isLoading ? 'Updating...' : 'Update password',
+                  onTap: _isLoading ? null : _resetPassword,
+                  enabled: !_isLoading,
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -275,8 +159,8 @@ class _ProfileChangeResetPasswordScreenState
                   child: OutlinedButton(
                     onPressed: () => context.go('/profile'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF111111),
-                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      foregroundColor: qash.textPrimary,
+                      side: BorderSide(color: qash.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),

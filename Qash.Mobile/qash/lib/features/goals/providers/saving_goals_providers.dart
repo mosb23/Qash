@@ -10,7 +10,9 @@ import '../domain/repositories/saving_goals_repository.dart';
 import '../domain/usecases/contribute_to_saving_goal_use_case.dart';
 import '../domain/usecases/create_saving_goal_use_case.dart';
 import '../domain/usecases/delete_saving_goal_use_case.dart';
+import '../domain/usecases/get_saving_goal_by_id_use_case.dart';
 import '../domain/usecases/get_saving_goals_use_case.dart';
+import '../domain/usecases/update_saving_goal_use_case.dart';
 
 final savingGoalsRemoteDataSourceProvider =
     Provider<SavingGoalsRemoteDataSource>((ref) {
@@ -33,12 +35,22 @@ final createSavingGoalUseCaseProvider = Provider<CreateSavingGoalUseCase>((
   return CreateSavingGoalUseCase(ref.read(savingGoalsRepositoryProvider));
 });
 
+final getSavingGoalByIdUseCaseProvider = Provider<GetSavingGoalByIdUseCase>((
+  ref,
+) {
+  return GetSavingGoalByIdUseCase(ref.read(savingGoalsRepositoryProvider));
+});
+
 final contributeToSavingGoalUseCaseProvider =
     Provider<ContributeToSavingGoalUseCase>((ref) {
       return ContributeToSavingGoalUseCase(
         ref.read(savingGoalsRepositoryProvider),
       );
     });
+
+final updateSavingGoalUseCaseProvider = Provider<UpdateSavingGoalUseCase>((ref) {
+  return UpdateSavingGoalUseCase(ref.read(savingGoalsRepositoryProvider));
+});
 
 final deleteSavingGoalUseCaseProvider = Provider<DeleteSavingGoalUseCase>((
   ref,
@@ -52,3 +64,10 @@ final savingGoalsProvider = FutureProvider<Result<List<SavingGoalEntity>>>((
   final useCase = ref.read(getSavingGoalsUseCaseProvider);
   return useCase();
 });
+
+final savingGoalByIdProvider = FutureProvider.family<Result<SavingGoalEntity>, String>(
+  (ref, goalId) async {
+    final useCase = ref.read(getSavingGoalByIdUseCaseProvider);
+    return useCase(goalId);
+  },
+);

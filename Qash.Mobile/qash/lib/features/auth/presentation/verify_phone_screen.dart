@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../domain/entities/auth_requests.dart';
 import '../providers/auth_providers.dart';
+import 'widgets/auth_screen_helpers.dart';
+import 'widgets/auth_text_field.dart';
 
 class VerifyPhoneScreen extends ConsumerStatefulWidget {
   final String? phoneNumber;
@@ -61,6 +64,7 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
     });
 
     if (response.isSuccess) {
+      markUserAuthenticated(ref);
       _showMessage('Phone verified. Welcome to Qash.');
       context.go('/home');
     } else {
@@ -80,178 +84,55 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 24),
+            color: qash.scaffoldBackground,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 56),
-                const Text(
-                  'Verify your phone',
-                  style: TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 24,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text('Verify your phone', style: authTitleStyle(context)),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Use the 5-digit code sent to your phone.',
-                  style: TextStyle(
-                    color: Color(0xFF8B8B8B),
-                    fontSize: 16,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
-                  ),
+                  style: authSubtitleStyle(context),
                 ),
                 const SizedBox(height: 40),
-                const Text(
-                  'Phone number',
-                  style: TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text('Phone number', style: authLabelStyle(context)),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: ShapeDecoration(
-                    color: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    shadows: const [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                        spreadRadius: -1,
-                      ),
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: '+20 1xx xxx xxxx',
-                      hintStyle: TextStyle(
-                        color: Color(0xFFC4C4C4),
-                        fontSize: 16,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 16,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
+                AuthTextField(
+                  controller: _phoneController,
+                  hintText: '+20 1xx xxx xxxx',
+                  keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Verification code',
-                  style: TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text('Verification code', style: authLabelStyle(context)),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: ShapeDecoration(
-                    color: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    shadows: const [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                        spreadRadius: -1,
-                      ),
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _codeController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: '00000',
-                      hintStyle: TextStyle(
-                        color: Color(0xFFC4C4C4),
-                        fontSize: 16,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 16,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
+                AuthTextField(
+                  controller: _codeController,
+                  hintText: '00000',
+                  keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Demo code: 00000',
                   style: TextStyle(
-                    color: Color(0xFF8B8B8B),
+                    color: qash.textSecondary,
                     fontSize: 12,
                     fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
                   ),
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _verify,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF111111),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      _isLoading ? 'Verifying...' : 'Verify',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                authPrimaryButton(
+                  context: context,
+                  label: _isLoading ? 'Verifying...' : 'Verify',
+                  onTap: _isLoading ? null : _verify,
+                  enabled: !_isLoading,
                 ),
                 const SizedBox(height: 20),
               ],

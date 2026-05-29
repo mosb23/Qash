@@ -9,8 +9,9 @@ import '../providers/wallets_providers.dart';
 
 class AddWalletScreen extends ConsumerStatefulWidget {
   final WalletEntity? wallet;
+  final String? walletId;
 
-  const AddWalletScreen({super.key, this.wallet});
+  const AddWalletScreen({super.key, this.wallet, this.walletId});
 
   @override
   ConsumerState<AddWalletScreen> createState() => _AddWalletScreenState();
@@ -26,7 +27,10 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
   bool _submitting = false;
   String? _errorMessage;
 
-  bool get _isEdit => widget.wallet != null;
+  WalletEntity? _resolvedWallet;
+  bool _initializedFromWallet = false;
+
+  bool get _isEdit => widget.wallet != null || widget.walletId != null;
 
   final List<_WalletTypeModel> _walletTypes = [
     _WalletTypeModel(
@@ -51,12 +55,8 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
   @override
   void initState() {
     super.initState();
-    final wallet = widget.wallet;
-    if (wallet != null) {
-      _walletNameController.text = wallet.name;
-      _balanceController.text = wallet.balance.toStringAsFixed(2);
-      _selectedCurrency = wallet.currency;
-    }
+    _resolvedWallet = widget.wallet;
+    _hydrateFromWallet(_resolvedWallet);
   }
 
   @override
@@ -87,7 +87,7 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
     final result = _isEdit
         ? await ref.read(updateWalletUseCaseProvider)(
             WalletUpdateData(
-              walletId: widget.wallet!.walletId,
+              walletId: _resolvedWallet!.walletId,
               name: name,
               currency: _selectedCurrency,
               balance: balance,
@@ -115,6 +115,37 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_initializedFromWallet &&
+        _resolvedWallet == null &&
+        widget.walletId != null) {
+      final walletAsync = ref.watch(walletByIdProvider(widget.walletId!));
+      if (walletAsync.value?.isSuccess == true) {
+        _resolvedWallet = walletAsync.value!.data;
+        _hydrateFromWallet(_resolvedWallet);
+      } else if (walletAsync.isLoading) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      } else if (walletAsync.hasValue && walletAsync.value!.isFailure) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Edit Wallet')),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(walletAsync.value!.message, textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: () => ref.invalidate(walletByIdProvider(widget.walletId!)),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    }
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -269,6 +300,14 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
         ),
       ),
     );
+  }
+
+  void _hydrateFromWallet(WalletEntity? wallet) {
+    if (wallet == null || _initializedFromWallet) return;
+    _walletNameController.text = wallet.name;
+    _balanceController.text = wallet.balance.toStringAsFixed(2);
+    _selectedCurrency = wallet.currency;
+    _initializedFromWallet = true;
   }
 }
 

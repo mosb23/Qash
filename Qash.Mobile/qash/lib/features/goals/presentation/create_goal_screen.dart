@@ -2,12 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/utils/currency_formatter.dart';
 
+import '../../dashboard/providers/home_preferences_provider.dart';
+import '../domain/entities/saving_goal.dart';
 import '../domain/entities/saving_goal_create.dart';
+import '../domain/entities/saving_goal_update.dart';
 import '../providers/saving_goals_providers.dart';
 
 class CreateGoalScreen extends ConsumerStatefulWidget {
-  const CreateGoalScreen({super.key});
+  final String? goalId;
+  final SavingGoalEntity? initialGoal;
+
+  const CreateGoalScreen({super.key, this.goalId, this.initialGoal});
 
   @override
   ConsumerState<CreateGoalScreen> createState() => _CreateGoalScreenState();
@@ -22,6 +30,9 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
   DateTime? _selectedDeadline;
   bool _submitting = false;
   String? _errorMessage;
+  bool _initializedFromGoal = false;
+
+  bool get _isEdit => widget.goalId != null;
 
   static const Color _goalCardColor = Color(0xFFE5E7EB);
 
@@ -85,14 +96,22 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
       _errorMessage = null;
     });
 
-    final result = await ref.read(createSavingGoalUseCaseProvider)(
-      SavingGoalCreateData(
-        name: name,
-        targetAmount: targetAmount,
-        deadline: _selectedDeadline!,
-        colorHex: _toHexColor(_goalCardColor),
-      ),
-    );
+    final result = _isEdit
+        ? await ref.read(updateSavingGoalUseCaseProvider)(
+            SavingGoalUpdateData(
+              savingGoalId: widget.goalId!,
+              name: name,
+              targetAmount: targetAmount,
+              deadline: _selectedDeadline!,
+            ),
+          )
+        : await ref.read(createSavingGoalUseCaseProvider)(
+            SavingGoalCreateData(
+              name: name,
+              targetAmount: targetAmount,
+              deadline: _selectedDeadline!,
+            ),
+          );
 
     if (!mounted) return;
 
@@ -100,6 +119,9 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
 
     if (result.isSuccess) {
       ref.invalidate(savingGoalsProvider);
+      if (_isEdit) {
+        ref.invalidate(savingGoalByIdProvider(widget.goalId!));
+      }
       context.pop(true);
     } else {
       setState(() => _errorMessage = result.message);
@@ -108,6 +130,20 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+    final editGoalAsync = _isEdit
+        ? ref.watch(savingGoalByIdProvider(widget.goalId!))
+        : null;
+    if (_isEdit &&
+        !_initializedFromGoal &&
+        widget.initialGoal != null &&
+        _goalNameController.text.isEmpty) {
+      _applyGoal(widget.initialGoal!);
+    }
+    if (_isEdit && !_initializedFromGoal && editGoalAsync?.value?.isSuccess == true) {
+      _applyGoal(editGoalAsync!.value!.data!);
+    }
+    final displayCurrency = ref.watch(displayCurrencyProvider);
     final goalName = _goalNameController.text.isEmpty
         ? 'Goal Name'
         : _goalNameController.text;
@@ -123,20 +159,20 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => context.pop(),
             ),
           ),
         ),
-        title: const Text(
-          'New Goal',
+        title: Text(
+          _isEdit ? 'Edit Goal' : 'New Goal',
           style: TextStyle(
-            color: Colors.black,
+            color: qash.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -154,6 +190,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                 target: target,
                 saved: saved,
                 color: _goalCardColor,
+                displayCurrency: displayCurrency,
               ),
               const SizedBox(height: 24),
               _sectionTitle('Icon'),
@@ -179,11 +216,11 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: selected ? Colors.black : Colors.white,
+                        color: selected ? qash.primaryButton : qash.surface,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
+                            color: qash.cardShadow,
                             blurRadius: 6,
                           ),
                         ],
@@ -210,7 +247,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                 children: [
                   Expanded(
                     child: CustomInputField(
-                      label: 'Target (\$)',
+                      label: 'Target',
                       hint: '2000',
                       controller: _targetController,
                       keyboardType: const TextInputType.numberWithOptions(
@@ -295,8 +332,8 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
-                          'Create Goal',
+                      : Text(
+                          _isEdit ? 'Save Goal' : 'Create Goal',
                           style: TextStyle(color: Colors.white, fontSize: 16),
                         ),
                 ),
@@ -306,6 +343,14 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
         ),
       ),
     );
+  }
+
+  void _applyGoal(SavingGoalEntity goal) {
+    _goalNameController.text = goal.name;
+    _targetController.text = goal.targetAmount.toStringAsFixed(2);
+    _savedController.text = goal.currentAmount.toStringAsFixed(2);
+    _selectedDeadline = goal.deadline;
+    _initializedFromGoal = true;
   }
 
   Widget _sectionTitle(String title) {
@@ -322,10 +367,6 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
     );
   }
 
-  String _toHexColor(Color color) {
-    final value = color.value.toRadixString(16).padLeft(8, '0').toUpperCase();
-    return '#${value.substring(2)}';
-  }
 }
 
 class GoalPreviewCard extends StatelessWidget {
@@ -334,6 +375,7 @@ class GoalPreviewCard extends StatelessWidget {
   final String target;
   final String saved;
   final Color color;
+  final String displayCurrency;
 
   const GoalPreviewCard({
     super.key,
@@ -342,10 +384,12 @@ class GoalPreviewCard extends StatelessWidget {
     required this.target,
     required this.saved,
     required this.color,
+    required this.displayCurrency,
   });
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -359,17 +403,17 @@ class GoalPreviewCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             goalName,
-            style: const TextStyle(
-              color: Color(0xFF111111),
+            style: TextStyle(
+              color: qash.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            '\$$saved / \$$target',
+            '${CurrencyFormatter.format(double.tryParse(saved) ?? 0, displayCurrency)} / ${CurrencyFormatter.format(double.tryParse(target) ?? 0, displayCurrency)}',
             style: TextStyle(
-              color: Colors.black.withValues(alpha: 0.6),
+              color: qash.textPrimary.withValues(alpha: 0.6),
               fontSize: 14,
             ),
           ),

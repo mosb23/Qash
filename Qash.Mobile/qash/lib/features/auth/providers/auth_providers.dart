@@ -10,7 +10,9 @@ import '../domain/usecases/login_use_case.dart';
 import '../domain/usecases/register_use_case.dart';
 import '../domain/usecases/request_forgot_password_code_use_case.dart';
 import '../domain/usecases/reset_forgot_password_use_case.dart';
+import '../domain/usecases/logout_use_case.dart';
 import '../domain/usecases/verify_phone_use_case.dart';
+import '../../../core/auth/auth_state.dart';
 
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
   return AuthApi(ref.read(dioProvider));
@@ -49,3 +51,12 @@ final resetForgotPasswordUseCaseProvider = Provider<ResetForgotPasswordUseCase>(
 final changePasswordUseCaseProvider = Provider<ChangePasswordUseCase>((ref) {
   return ChangePasswordUseCase(ref.read(authRepositoryProvider));
 });
+
+final logoutUseCaseProvider = Provider<LogoutUseCase>((ref) {
+  return LogoutUseCase(ref.read(authRepositoryProvider));
+});
+
+/// After login / verify, mark session active for routing.
+void markUserAuthenticated(WidgetRef ref) {
+  ref.read(authStatusProvider.notifier).setAuthenticated();
+}

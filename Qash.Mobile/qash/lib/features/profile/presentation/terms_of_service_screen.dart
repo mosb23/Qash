@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 class TermsOfServiceScreen extends StatelessWidget {
   const TermsOfServiceScreen({super.key});
@@ -53,6 +54,8 @@ class TermsOfServiceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -60,20 +63,20 @@ class TermsOfServiceScreen extends StatelessWidget {
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => Navigator.pop(context),
             ),
           ),
         ),
-        title: const Text(
+        title: Text(
           'Terms & Conditions',
           style: TextStyle(
-            color: Color(0xFF111111),
+            color: qash.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
@@ -92,14 +95,14 @@ class TermsOfServiceScreen extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF4D93A),
+                        color: qash.accent,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text('📋', style: TextStyle(fontSize: 20)),
-                          SizedBox(width: 12),
+                        children: [
+                          const Text('📋', style: TextStyle(fontSize: 20)),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,16 +110,16 @@ class TermsOfServiceScreen extends StatelessWidget {
                                 Text(
                                   'Last updated: May 2026',
                                   style: TextStyle(
-                                    color: Color(0xFF111111),
+                                    color: qash.onAccent,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                SizedBox(height: 2),
+                                const SizedBox(height: 2),
                                 Text(
                                   'Please read these terms carefully before using Qash.',
                                   style: TextStyle(
-                                    color: Color(0x99111111),
+                                    color: qash.onAccent.withValues(alpha: 0.6),
                                     fontSize: 12,
                                   ),
                                 ),
@@ -131,6 +134,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                       (section) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _sectionCard(
+                          context,
                           section['title']!,
                           section['body']!,
                         ),
@@ -143,8 +147,8 @@ class TermsOfServiceScreen extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF111111),
-                          foregroundColor: Colors.white,
+                          backgroundColor: qash.primaryButton,
+                          foregroundColor: qash.onPrimaryButton,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -169,24 +173,26 @@ class TermsOfServiceScreen extends StatelessWidget {
     );
   }
 
-  Widget _sectionCard(String title, String body) {
+  Widget _sectionCard(BuildContext context, String title, String body) {
+    final qash = context.qash;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -195,8 +201,8 @@ class TermsOfServiceScreen extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Color(0xFF111111),
+            style: TextStyle(
+              color: qash.textPrimary,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -204,8 +210,8 @@ class TermsOfServiceScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             body,
-            style: const TextStyle(
-              color: Color(0xFF8B8B8B),
+            style: TextStyle(
+              color: qash.textSecondary,
               fontSize: 12,
             ),
           ),

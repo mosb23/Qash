@@ -5,7 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../../core/errors/app_failure.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
+import '../../../core/widgets/currency_badge.dart';
+import '../providers/home_preferences_provider.dart';
 import '../../budgets/domain/entities/budget_status.dart';
 import '../../budgets/providers/budgets_providers.dart';
 import '../../goals/domain/entities/saving_goal.dart';
@@ -39,6 +42,20 @@ class HomeScreen extends ConsumerWidget {
       ref.watch(savingGoalsProvider),
     );
     final recents = _resolveRecentTransactions(ref.watch(transactionsProvider));
+    final hideBalance = ref.watch(balanceHiddenProvider);
+    final displayCurrency = ref.watch(displayCurrencyProvider);
+
+    ref.listen(walletsProvider, (_, next) {
+      next.whenData((result) {
+        if (result.isFailure) {
+          return;
+        }
+        final items = result.data ?? const <WalletEntity>[];
+        ref
+            .read(displayCurrencyProvider.notifier)
+            .applyDefaultFromWallets(items);
+      });
+    });
 
     return Scaffold(
       body: SafeArea(
@@ -110,29 +127,77 @@ class HomeScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Total Balance',
-                                style: TextStyle(
-                                  color: qash.textSecondary,
-                                  fontSize: 12,
-                                ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Total Balance',
+                                    style: TextStyle(
+                                      color: qash.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => _pickDisplayCurrency(
+                                      context,
+                                      ref,
+                                      displayCurrency,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          displayCurrency,
+                                          style: TextStyle(
+                                            color: qash.textSecondary,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        Icon(
+                                          Icons.keyboard_arrow_down,
+                                          color: qash.textSecondary,
+                                          size: 18,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Text(
-                                    _formatCurrency(_walletsTotal(wallets)),
-                                    style: TextStyle(
-                                      color: qash.onPrimaryButton,
-                                      fontSize: 30,
-                                      fontWeight: FontWeight.w400,
+                                  Expanded(
+                                    child: Text(
+                                      hideBalance
+                                          ? CurrencyFormatter.formatHidden()
+                                          : _formatCurrency(
+                                              _walletsTotal(
+                                                wallets,
+                                                displayCurrency,
+                                              ),
+                                              displayCurrency,
+                                            ),
+                                      style: TextStyle(
+                                        color: qash.onPrimaryButton,
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.w400,
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    Icons.visibility_outlined,
-                                    color: qash.textSecondary,
-                                    size: 20,
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () => ref
+                                        .read(balanceHiddenProvider.notifier)
+                                        .toggle(),
+                                    icon: Icon(
+                                      hideBalance
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: qash.textSecondary,
+                                      size: 22,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -169,12 +234,16 @@ class HomeScreen extends ConsumerWidget {
                                             ),
                                           ),
                                           Text(
-                                            _formatCurrency(
-                                              _dashboardValue(
-                                                dashboard,
-                                                (value) => value.monthlyIncome,
-                                              ),
-                                            ),
+                                            hideBalance
+                                                ? CurrencyFormatter.formatHidden()
+                                                : _formatCurrency(
+                                                    _dashboardValue(
+                                                      dashboard,
+                                                      (value) =>
+                                                          value.monthlyIncome,
+                                                    ),
+                                                    displayCurrency,
+                                                  ),
                                             style: TextStyle(
                                               color: qash.onPrimaryButton,
                                               fontSize: 14,
@@ -215,13 +284,16 @@ class HomeScreen extends ConsumerWidget {
                                             ),
                                           ),
                                           Text(
-                                            _formatCurrency(
-                                              _dashboardValue(
-                                                dashboard,
-                                                (value) =>
-                                                    value.monthlyExpenses,
-                                              ),
-                                            ),
+                                            hideBalance
+                                                ? CurrencyFormatter.formatHidden()
+                                                : _formatCurrency(
+                                                    _dashboardValue(
+                                                      dashboard,
+                                                      (value) =>
+                                                          value.monthlyExpenses,
+                                                    ),
+                                                    displayCurrency,
+                                                  ),
                                             style: TextStyle(
                                               color: qash.onPrimaryButton,
                                               fontSize: 14,
@@ -266,7 +338,12 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _walletsSection(context, wallets),
+                      _walletsSection(
+                        context,
+                        wallets,
+                        displayCurrency,
+                        hideBalance,
+                      ),
                       const SizedBox(height: 24),
                       // -- Quick Actions --
                       Padding(
@@ -353,7 +430,12 @@ class HomeScreen extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            _budgetSection(context, budgets),
+                            _budgetSection(
+                              context,
+                              budgets,
+                              displayCurrency,
+                              hideBalance,
+                            ),
                           ],
                         ),
                       ),
@@ -373,7 +455,12 @@ class HomeScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            _topCategoriesSection(context, dashboard),
+                            _topCategoriesSection(
+                              context,
+                              dashboard,
+                              displayCurrency,
+                              hideBalance,
+                            ),
                           ],
                         ),
                       ),
@@ -408,7 +495,12 @@ class HomeScreen extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            _goalsSection(context, goals),
+                            _goalsSection(
+                              context,
+                              goals,
+                              displayCurrency,
+                              hideBalance,
+                            ),
                           ],
                         ),
                       ),
@@ -443,7 +535,12 @@ class HomeScreen extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            _recentSection(context, recents),
+                            _recentSection(
+                              context,
+                              recents,
+                              displayCurrency,
+                              hideBalance,
+                            ),
                           ],
                         ),
                       ),
@@ -505,11 +602,61 @@ class HomeScreen extends ConsumerWidget {
     return dashboard.maybeWhen(data: selector, orElse: () => 0);
   }
 
-  double _walletsTotal(AsyncValue<List<WalletEntity>> wallets) {
+  double _walletsTotal(
+    AsyncValue<List<WalletEntity>> wallets,
+    String displayCurrency,
+  ) {
     return wallets.maybeWhen(
-      data: (items) => items.fold(0, (sum, item) => sum + item.balance),
+      data: (items) {
+        if (items.isEmpty) {
+          return 0;
+        }
+        final code = displayCurrency.toUpperCase();
+        return items
+            .where((item) => item.currency.toUpperCase() == code)
+            .fold(0, (sum, item) => sum + item.balance);
+      },
       orElse: () => 0,
     );
+  }
+
+  Future<void> _pickDisplayCurrency(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Display currency',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+              ),
+              for (final currency in supportedCurrencies)
+                ListTile(
+                  title: Text(currency),
+                  subtitle: Text(CurrencyFormatter.symbolFor(currency)),
+                  trailing: current == currency
+                      ? const Icon(Icons.check)
+                      : null,
+                  onTap: () => Navigator.pop(context, currency),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selected != null) {
+      await ref.read(displayCurrencyProvider.notifier).setCurrency(selected);
+    }
   }
 
   String _profileName(AsyncValue<ProfileEntity> profile) {
@@ -549,6 +696,8 @@ class HomeScreen extends ConsumerWidget {
   Widget _walletsSection(
     BuildContext context,
     AsyncValue<List<WalletEntity>> wallets,
+    String displayCurrency,
+    bool hideBalance,
   ) {
     return wallets.when(
       data: (items) {
@@ -572,7 +721,7 @@ class HomeScreen extends ConsumerWidget {
             padding: const EdgeInsets.only(left: 24),
             children: [
               for (final wallet in items) ...[
-                _walletCard(context, wallet),
+                _walletCard(context, wallet, hideBalance),
                 const SizedBox(width: 12),
               ],
               _addWalletCard(context),
@@ -600,6 +749,8 @@ class HomeScreen extends ConsumerWidget {
   Widget _budgetSection(
     BuildContext context,
     AsyncValue<List<BudgetStatusEntity>> budgets,
+    String displayCurrency,
+    bool hideBalance,
   ) {
     final qash = context.qash;
     return budgets.when(
@@ -621,10 +772,24 @@ class HomeScreen extends ConsumerWidget {
         final cards = items.take(2).toList();
         return Row(
           children: [
-            Expanded(child: _budgetStatusCard(context, cards.first)),
+            Expanded(
+              child: _budgetStatusCard(
+                context,
+                cards.first,
+                displayCurrency,
+                hideBalance,
+              ),
+            ),
             if (cards.length > 1) ...[
               const SizedBox(width: 12),
-              Expanded(child: _budgetStatusCard(context, cards.last)),
+              Expanded(
+                child: _budgetStatusCard(
+                  context,
+                  cards.last,
+                  displayCurrency,
+                  hideBalance,
+                ),
+              ),
             ],
           ],
         );
@@ -643,6 +808,8 @@ class HomeScreen extends ConsumerWidget {
   Widget _topCategoriesSection(
     BuildContext context,
     AsyncValue<DashboardEntity> dashboard,
+    String displayCurrency,
+    bool hideBalance,
   ) {
     final qash = context.qash;
     return dashboard.when(
@@ -656,7 +823,12 @@ class HomeScreen extends ConsumerWidget {
         return Column(
           children: [
             for (final category in value.topCategories) ...[
-              _topCategoryRow(context, category),
+              _topCategoryRow(
+                context,
+                category,
+                displayCurrency,
+                hideBalance,
+              ),
               const SizedBox(height: 12),
             ],
           ],
@@ -676,6 +848,8 @@ class HomeScreen extends ConsumerWidget {
   Widget _goalsSection(
     BuildContext context,
     AsyncValue<List<SavingGoalEntity>> goals,
+    String displayCurrency,
+    bool hideBalance,
   ) {
     final qash = context.qash;
     return goals.when(
@@ -690,7 +864,12 @@ class HomeScreen extends ConsumerWidget {
         return Column(
           children: [
             for (final goal in list) ...[
-              _goalCardFromData(context, goal),
+              _goalCardFromData(
+                context,
+                goal,
+                displayCurrency,
+                hideBalance,
+              ),
               const SizedBox(height: 12),
             ],
           ],
@@ -710,6 +889,8 @@ class HomeScreen extends ConsumerWidget {
   Widget _recentSection(
     BuildContext context,
     AsyncValue<List<TransactionEntity>> transactions,
+    String displayCurrency,
+    bool hideBalance,
   ) {
     final qash = context.qash;
     return transactions.when(
@@ -723,7 +904,12 @@ class HomeScreen extends ConsumerWidget {
         return Column(
           children: [
             for (final item in items) ...[
-              _transactionCard(context, item),
+              _transactionCard(
+                context,
+                item,
+                displayCurrency,
+                hideBalance,
+              ),
               const SizedBox(height: 8),
             ],
           ],
@@ -747,9 +933,15 @@ class HomeScreen extends ConsumerWidget {
     return 'Failed to load data.';
   }
 
-  Widget _walletCard(BuildContext context, WalletEntity wallet) {
+  Widget _walletCard(
+    BuildContext context,
+    WalletEntity wallet,
+    bool hideBalance,
+  ) {
     final qash = context.qash;
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push('/wallets/${wallet.walletId}/edit', extra: wallet),
+      child: Container(
       width: 240,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -777,26 +969,7 @@ class HomeScreen extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3B82F6),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Center(
-                      child: Text(
-                        wallet.currency.isNotEmpty
-                            ? wallet.currency.substring(0, 1).toUpperCase()
-                            : '\$',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
+                  CurrencyBadge(currencyCode: wallet.currency),
                   const SizedBox(width: 8),
                   Text(
                     wallet.name,
@@ -827,7 +1000,9 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            _formatCurrency(wallet.balance),
+            hideBalance
+                ? CurrencyFormatter.formatHidden()
+                : _formatCurrency(wallet.balance, wallet.currency),
             style: TextStyle(
               color: qash.textPrimary,
               fontSize: 24,
@@ -841,6 +1016,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -873,9 +1049,19 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _budgetStatusCard(BuildContext context, BudgetStatusEntity budget) {
+  Widget _budgetStatusCard(
+    BuildContext context,
+    BudgetStatusEntity budget,
+    String displayCurrency,
+    bool hideBalance,
+  ) {
     final qash = context.qash;
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push(
+        '/budgets/${budget.budgetId}/edit',
+        extra: budget,
+      ),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: qash.surface,
@@ -907,7 +1093,9 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${_formatCurrency(budget.spentAmount)} / ${_formatCurrency(budget.budgetAmount)}',
+            hideBalance
+                ? CurrencyFormatter.formatHidden()
+                : '${_formatCurrency(budget.spentAmount, displayCurrency)} / ${_formatCurrency(budget.budgetAmount, displayCurrency)}',
             style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 8),
@@ -923,16 +1111,24 @@ class HomeScreen extends ConsumerWidget {
           if (budget.isOverBudget) ...[
             const SizedBox(height: 4),
             Text(
-              'Over by ${_formatCurrency((budget.spentAmount - budget.budgetAmount).abs())}',
+              hideBalance
+                  ? 'Over budget'
+                  : 'Over by ${_formatCurrency((budget.spentAmount - budget.budgetAmount).abs(), displayCurrency)}',
               style: const TextStyle(color: Color(0xFFFB2C36), fontSize: 12),
             ),
           ],
         ],
       ),
+    ),
     );
   }
 
-  Widget _topCategoryRow(BuildContext context, TopCategoryEntity category) {
+  Widget _topCategoryRow(
+    BuildContext context,
+    TopCategoryEntity category,
+    String displayCurrency,
+    bool hideBalance,
+  ) {
     final qash = context.qash;
     return Container(
       padding: const EdgeInsets.all(12),
@@ -968,7 +1164,9 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
               Text(
-                _formatCurrency(category.totalAmount),
+                hideBalance
+                    ? CurrencyFormatter.formatHidden()
+                    : _formatCurrency(category.totalAmount, displayCurrency),
                 style: TextStyle(
                   color: qash.textPrimary,
                   fontSize: 12,
@@ -990,7 +1188,12 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _goalCardFromData(BuildContext context, SavingGoalEntity goal) {
+  Widget _goalCardFromData(
+    BuildContext context,
+    SavingGoalEntity goal,
+    String displayCurrency,
+    bool hideBalance,
+  ) {
     final qash = context.qash;
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1050,11 +1253,15 @@ class HomeScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                _formatCurrency(goal.currentAmount),
+                hideBalance
+                    ? CurrencyFormatter.formatHidden()
+                    : _formatCurrency(goal.currentAmount, displayCurrency),
                 style: TextStyle(color: qash.textSecondary, fontSize: 12),
               ),
               Text(
-                _formatCurrency(goal.targetAmount),
+                hideBalance
+                    ? CurrencyFormatter.formatHidden()
+                    : _formatCurrency(goal.targetAmount, displayCurrency),
                 style: TextStyle(color: qash.textSecondary, fontSize: 12),
               ),
             ],
@@ -1064,7 +1271,12 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _transactionCard(BuildContext context, TransactionEntity item) {
+  Widget _transactionCard(
+    BuildContext context,
+    TransactionEntity item,
+    String displayCurrency,
+    bool hideBalance,
+  ) {
     final qash = context.qash;
     final isTransfer = item.isTransfer;
     final amountColor = isTransfer
@@ -1147,7 +1359,9 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
           Text(
-            '$amountSign${_formatCurrency(item.amount)}',
+            hideBalance
+                ? CurrencyFormatter.formatHidden()
+                : '$amountSign${_formatCurrency(item.amount, displayCurrency)}',
             style: TextStyle(
               color: amountColor,
               fontSize: 14,
@@ -1159,8 +1373,8 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
+  String _formatCurrency(double value, String currencyCode) {
+    return CurrencyFormatter.format(value, currencyCode);
   }
 
   String _formatDate(DateTime value) {

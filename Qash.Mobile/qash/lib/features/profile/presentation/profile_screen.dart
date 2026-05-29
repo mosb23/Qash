@@ -416,8 +416,8 @@ class _MenuItem extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: danger
-                    ? const Color(0xFFFEE2E2)
-                    : const Color(0xFFF3F4F6),
+                    ? qash.danger.withValues(alpha: 0.15)
+                    : qash.surfaceElevated,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: labelColor),

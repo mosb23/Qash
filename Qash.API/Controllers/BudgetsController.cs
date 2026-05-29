@@ -24,6 +24,17 @@ public class BudgetsController : ControllerBase
         _getBudgetStatusesValidator = getBudgetStatusesValidator;
     }
 
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+            return Unauthorized();
+
+        var response = await _mediator.Send(new GetBudgetByIdQuery(userId.Value, id));
+        return response.Success ? Ok(response) : NotFound(response);
+    }
+
     [HttpGet("status")]
     public async Task<IActionResult> GetStatuses([FromQuery] int year, [FromQuery] int month)
     {

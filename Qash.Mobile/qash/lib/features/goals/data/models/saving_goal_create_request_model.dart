@@ -4,13 +4,11 @@ class SavingGoalCreateRequestModel {
   final String name;
   final double targetAmount;
   final DateTime deadline;
-  final String colorHex;
 
   const SavingGoalCreateRequestModel({
     required this.name,
     required this.targetAmount,
     required this.deadline,
-    required this.colorHex,
   });
 
   factory SavingGoalCreateRequestModel.fromDomain(SavingGoalCreateData data) {
@@ -18,7 +16,6 @@ class SavingGoalCreateRequestModel {
       name: data.name,
       targetAmount: data.targetAmount,
       deadline: data.deadline,
-      colorHex: data.colorHex,
     );
   }
 
@@ -27,7 +24,6 @@ class SavingGoalCreateRequestModel {
       'name': name,
       'targetAmount': targetAmount,
       'deadline': deadline.toUtc().toIso8601String(),
-      'colorHex': colorHex,
     };
   }
 }

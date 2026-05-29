@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/utils/currency_formatter.dart';
 
+import '../../dashboard/providers/home_preferences_provider.dart';
 import '../domain/entities/saving_goal.dart';
 import '../domain/entities/saving_goal_contribution.dart';
 import '../providers/saving_goals_providers.dart';
@@ -42,7 +44,7 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     if (amount > remaining) {
       setState(
         () => _errorMessage =
-            'Amount exceeds remaining balance (${_formatCurrency(remaining)}).',
+            'Amount exceeds remaining balance (${_formatCurrency(remaining, ref.read(displayCurrencyProvider))}).',
       );
       return;
     }
@@ -73,6 +75,9 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+    final displayCurrency = ref.watch(displayCurrencyProvider);
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -80,20 +85,20 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => context.pop(),
             ),
           ),
         ),
-        title: const Text(
+        title: Text(
           'Add Funds',
           style: TextStyle(
-            color: Colors.black,
+            color: qash.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -105,14 +110,14 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _goalSummary(widget.goal),
+              _goalSummary(widget.goal, displayCurrency),
               const SizedBox(height: 20),
-              _label('Amount'),
+              _label(context, 'Amount'),
               const SizedBox(height: 8),
               _textField(
                 controller: _amountController,
                 hint:
-                    'Max ${_formatCurrency(widget.goal.targetAmount - widget.goal.currentAmount)}',
+                    'Max ${_formatCurrency(widget.goal.targetAmount - widget.goal.currentAmount, displayCurrency)}',
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -162,26 +167,17 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     );
   }
 
-  Widget _goalSummary(SavingGoalEntity goal) {
+  Widget _goalSummary(SavingGoalEntity goal, String displayCurrency) {
+    final qash = context.qash;
     final progress = goal.progress;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
+        color: qash.surface,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-            spreadRadius: -1,
-          ),
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
+        boxShadow: [
+          BoxShadow(color: qash.cardShadow, blurRadius: 2, offset: const Offset(0, 1)),
         ],
       ),
       child: Column(
@@ -189,16 +185,16 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
         children: [
           Text(
             goal.name,
-            style: const TextStyle(
-              color: Color(0xFF111111),
+            style: TextStyle(
+              color: qash.textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Saved ${_formatCurrency(goal.currentAmount)} of ${_formatCurrency(goal.targetAmount)}',
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            'Saved ${_formatCurrency(goal.currentAmount, displayCurrency)} of ${_formatCurrency(goal.targetAmount, displayCurrency)}',
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 12),
           ClipRRect(
@@ -206,10 +202,8 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 8,
-              backgroundColor: const Color(0xFFF3F4F6),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF111111),
-              ),
+              backgroundColor: qash.border,
+              valueColor: AlwaysStoppedAnimation<Color>(qash.primaryButton),
             ),
           ),
         ],
@@ -217,11 +211,12 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     );
   }
 
-  Widget _label(String text) {
+  Widget _label(BuildContext context, String text) {
+    final qash = context.qash;
     return Text(
       text,
-      style: const TextStyle(
-        color: Color(0xFF111111),
+      style: TextStyle(
+        color: qash.textPrimary,
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
@@ -233,33 +228,24 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     required String hint,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    final qash = context.qash;
     return Container(
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-            spreadRadius: -1,
-          ),
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
+        boxShadow: [
+          BoxShadow(color: qash.cardShadow, blurRadius: 2, offset: const Offset(0, 1)),
         ],
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        style: const TextStyle(color: Color(0xFF111111), fontSize: 16),
+        style: TextStyle(color: qash.textPrimary, fontSize: 16),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Color(0xFFC4C4C4), fontSize: 16),
+          hintStyle: TextStyle(color: qash.textHint, fontSize: 16),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -270,7 +256,7 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     );
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
+  String _formatCurrency(double value, String currencyCode) {
+    return CurrencyFormatter.format(value, currencyCode);
   }
 }

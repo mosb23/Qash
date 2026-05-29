@@ -152,7 +152,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: canDelete ? qash.danger : qash.danger.withValues(alpha: 0.4),
-                  foregroundColor: Colors.white,
+                  foregroundColor: qash.onPrimaryButton,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),

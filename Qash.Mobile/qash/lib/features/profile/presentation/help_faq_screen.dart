@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 class HelpFaqScreen extends StatelessWidget {
   const HelpFaqScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Scaffold(
+      backgroundColor: qash.scaffoldBackground,
       body: Column(
         children: [
           const _PageHeader(title: 'Help and FAQ'),
@@ -21,9 +24,9 @@ class HelpFaqScreen extends StatelessWidget {
                       children: [
                         Text(
                           section.category.toUpperCase(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF8B8B8B),
+                            color: qash.textSecondary,
                             letterSpacing: 1.2,
                           ),
                         ),
@@ -42,22 +45,22 @@ class HelpFaqScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF111111),
+                    color: qash.primaryButton,
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Still need help?',
-                        style: TextStyle(fontSize: 16, color: Colors.white),
+                        style: TextStyle(fontSize: 16, color: qash.onPrimaryButton),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
                         'Our support team is available Mon-Fri, 9am-6pm.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFFBDBDBD),
+                          color: qash.onPrimaryButton.withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -66,8 +69,8 @@ class HelpFaqScreen extends StatelessWidget {
                         height: 48,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF4D93A),
-                            foregroundColor: const Color(0xFF111111),
+                            backgroundColor: qash.accent,
+                            foregroundColor: qash.onAccent,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -83,8 +86,8 @@ class HelpFaqScreen extends StatelessWidget {
                         height: 48,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white12,
-                            foregroundColor: Colors.white,
+                            backgroundColor: qash.onPrimaryButton.withValues(alpha: 0.12),
+                            foregroundColor: qash.onPrimaryButton,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -113,6 +116,7 @@ class _PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -120,19 +124,19 @@ class _PageHeader extends StatelessWidget {
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.arrow_back_ios_new,
-                color: Color(0xFF111111),
+                color: qash.textPrimary,
               ),
               onPressed: () => Navigator.pop(context),
             ),
             const SizedBox(width: 8),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF111111),
+                color: qash.textPrimary,
               ),
             ),
           ],
@@ -157,6 +161,7 @@ class _FaqItemState extends State<_FaqItem> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
@@ -164,11 +169,11 @@ class _FaqItemState extends State<_FaqItem> {
         onTap: () => setState(() => _open = !_open),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: qash.surface,
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: qash.cardShadow,
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -183,9 +188,9 @@ class _FaqItemState extends State<_FaqItem> {
                     Expanded(
                       child: Text(
                         widget.question,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF111111),
+                          color: qash.textPrimary,
                         ),
                       ),
                     ),
@@ -193,7 +198,7 @@ class _FaqItemState extends State<_FaqItem> {
                       _open
                           ? Icons.keyboard_arrow_up
                           : Icons.keyboard_arrow_down,
-                      color: const Color(0xFF8B8B8B),
+                      color: qash.textSecondary,
                     ),
                   ],
                 ),
@@ -202,14 +207,14 @@ class _FaqItemState extends State<_FaqItem> {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: qash.border)),
                   ),
                   child: Text(
                     widget.answer,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF8B8B8B),
+                      color: qash.textSecondary,
                       height: 1.4,
                     ),
                   ),
@@ -253,7 +258,7 @@ const List<_FaqSection> _faqSections = [
       _FaqItemData(
         question: 'Can I have multiple currencies?',
         answer:
-            'Yes. Each wallet can have its own currency. Your home screen displays a combined total balance converted to your default currency.',
+            'Yes. Each wallet can have its own currency. Your home total only includes wallets that match your selected display currency—Qash does not convert amounts between currencies.',
       ),
     ],
   ),

@@ -4,6 +4,7 @@ import '../../../core/network/api_response.dart';
 import 'datasources/transactions_remote_data_source.dart';
 import 'models/transaction_create_request_model.dart';
 import 'models/transaction_model.dart';
+import 'models/transaction_update_request_model.dart';
 
 class TransactionsApi implements TransactionsRemoteDataSource {
   final Dio _dio;
@@ -52,6 +53,39 @@ class TransactionsApi implements TransactionsRemoteDataSource {
         '/api/transactions',
         data: request.toJson(),
       );
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<String>.fromJson(
+        data,
+        (json) => json?.toString() ?? '',
+      );
+    } on DioException catch (error) {
+      return _handleError<String>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<TransactionModel>> updateTransaction(
+    String transactionId,
+    TransactionUpdateRequestModel request,
+  ) async {
+    try {
+      final response = await _dio.put(
+        '/api/transactions/$transactionId',
+        data: request.toJson(),
+      );
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<TransactionModel>.fromJson(data, (json) {
+        return TransactionModel.fromJson(json as Map<String, dynamic>);
+      });
+    } on DioException catch (error) {
+      return _handleError<TransactionModel>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<String>> deleteTransaction(String transactionId) async {
+    try {
+      final response = await _dio.delete('/api/transactions/$transactionId');
       final data = response.data as Map<String, dynamic>;
       return ApiResponse<String>.fromJson(
         data,

@@ -7,6 +7,8 @@ import 'models/change_password_request_model.dart';
 import 'models/forgot_password_code_request_model.dart';
 import 'models/forgot_password_code_response_model.dart';
 import 'models/login_request_model.dart';
+import 'models/logout_request_model.dart';
+import 'models/refresh_token_request_model.dart';
 import 'models/register_request_model.dart';
 import 'models/reset_forgot_password_request_model.dart';
 import 'models/verify_phone_request_model.dart';
@@ -119,6 +121,42 @@ class AuthApi implements AuthRemoteDataSource {
     try {
       final response = await _dio.post(
         '/api/profile/change-password',
+        data: request.toJson(),
+      );
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<String>.fromJson(
+        data,
+        (json) => json?.toString() ?? '',
+      );
+    } on DioException catch (error) {
+      return _handleError<String>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<AuthResponseModel>> refreshToken(
+    RefreshTokenRequestModel request,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/auth/refresh-token',
+        data: request.toJson(),
+      );
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<AuthResponseModel>.fromJson(
+        data,
+        (json) => AuthResponseModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (error) {
+      return _handleError<AuthResponseModel>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<String>> logout(LogoutRequestModel request) async {
+    try {
+      final response = await _dio.post(
+        '/api/auth/logout',
         data: request.toJson(),
       );
       final data = response.data as Map<String, dynamic>;

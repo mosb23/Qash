@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
-import '../../auth/providers/auth_providers.dart';
 import '../../auth/domain/entities/auth_requests.dart';
+import '../../auth/presentation/widgets/auth_password_field.dart';
+import '../../auth/presentation/widgets/auth_screen_helpers.dart';
+import '../../auth/providers/auth_providers.dart';
 
 class ProfileChangePasswordScreen extends ConsumerStatefulWidget {
   const ProfileChangePasswordScreen({super.key});
@@ -17,7 +20,6 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
   final TextEditingController _nextController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
 
-  bool _showPassword = false;
   bool _loading = false;
   bool _done = false;
 
@@ -78,35 +80,42 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_done) {
-      return Scaffold(
-        appBar: AppBar(
-          elevation: 0,
-          centerTitle: true,
-          leading: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
+  PreferredSizeWidget _buildAppBar(BuildContext context, String title) {
+    final qash = context.qash;
+    return AppBar(
+      elevation: 0,
+      centerTitle: true,
+      leading: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: qash.surface,
+            shape: BoxShape.circle,
           ),
-          title: const Text(
-            'Password Changed',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.w600,
-              fontSize: 20,
-            ),
+          child: IconButton(
+            icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
+            onPressed: () => Navigator.pop(context),
           ),
         ),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: qash.textPrimary,
+          fontWeight: FontWeight.w600,
+          fontSize: 20,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final qash = context.qash;
+
+    if (_done) {
+      return Scaffold(
+        appBar: _buildAppBar(context, 'Password Changed'),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
@@ -116,29 +125,28 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD9F0C8),
+                  color: qash.accent.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.check,
                   size: 40,
-                  color: Color(0xFF111111),
+                  color: qash.textPrimary,
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Password Updated!',
-                style: TextStyle(
+                style: authTitleStyle(context).copyWith(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF111111),
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Your password has been changed successfully.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Color(0xFF8B8B8B)),
+                style: authMutedBodyStyle(context),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -146,8 +154,8 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
                 height: 56,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF111111),
-                    foregroundColor: Colors.white,
+                    backgroundColor: qash.primaryButton,
+                    foregroundColor: qash.onPrimaryButton,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -163,54 +171,29 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
     }
 
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        centerTitle: true,
-        leading: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-        ),
-        title: const Text(
-          'Change Password',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-          ),
-        ),
-      ),
+      appBar: _buildAppBar(context, 'Change Password'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
         children: [
-          _PasswordField(
-            label: 'Current Password',
+          Text('Current Password', style: authLabelStyle(context)),
+          const SizedBox(height: 8),
+          AuthPasswordField(
             controller: _currentController,
-            showPassword: _showPassword,
-            toggleVisibility: () => setState(() {
-              _showPassword = !_showPassword;
-            }),
-            showToggle: true,
+            hintText: '********',
           ),
           const SizedBox(height: 16),
-          _PasswordField(
-            label: 'New Password',
+          Text('New Password', style: authLabelStyle(context)),
+          const SizedBox(height: 8),
+          AuthPasswordField(
             controller: _nextController,
-            showPassword: _showPassword,
+            hintText: '********',
           ),
           const SizedBox(height: 16),
-          _PasswordField(
-            label: 'Confirm New Password',
+          Text('Confirm New Password', style: authLabelStyle(context)),
+          const SizedBox(height: 8),
+          AuthPasswordField(
             controller: _confirmController,
-            showPassword: _showPassword,
+            hintText: '********',
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -218,8 +201,8 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
             height: 56,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF111111),
-                foregroundColor: Colors.white,
+                backgroundColor: qash.primaryButton,
+                foregroundColor: qash.onPrimaryButton,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -230,64 +213,6 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PasswordField extends StatelessWidget {
-  const _PasswordField({
-    required this.label,
-    required this.controller,
-    required this.showPassword,
-    this.toggleVisibility,
-    this.showToggle = false,
-    this.hintText = '********',
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final bool showPassword;
-  final VoidCallback? toggleVisibility;
-  final bool showToggle;
-  final String hintText;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF111111)),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          obscureText: showToggle ? !showPassword : true,
-          decoration: InputDecoration(
-            hintText: hintText,
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(20),
-              borderSide: BorderSide.none,
-            ),
-            suffixIcon: showToggle
-                ? IconButton(
-                    onPressed: toggleVisibility,
-                    icon: Icon(
-                      showPassword ? Icons.visibility_off : Icons.visibility,
-                      color: const Color(0xFF8B8B8B),
-                    ),
-                  )
-                : null,
-          ),
-        ),
-      ],
     );
   }
 }

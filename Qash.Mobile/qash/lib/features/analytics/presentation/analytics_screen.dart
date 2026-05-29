@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/utils/currency_formatter.dart';
 
 import '../../../core/errors/app_failure.dart';
+import '../../dashboard/providers/home_preferences_provider.dart';
 import '../../../core/utils/result.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../../categories/domain/entities/category.dart';
@@ -41,6 +43,7 @@ class AnalyticsScreen extends ConsumerWidget {
     final transactions = ref.watch(transactionsProvider);
     final periodComparison = ref.watch(periodComparisonProvider);
     final spendingTrend = ref.watch(spendingTrendProvider);
+    final displayCurrency = ref.watch(displayCurrencyProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -78,7 +81,15 @@ class AnalyticsScreen extends ConsumerWidget {
                       const SizedBox(height: 16),
                       _periodSelector(context, period, ref),
                       const SizedBox(height: 16),
-                      _summaryCards(context, summary),
+                      _summaryCards(context, summary, displayCurrency),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Amounts shown in $displayCurrency. Qash does not convert between wallet currencies.',
+                        style: TextStyle(
+                          color: qash.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       _categoryBreakdownSection(
                         context,
@@ -86,13 +97,18 @@ class AnalyticsScreen extends ConsumerWidget {
                         breakdown: breakdown,
                         categories: categories,
                         transactions: transactions,
+                        displayCurrency: displayCurrency,
                       ),
                       const SizedBox(height: 16),
                       _card(
                         context,
                         title: 'Cash Flow Summary',
                         height: 180,
-                        child: _cashFlowSummary(context, summary),
+                        child: _cashFlowSummary(
+                          context,
+                          summary,
+                          displayCurrency,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       _card(
@@ -103,6 +119,7 @@ class AnalyticsScreen extends ConsumerWidget {
                           context,
                           period: period,
                           trend: spendingTrend,
+                          displayCurrency: displayCurrency,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -198,6 +215,7 @@ class AnalyticsScreen extends ConsumerWidget {
   Widget _summaryCards(
     BuildContext context,
     AsyncValue<AnalyticsSummary> summary,
+    String displayCurrency,
   ) {
     return summary.when(
       data: (value) {
@@ -207,7 +225,7 @@ class AnalyticsScreen extends ConsumerWidget {
               child: _summaryCard(
                 context,
                 'Income',
-                _formatCurrency(value.totalIncome),
+                _formatCurrency(value.totalIncome, displayCurrency),
                 const Color(0xFFD9F0C8),
               ),
             ),
@@ -216,7 +234,7 @@ class AnalyticsScreen extends ConsumerWidget {
               child: _summaryCard(
                 context,
                 'Expenses',
-                _formatCurrency(value.totalExpenses),
+                _formatCurrency(value.totalExpenses, displayCurrency),
                 const Color(0xFFFFE3E3),
               ),
             ),
@@ -225,7 +243,7 @@ class AnalyticsScreen extends ConsumerWidget {
               child: _summaryCard(
                 context,
                 'Net',
-                _formatCurrency(value.netBalance),
+                _formatCurrency(value.netBalance, displayCurrency),
                 const Color(0xFFFEF3C7),
               ),
             ),
@@ -322,6 +340,7 @@ class AnalyticsScreen extends ConsumerWidget {
     required AsyncValue<Result<List<CategoryBreakdownEntity>>> breakdown,
     required AsyncValue<Result<List<CategoryEntity>>> categories,
     required AsyncValue<Result<List<TransactionEntity>>> transactions,
+    required String displayCurrency,
   }) {
     final qash = context.qash;
     return breakdown.when(
@@ -344,7 +363,12 @@ class AnalyticsScreen extends ConsumerWidget {
           context,
           title: _categorySectionTitle(period),
           height: 200,
-          child: _categoryChart(context, items, categoryMap),
+          child: _categoryChart(
+            context,
+            items,
+            categoryMap,
+            displayCurrency,
+          ),
         );
       },
       loading: () => const SizedBox(
@@ -393,6 +417,7 @@ class AnalyticsScreen extends ConsumerWidget {
     BuildContext context,
     List<CategoryBreakdownEntity> items,
     Map<String, String> categoryMap,
+    String displayCurrency,
   ) {
     final qash = context.qash;
     final total = items.fold<double>(0, (sum, item) => sum + item.totalAmount);
@@ -467,7 +492,7 @@ class AnalyticsScreen extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      _formatCurrency(item.totalAmount),
+                      _formatCurrency(item.totalAmount, displayCurrency),
                       style: TextStyle(
                         color: qash.textPrimary,
                         fontSize: 12,
@@ -488,6 +513,7 @@ class AnalyticsScreen extends ConsumerWidget {
   Widget _cashFlowSummary(
     BuildContext context,
     AsyncValue<AnalyticsSummary> summary,
+    String displayCurrency,
   ) {
     final qash = context.qash;
     return summary.when(
@@ -505,6 +531,7 @@ class AnalyticsScreen extends ConsumerWidget {
               value.totalIncome,
               maxVal,
               const Color(0xFF10B981),
+              displayCurrency,
             ),
             const SizedBox(height: 16),
             _cashFlowRow(
@@ -513,6 +540,7 @@ class AnalyticsScreen extends ConsumerWidget {
               value.totalExpenses,
               maxVal,
               const Color(0xFFEF4444),
+              displayCurrency,
             ),
             const SizedBox(height: 16),
             _cashFlowRow(
@@ -521,6 +549,7 @@ class AnalyticsScreen extends ConsumerWidget {
               value.netBalance,
               maxVal,
               const Color(0xFF3B82F6),
+              displayCurrency,
             ),
           ],
         );
@@ -539,6 +568,7 @@ class AnalyticsScreen extends ConsumerWidget {
     double value,
     double maxVal,
     Color color,
+    String displayCurrency,
   ) {
     final qash = context.qash;
     final ratio = maxVal > 0 ? (value.abs() / maxVal).clamp(0.0, 1.0) : 0.0;
@@ -557,7 +587,7 @@ class AnalyticsScreen extends ConsumerWidget {
               ),
             ),
             Text(
-              _formatCurrency(value),
+              _formatCurrency(value, displayCurrency),
               style: TextStyle(
                 color: qash.textPrimary,
                 fontSize: 13,
@@ -601,6 +631,7 @@ class AnalyticsScreen extends ConsumerWidget {
     BuildContext context, {
     required AnalyticsPeriod period,
     required AsyncValue<Result<List<SpendingTrendEntity>>> trend,
+    required String displayCurrency,
   }) {
     final qash = context.qash;
     return trend.when(
@@ -669,7 +700,7 @@ class AnalyticsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    _formatCurrency(item.totalExpenses),
+                    _formatCurrency(item.totalExpenses, displayCurrency),
                     style: TextStyle(
                       color: qash.textPrimary,
                       fontSize: 12,
@@ -934,8 +965,8 @@ class AnalyticsScreen extends ConsumerWidget {
     }
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
+  String _formatCurrency(double value, String currencyCode) {
+    return CurrencyFormatter.format(value, currencyCode);
   }
 
   String _formatShort(double value) {

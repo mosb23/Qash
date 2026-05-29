@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class OnboardingScreen extends StatefulWidget {
+import '../../../core/auth/onboarding_preferences.dart';
+
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int currentPage = 0;
 
   final List<Map<String, dynamic>> onboardingData = [
@@ -35,18 +38,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     },
   ];
 
+  Future<void> _finishOnboarding() async {
+    await ref.read(onboardingCompletedProvider.notifier).markCompleted();
+    if (!mounted) return;
+    context.go('/login');
+  }
+
   void nextPage() {
     if (currentPage < 2) {
       setState(() {
         currentPage += 1;
       });
     } else {
-      context.go('/login');
+      _finishOnboarding();
     }
   }
 
   void skip() {
-    context.go('/login');
+    _finishOnboarding();
   }
 
   Widget buildIndicator(int index) {

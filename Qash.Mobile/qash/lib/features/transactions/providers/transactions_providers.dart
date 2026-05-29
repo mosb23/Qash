@@ -9,8 +9,10 @@ import '../data/repositories/transactions_repository_impl.dart';
 import '../domain/entities/transaction.dart';
 import '../domain/repositories/transactions_repository.dart';
 import '../domain/usecases/create_transaction_use_case.dart';
+import '../domain/usecases/delete_transaction_use_case.dart';
 import '../domain/usecases/get_transaction_by_id_use_case.dart';
 import '../domain/usecases/get_transactions_use_case.dart';
+import '../domain/usecases/update_transaction_use_case.dart';
 
 enum TransactionFilter { all, income, expense, transfer }
 
@@ -50,6 +52,18 @@ final createTransactionUseCaseProvider = Provider<CreateTransactionUseCase>((
   ref,
 ) {
   return CreateTransactionUseCase(ref.read(transactionsRepositoryProvider));
+});
+
+final updateTransactionUseCaseProvider = Provider<UpdateTransactionUseCase>((
+  ref,
+) {
+  return UpdateTransactionUseCase(ref.read(transactionsRepositoryProvider));
+});
+
+final deleteTransactionUseCaseProvider = Provider<DeleteTransactionUseCase>((
+  ref,
+) {
+  return DeleteTransactionUseCase(ref.read(transactionsRepositoryProvider));
 });
 
 final transactionsFilterProvider = StateProvider<TransactionFilter>((ref) {

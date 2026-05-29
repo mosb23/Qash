@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/utils/currency_formatter.dart';
 
 import '../../../core/widgets/bottom_nav_bar.dart';
+import '../../dashboard/providers/home_preferences_provider.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../../categories/domain/entities/category.dart';
@@ -25,6 +27,7 @@ class TransactionsScreen extends ConsumerWidget {
     final searchQuery = ref.watch(transactionsSearchQueryProvider);
     final transactions = ref.watch(filteredTransactionsProvider);
     final categories = ref.watch(categoriesProvider);
+    final displayCurrency = ref.watch(displayCurrencyProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -103,7 +106,15 @@ class TransactionsScreen extends ConsumerWidget {
                           ),
                         ],
                         const SizedBox(height: 16),
-                        _summaryRow(context, summary),
+                        _summaryRow(context, summary, displayCurrency),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Totals in $displayCurrency (no currency conversion).',
+                          style: TextStyle(
+                            color: qash.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
@@ -178,7 +189,12 @@ class TransactionsScreen extends ConsumerWidget {
                         const SizedBox(height: 24),
                         transactions.when(
                           data: (items) =>
-                              _transactionsList(context, items, categories),
+                              _transactionsList(
+                                context,
+                                items,
+                                categories,
+                                displayCurrency,
+                              ),
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
                             child: Center(child: CircularProgressIndicator()),
@@ -346,6 +362,7 @@ class TransactionsScreen extends ConsumerWidget {
   Widget _summaryRow(
     BuildContext context,
     AsyncValue<TransactionsSummary> summary,
+    String displayCurrency,
   ) {
     return Row(
       children: [
@@ -355,6 +372,7 @@ class TransactionsScreen extends ConsumerWidget {
             label: 'Income',
             color: const Color(0xFFD9F0C8),
             summary: summary,
+            displayCurrency: displayCurrency,
             selector: (value) => value.incomeTotal,
           ),
         ),
@@ -365,6 +383,7 @@ class TransactionsScreen extends ConsumerWidget {
             label: 'Expenses',
             color: const Color(0xFFFFE3E3),
             summary: summary,
+            displayCurrency: displayCurrency,
             selector: (value) => value.expenseTotal,
           ),
         ),
@@ -377,6 +396,7 @@ class TransactionsScreen extends ConsumerWidget {
     required String label,
     required Color color,
     required AsyncValue<TransactionsSummary> summary,
+    required String displayCurrency,
     required double Function(TransactionsSummary summary) selector,
   }) {
     final qash = context.qash;
@@ -399,7 +419,7 @@ class TransactionsScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           summary.when(
             data: (value) => Text(
-              _formatCurrency(selector(value)),
+              _formatCurrency(selector(value), displayCurrency),
               style: TextStyle(color: qash.textPrimary, fontSize: 14),
             ),
             loading: () => Text(
@@ -420,6 +440,7 @@ class TransactionsScreen extends ConsumerWidget {
     BuildContext context,
     List<TransactionEntity> items,
     AsyncValue<Result<List<CategoryEntity>>> categories,
+    String displayCurrency,
   ) {
     final qash = context.qash;
     if (items.isEmpty) {
@@ -453,7 +474,7 @@ class TransactionsScreen extends ConsumerWidget {
           _sectionLabel(context, entry.key),
           const SizedBox(height: 8),
           for (final item in entry.value) ...[
-            _transactionItem(context, item, categoryMap),
+            _transactionItem(context, item, categoryMap, displayCurrency),
             const SizedBox(height: 8),
           ],
           const SizedBox(height: 16),
@@ -490,8 +511,8 @@ class TransactionsScreen extends ConsumerWidget {
     return DateFormat('MMM d').format(date);
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
+  String _formatCurrency(double value, String currencyCode) {
+    return CurrencyFormatter.format(value, currencyCode);
   }
 
   Widget _iconButton(
@@ -587,6 +608,7 @@ class TransactionsScreen extends ConsumerWidget {
     BuildContext context,
     TransactionEntity item,
     Map<String, CategoryEntity> categoryMap,
+    String displayCurrency,
   ) {
     final qash = context.qash;
     final isTransfer = item.isTransfer;
@@ -688,7 +710,7 @@ class TransactionsScreen extends ConsumerWidget {
             ],
           ),
           Text(
-            '$amountSign${_formatCurrency(item.amount)}',
+            '$amountSign${_formatCurrency(item.amount, displayCurrency)}',
             style: TextStyle(
               color: amountColor,
               fontSize: 14,

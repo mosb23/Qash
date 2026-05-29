@@ -1,24 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class SplashScreen extends StatefulWidget {
+import '../../../config/providers.dart';
+import '../../../core/auth/auth_state.dart';
+import '../../../core/auth/onboarding_preferences.dart';
+
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    _bootstrap();
+  }
 
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted) {
-        return;
-      }
+  Future<void> _bootstrap() async {
+    await ref.read(appInitializationProvider.future);
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (!mounted) return;
+
+    final auth = ref.read(authStatusProvider);
+    if (auth == AuthStatus.authenticated) {
+      context.go('/home');
+      return;
+    }
+
+    final onboardingDone = ref.read(onboardingCompletedProvider);
+    if (!onboardingDone) {
       context.go('/onboarding');
-    });
+      return;
+    }
+
+    context.go('/login');
   }
 
   @override
@@ -68,21 +87,10 @@ class _SplashScreenState extends State<SplashScreen> {
               'Smart Money Management',
               style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 16),
             ),
-            const SizedBox(height: 120),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                3,
-                (index) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF4D93A),
-                    borderRadius: BorderRadius.circular(50),
-                  ),
-                ),
-              ),
+            const SizedBox(height: 48),
+            const CircularProgressIndicator(
+              color: Color(0xFFF4D93A),
+              strokeWidth: 2,
             ),
           ],
         ),

@@ -53,6 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     if (response.isSuccess) {
+      markUserAuthenticated(ref);
       context.go('/home');
     } else {
       _showMessage(

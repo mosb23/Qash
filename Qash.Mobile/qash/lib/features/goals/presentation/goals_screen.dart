@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/utils/currency_formatter.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
+import '../../dashboard/providers/home_preferences_provider.dart';
 import '../domain/entities/saving_goal.dart';
 import '../providers/saving_goals_providers.dart';
 
@@ -19,6 +20,7 @@ class GoalsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final qash = context.qash;
     final goals = ref.watch(savingGoalsProvider);
+    final displayCurrency = ref.watch(displayCurrencyProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -68,7 +70,7 @@ class GoalsScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _summaryCard(context, goals),
+                      _summaryCard(context, goals, displayCurrency),
                       const SizedBox(height: 20),
                       goals.when(
                         data: (result) {
@@ -94,7 +96,7 @@ class GoalsScreen extends ConsumerWidget {
                           return Column(
                             children: [
                               for (final item in items) ...[
-                                _goalCard(context, item),
+                                _goalCard(context, item, displayCurrency),
                                 const SizedBox(height: 16),
                               ],
                             ],
@@ -133,6 +135,7 @@ class GoalsScreen extends ConsumerWidget {
   Widget _summaryCard(
     BuildContext context,
     AsyncValue<Result<List<SavingGoalEntity>>> goals,
+    String displayCurrency,
   ) {
     return goals.when(
       data: (result) {
@@ -144,6 +147,7 @@ class GoalsScreen extends ConsumerWidget {
             completed: 0,
             totalGoals: 0,
             progress: 0,
+            displayCurrency: displayCurrency,
           );
         }
         final items = result.data ?? const [];
@@ -163,15 +167,16 @@ class GoalsScreen extends ConsumerWidget {
             )
             .length;
         final progress = totalTarget > 0 ? (totalSaved / totalTarget) : 0.0;
-        return _summaryCardShell(
-          context,
-          totalSaved: totalSaved,
-          totalTarget: totalTarget,
-          completed: completed,
-          totalGoals: items.length,
-          progress: progress.clamp(0.0, 1.0),
-        );
-      },
+          return _summaryCardShell(
+            context,
+            totalSaved: totalSaved,
+            totalTarget: totalTarget,
+            completed: completed,
+            totalGoals: items.length,
+            progress: progress.clamp(0.0, 1.0),
+            displayCurrency: displayCurrency,
+          );
+        },
       loading: () => _summaryCardShell(
         context,
         totalSaved: 0,
@@ -179,6 +184,7 @@ class GoalsScreen extends ConsumerWidget {
         completed: 0,
         totalGoals: 0,
         progress: 0,
+        displayCurrency: displayCurrency,
       ),
       error: (_, _) => _summaryCardShell(
         context,
@@ -187,6 +193,7 @@ class GoalsScreen extends ConsumerWidget {
         completed: 0,
         totalGoals: 0,
         progress: 0,
+        displayCurrency: displayCurrency,
       ),
     );
   }
@@ -198,6 +205,7 @@ class GoalsScreen extends ConsumerWidget {
     required int completed,
     required int totalGoals,
     required double progress,
+    required String displayCurrency,
   }) {
     final qash = context.qash;
     return Container(
@@ -216,7 +224,7 @@ class GoalsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            _formatCurrency(totalSaved),
+            _formatCurrency(totalSaved, displayCurrency),
             style: TextStyle(
               color: qash.onPrimaryButton,
               fontSize: 24,
@@ -225,7 +233,7 @@ class GoalsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'of ${_formatCurrency(totalTarget)} goal',
+            'of ${_formatCurrency(totalTarget, displayCurrency)} goal',
             style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 16),
@@ -256,13 +264,17 @@ class GoalsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _goalCard(BuildContext context, SavingGoalEntity goal) {
+  Widget _goalCard(
+    BuildContext context,
+    SavingGoalEntity goal,
+    String displayCurrency,
+  ) {
     final qash = context.qash;
     final color = _goalColor(goal);
     final percent = (goal.progress * 100).round();
 
     return GestureDetector(
-      onTap: () => context.push('/goals/${goal.savingGoalId}', extra: goal),
+      onTap: () => context.push('/goals/${goal.savingGoalId}'),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -362,7 +374,7 @@ class GoalsScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${_formatCurrency(goal.currentAmount)} saved',
+                  '${_formatCurrency(goal.currentAmount, displayCurrency)} saved',
                   style: TextStyle(
                     color: qash.textPrimary.withValues(alpha: 0.7),
                     fontSize: 12,
@@ -370,7 +382,7 @@ class GoalsScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  'Target: ${_formatCurrency(goal.targetAmount)}',
+                  'Target: ${_formatCurrency(goal.targetAmount, displayCurrency)}',
                   style: TextStyle(
                     color: qash.textPrimary.withValues(alpha: 0.7),
                     fontSize: 12,
@@ -432,8 +444,8 @@ class GoalsScreen extends ConsumerWidget {
     }
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
+  String _formatCurrency(double value, String currencyCode) {
+    return CurrencyFormatter.format(value, currencyCode);
   }
 
   int _daysLeft(DateTime deadline) {

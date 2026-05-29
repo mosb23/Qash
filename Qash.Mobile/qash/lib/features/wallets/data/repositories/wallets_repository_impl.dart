@@ -27,6 +27,19 @@ class WalletsRepositoryImpl implements WalletsRepository {
   }
 
   @override
+  Future<Result<WalletEntity>> getWalletById(String walletId) async {
+    final response = await _remoteDataSource.getWalletById(walletId);
+
+    if (response.success && response.data != null) {
+      return Result.success(response.data!);
+    }
+
+    return Result.failure(
+      AppFailure(message: response.message, errors: response.errors),
+    );
+  }
+
+  @override
   Future<Result<WalletEntity>> createWallet(WalletCreateData data) async {
     final response = await _remoteDataSource.createWallet(
       WalletCreateRequestModel.fromDomain(data),
