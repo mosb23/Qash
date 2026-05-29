@@ -8,7 +8,7 @@ abstract class AuthRepository {
 
   Future<Result<AuthSession>> register(RegistrationData data);
 
-  Future<Result<String>> verifyPhone(PhoneVerificationData data);
+  Future<Result<AuthSession>> verifyPhone(PhoneVerificationData data);
 
   Future<Result<ForgotPasswordCode>> requestForgotPasswordCode(
     ForgotPasswordCodeRequestData data,

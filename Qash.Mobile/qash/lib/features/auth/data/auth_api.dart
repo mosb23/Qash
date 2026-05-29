@@ -36,7 +36,7 @@ class AuthApi implements AuthRemoteDataSource {
   }
 
   @override
-  Future<ApiResponse<String>> verifyPhone(
+  Future<ApiResponse<AuthResponseModel>> verifyPhone(
     VerifyPhoneRequestModel request,
   ) async {
     try {
@@ -45,12 +45,12 @@ class AuthApi implements AuthRemoteDataSource {
         data: request.toJson(),
       );
       final data = response.data as Map<String, dynamic>;
-      return ApiResponse<String>.fromJson(
+      return ApiResponse<AuthResponseModel>.fromJson(
         data,
-        (json) => json?.toString() ?? '',
+        (json) => AuthResponseModel.fromJson(json as Map<String, dynamic>),
       );
     } on DioException catch (error) {
-      return _handleError<String>(error);
+      return _handleError<AuthResponseModel>(error);
     }
   }
 

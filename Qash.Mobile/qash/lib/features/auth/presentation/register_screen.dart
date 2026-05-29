@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../domain/entities/auth_requests.dart';
 import '../providers/auth_providers.dart';
+import 'widgets/auth_password_field.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -21,6 +22,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   bool _isLoading = false;
+  bool _acceptedTerms = false;
 
   @override
   void dispose() {
@@ -53,6 +55,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     if (password != confirmPassword) {
       _showMessage('Passwords do not match.');
+      return;
+    }
+
+    if (!_acceptedTerms) {
+      _showMessage('Please accept the Terms of Service and Privacy Policy.');
       return;
     }
 
@@ -223,65 +230,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   hintText: 'Repeat your password',
                 ),
                 const SizedBox(height: 16),
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: 'By creating an account, you agree to our ',
-                        style: TextStyle(
-                          color: const Color(0xFF8B8B8B),
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      TextSpan(
-                        text: 'Terms of Service',
-                        style: TextStyle(
-                          color: const Color(0xFF111111),
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      TextSpan(
-                        text: ' and ',
-                        style: TextStyle(
-                          color: const Color(0xFF8B8B8B),
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      TextSpan(
-                        text: 'Privacy Policy',
-                        style: TextStyle(
-                          color: const Color(0xFF111111),
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      TextSpan(
-                        text: '.',
-                        style: TextStyle(
-                          color: const Color(0xFF8B8B8B),
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _termsAgreementRow(context),
                 const SizedBox(height: 24),
                 GestureDetector(
-                  onTap: _isLoading ? null : _register,
+                  onTap: _isLoading || !_acceptedTerms ? null : _register,
                   child: Container(
                     width: double.infinity,
                     height: 56,
                     decoration: ShapeDecoration(
-                      color: const Color(0xFF111111),
+                      color: _acceptedTerms
+                          ? const Color(0xFF111111)
+                          : const Color(0xFFB8B8B8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -391,60 +350,74 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     required TextEditingController controller,
     required String hintText,
   }) {
-    return Container(
-      width: double.infinity,
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        shadows: const [
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-            spreadRadius: -1,
+    return AuthPasswordField(controller: controller, hintText: hintText);
+  }
+
+  Widget _termsAgreementRow(BuildContext context) {
+    const bodyStyle = TextStyle(
+      color: Color(0xFF8B8B8B),
+      fontSize: 12,
+      fontFamily: 'Inter',
+      fontWeight: FontWeight.w400,
+      height: 1.4,
+    );
+    const linkStyle = TextStyle(
+      color: Color(0xFF111111),
+      fontSize: 12,
+      fontFamily: 'Inter',
+      fontWeight: FontWeight.w500,
+      decoration: TextDecoration.underline,
+      height: 1.4,
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 24,
+          height: 24,
+          child: Checkbox(
+            value: _acceptedTerms,
+            onChanged: (value) {
+              setState(() => _acceptedTerms = value ?? false);
+            },
+            activeColor: const Color(0xFF111111),
+            checkColor: Colors.white,
+            side: const BorderSide(color: Color(0xFFC4C4C4), width: 1.5),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
           ),
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              obscureText: true,
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: hintText,
-                hintStyle: const TextStyle(
-                  color: Color(0xFFC4C4C4),
-                  fontSize: 16,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w400,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              style: bodyStyle,
+              children: [
+                const TextSpan(text: 'I agree to the '),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.baseline,
+                  baseline: TextBaseline.alphabetic,
+                  child: GestureDetector(
+                    onTap: () => context.push('/profile/terms'),
+                    child: const Text('Terms of Service', style: linkStyle),
+                  ),
                 ),
-              ),
-              style: const TextStyle(
-                color: Color(0xFF111111),
-                fontSize: 16,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w400,
-              ),
+                const TextSpan(text: ' and '),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.baseline,
+                  baseline: TextBaseline.alphabetic,
+                  child: GestureDetector(
+                    onTap: () => context.push('/profile/privacy'),
+                    child: const Text('Privacy Policy', style: linkStyle),
+                  ),
+                ),
+                const TextSpan(text: '.'),
+              ],
             ),
           ),
-          const Icon(
-            Icons.visibility_off_outlined,
-            color: Color(0xFFC4C4C4),
-            size: 20,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

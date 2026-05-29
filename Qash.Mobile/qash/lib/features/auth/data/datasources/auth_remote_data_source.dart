@@ -11,7 +11,9 @@ import '../models/verify_phone_request_model.dart';
 abstract class AuthRemoteDataSource {
   Future<ApiResponse<AuthResponseModel>> register(RegisterRequestModel request);
 
-  Future<ApiResponse<String>> verifyPhone(VerifyPhoneRequestModel request);
+  Future<ApiResponse<AuthResponseModel>> verifyPhone(
+    VerifyPhoneRequestModel request,
+  );
 
   Future<ApiResponse<AuthResponseModel>> login(LoginRequestModel request);
 
