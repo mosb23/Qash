@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../auth/providers/auth_providers.dart';
+import '../../../core/assets/qash_icons.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/widgets/qash_icon.dart';
 
 class LogoutConfirmScreen extends ConsumerWidget {
   const LogoutConfirmScreen({super.key});
@@ -43,6 +45,20 @@ class LogoutConfirmScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
         child: Column(
           children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: qash.danger.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const QashIcon(
+                assetPath: QashIcons.profileLogout,
+                fallback: Icons.logout,
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 24),
             Text(
               'Are you sure you want to sign out?',
               style: TextStyle(fontSize: 16, color: qash.textPrimary),

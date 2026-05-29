@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/assets/qash_icons.dart';
 import '../../../core/theme/qash_theme_extension.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../core/widgets/qash_icon.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -125,6 +127,7 @@ class SettingsScreen extends ConsumerWidget {
             title: 'Danger Zone',
             children: [
               _LinkRow(
+                iconAsset: QashIcons.profileLogout,
                 icon: Icons.logout,
                 iconBg: const Color(0xFFFEE2E2),
                 iconColor: qash.danger,
@@ -134,6 +137,7 @@ class SettingsScreen extends ConsumerWidget {
                 danger: true,
               ),
               _LinkRow(
+                iconAsset: QashIcons.profileDelete,
                 icon: Icons.delete_outline,
                 iconBg: const Color(0xFFFEE2E2),
                 iconColor: qash.danger,
@@ -258,12 +262,14 @@ class _LinkRow extends StatelessWidget {
     required this.iconBg,
     required this.iconColor,
     required this.onTap,
+    this.iconAsset,
     this.sublabel,
     this.danger = false,
   });
 
   final String label;
   final String? sublabel;
+  final String? iconAsset;
   final IconData icon;
   final Color iconBg;
   final Color iconColor;
@@ -288,7 +294,12 @@ class _LinkRow extends StatelessWidget {
                 color: iconBg,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: iconColor),
+              child: QashIcon(
+                assetPath: iconAsset,
+                fallback: icon,
+                size: 22,
+                color: iconColor,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

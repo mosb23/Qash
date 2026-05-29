@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../assets/qash_icons.dart';
 import '../utils/currency_formatter.dart';
+import 'qash_icon.dart';
 
 class CurrencyBadge extends StatelessWidget {
   final String currencyCode;
@@ -18,6 +20,17 @@ class CurrencyBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final flagAsset = QashIcons.currencyFlag(currencyCode);
+    if (flagAsset != null) {
+      return ClipOval(
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: QashIcon(assetPath: flagAsset, size: size, fit: BoxFit.cover),
+        ),
+      );
+    }
+
     final label = CurrencyFormatter.badgeLabel(currencyCode);
     final fontSize = label.length > 2 ? 11.0 : 14.0;
 

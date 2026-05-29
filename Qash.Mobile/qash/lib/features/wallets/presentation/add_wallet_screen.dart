@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/assets/qash_icons.dart';
+import '../../../core/widgets/qash_icon.dart';
 import '../domain/entities/wallet.dart';
 import '../domain/entities/wallet_create.dart';
 import '../domain/entities/wallet_update.dart';
@@ -36,17 +38,17 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
     _WalletTypeModel(
       title: 'Bank Account',
       subtitle: 'Debit or credit card',
-      emoji: '🏦',
+      iconAsset: QashIcons.walletBank,
     ),
     _WalletTypeModel(
       title: 'Cash',
       subtitle: 'Physical money on hand',
-      emoji: '💵',
+      iconAsset: QashIcons.walletCash,
     ),
     _WalletTypeModel(
       title: 'Savings',
       subtitle: 'Savings & deposits',
-      emoji: '🐖',
+      iconAsset: QashIcons.iconWallet,
     ),
   ];
 
@@ -344,7 +346,11 @@ class _WalletTypeTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Text(walletType.emoji, style: const TextStyle(fontSize: 28)),
+            QashIcon(
+              assetPath: walletType.iconAsset,
+              fallback: Icons.account_balance_wallet_outlined,
+              size: 32,
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -437,11 +443,11 @@ class _SectionTitle extends StatelessWidget {
 class _WalletTypeModel {
   final String title;
   final String subtitle;
-  final String emoji;
+  final String iconAsset;
 
   const _WalletTypeModel({
     required this.title,
     required this.subtitle,
-    required this.emoji,
+    required this.iconAsset,
   });
 }

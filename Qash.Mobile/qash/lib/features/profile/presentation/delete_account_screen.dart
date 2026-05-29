@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../../config/providers.dart';
+import '../../../core/assets/qash_icons.dart';
+import '../../../core/widgets/qash_icon.dart';
 import '../../auth/presentation/widgets/auth_password_field.dart';
 import '../providers/profile_providers.dart';
 
@@ -122,6 +124,22 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: qash.danger.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const QashIcon(
+                  assetPath: QashIcons.profileDelete,
+                  fallback: Icons.delete_outline,
+                  size: 36,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             Text(
               'This will permanently delete your account and data.',
               style: TextStyle(fontSize: 14, color: qash.textSecondary),

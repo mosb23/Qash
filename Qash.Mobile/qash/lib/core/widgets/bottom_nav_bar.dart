@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../assets/qash_icons.dart';
 import '../theme/qash_theme_extension.dart';
+import 'qash_icon.dart';
 
 enum AppTab { home, transactions, analytics, goals, profile }
 
@@ -37,35 +39,38 @@ class AppBottomNavBar extends StatelessWidget {
           _navItem(
             context: context,
             label: 'Home',
-            icon: Icons.home_rounded,
+            fallback: Icons.home_rounded,
             isActive: currentTab == AppTab.home,
             onTap: () => onSelected(AppTab.home),
           ),
           _navItem(
             context: context,
             label: 'Transactions',
-            icon: Icons.swap_horiz_rounded,
+            assetPath: QashIcons.navTransactions,
+            fallback: Icons.swap_horiz_rounded,
             isActive: currentTab == AppTab.transactions,
             onTap: () => onSelected(AppTab.transactions),
           ),
           _navItem(
             context: context,
             label: 'Analytics',
-            icon: Icons.bar_chart_rounded,
+            assetPath: QashIcons.navAnalytics,
+            fallback: Icons.bar_chart_rounded,
             isActive: currentTab == AppTab.analytics,
             onTap: () => onSelected(AppTab.analytics),
           ),
           _navItem(
             context: context,
             label: 'Goals',
-            icon: Icons.flag_rounded,
+            assetPath: QashIcons.navGoals,
+            fallback: Icons.flag_rounded,
             isActive: currentTab == AppTab.goals,
             onTap: () => onSelected(AppTab.goals),
           ),
           _navItem(
             context: context,
             label: 'Profile',
-            icon: Icons.person_rounded,
+            fallback: Icons.person_rounded,
             isActive: currentTab == AppTab.profile,
             onTap: () => onSelected(AppTab.profile),
           ),
@@ -77,7 +82,8 @@ class AppBottomNavBar extends StatelessWidget {
   Widget _navItem({
     required BuildContext context,
     required String label,
-    required IconData icon,
+    String? assetPath,
+    required IconData fallback,
     required bool isActive,
     required VoidCallback onTap,
   }) {
@@ -95,10 +101,13 @@ class AppBottomNavBar extends StatelessWidget {
               color: isActive ? qash.accent : Colors.transparent,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(
-              icon,
-              color: isActive ? qash.onAccent : qash.iconMuted,
-              size: 20,
+            child: Center(
+              child: QashIcon(
+                assetPath: assetPath,
+                fallback: fallback,
+                size: 22,
+                color: isActive ? qash.onAccent : qash.iconMuted,
+              ),
             ),
           ),
           const SizedBox(height: 2),

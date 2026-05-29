@@ -6,7 +6,9 @@ import 'package:qash/core/utils/currency_formatter.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
+import '../../../core/assets/qash_icons.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
+import '../../../core/widgets/qash_icon.dart';
 import '../../dashboard/providers/home_preferences_provider.dart';
 import '../domain/entities/saving_goal.dart';
 import '../providers/saving_goals_providers.dart';
@@ -311,10 +313,11 @@ class GoalsScreen extends ConsumerWidget {
                         color: qash.surface.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(
-                        Icons.flag_rounded,
+                      child: QashIcon(
+                        assetPath: QashIcons.navGoals,
+                        fallback: Icons.flag_rounded,
+                        size: 22,
                         color: qash.textPrimary,
-                        size: 20,
                       ),
                     ),
                     const SizedBox(width: 12),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
 
+import '../../../core/assets/qash_icons.dart';
+import '../../../core/widgets/qash_icon.dart';
 import 'widgets/auth_screen_helpers.dart';
 
 class PasswordChangedScreen extends StatelessWidget {
@@ -29,10 +31,10 @@ class PasswordChangedScreen extends StatelessWidget {
                         color: qash.accent.withValues(alpha: 0.35),
                         borderRadius: BorderRadius.circular(18),
                       ),
-                      child: Icon(
-                        Icons.check_circle_outline,
-                        size: 32,
-                        color: qash.textPrimary,
+                      child: const QashIcon(
+                        assetPath: QashIcons.actionSuccess,
+                        fallback: Icons.check_circle_outline,
+                        size: 36,
                       ),
                     ),
                     const SizedBox(height: 20),

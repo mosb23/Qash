@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
 
+import '../../../core/assets/qash_icons.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
+import '../../../core/widgets/qash_icon.dart';
 import '../../../core/utils/result.dart';
 import '../../goals/providers/saving_goals_providers.dart';
 import '../../transactions/providers/transactions_providers.dart';
@@ -159,6 +161,7 @@ class ProfileScreen extends ConsumerWidget {
                     _StatCard(
                       label: 'Wallets',
                       value: walletCount.toString(),
+                      iconAsset: QashIcons.iconWallet,
                       icon: Icons.account_balance_wallet_outlined,
                       color: const Color(0xFFD9F0C8),
                     ),
@@ -166,6 +169,7 @@ class ProfileScreen extends ConsumerWidget {
                     _StatCard(
                       label: 'Transactions',
                       value: transactionCount.toString(),
+                      iconAsset: QashIcons.navTransactions,
                       icon: Icons.swap_horiz,
                       color: const Color(0xFFFEF3C7),
                     ),
@@ -173,6 +177,7 @@ class ProfileScreen extends ConsumerWidget {
                     _StatCard(
                       label: 'Goals',
                       value: goalCount.toString(),
+                      iconAsset: QashIcons.navGoals,
                       icon: Icons.flag_outlined,
                       color: const Color(0xFFEDE9FE),
                     ),
@@ -225,6 +230,7 @@ class ProfileScreen extends ConsumerWidget {
                   title: '',
                   items: [
                     _MenuItem(
+                      iconAsset: QashIcons.profileLogout,
                       icon: Icons.logout,
                       label: 'Sign Out',
                       onTap: () => context.push('/profile/logout'),
@@ -281,12 +287,14 @@ class ProfileScreen extends ConsumerWidget {
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
+  final String? iconAsset;
   final IconData icon;
   final Color color;
 
   const _StatCard({
     required this.label,
     required this.value,
+    this.iconAsset,
     required this.icon,
     required this.color,
   });
@@ -318,7 +326,12 @@ class _StatCard extends StatelessWidget {
                 color: color,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: qash.textPrimary, size: 18),
+              child: QashIcon(
+                assetPath: iconAsset,
+                fallback: icon,
+                size: 20,
+                color: qash.textPrimary,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
@@ -384,6 +397,7 @@ class _SectionCard extends StatelessWidget {
 }
 
 class _MenuItem extends StatelessWidget {
+  final String? iconAsset;
   final IconData icon;
   final String label;
   final String? sublabel;
@@ -391,6 +405,7 @@ class _MenuItem extends StatelessWidget {
   final bool danger;
 
   const _MenuItem({
+    this.iconAsset,
     required this.icon,
     required this.label,
     this.sublabel,
@@ -420,7 +435,12 @@ class _MenuItem extends StatelessWidget {
                     : qash.surfaceElevated,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: labelColor),
+              child: QashIcon(
+                assetPath: iconAsset,
+                fallback: icon,
+                size: 22,
+                color: labelColor,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

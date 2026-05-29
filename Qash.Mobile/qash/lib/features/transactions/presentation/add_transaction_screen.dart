@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qash/core/assets/qash_icons.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/widgets/qash_icon.dart';
 
 import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
@@ -539,14 +541,27 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 label: 'Category',
                                 value: _categoryId,
                                 items: _categories.map((category) {
+                                  final icon =
+                                      QashIcons.categoryFor(category.name);
                                   return DropdownMenuItem<String>(
                                     value: category.id,
-                                    child: Text(
-                                      category.name,
-                                      style: const TextStyle(
-                                        color: Color(0xFF111111),
-                                        fontSize: 14,
-                                      ),
+                                    child: Row(
+                                      children: [
+                                        if (icon != null) ...[
+                                          QashIcon(
+                                            assetPath: icon,
+                                            size: 22,
+                                          ),
+                                          const SizedBox(width: 10),
+                                        ],
+                                        Text(
+                                          category.name,
+                                          style: const TextStyle(
+                                            color: Color(0xFF111111),
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   );
                                 }).toList(),

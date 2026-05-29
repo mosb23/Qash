@@ -9,6 +9,8 @@ import '../../../core/widgets/bottom_nav_bar.dart';
 import '../../dashboard/providers/home_preferences_provider.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
+import '../../../core/assets/qash_icons.dart';
+import '../../../core/widgets/qash_icon.dart';
 import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
 import '../../wallets/domain/entities/wallet.dart';
@@ -630,9 +632,9 @@ class TransactionsScreen extends ConsumerWidget {
     final resolvedCategoryName = item.categoryName.isNotEmpty
         ? item.categoryName
         : (categoryMap[item.categoryId]?.name ?? '');
-    final iconText = resolvedCategoryName.isNotEmpty
-        ? resolvedCategoryName.substring(0, 1).toUpperCase()
-        : '?';
+    final categoryIcon = resolvedCategoryName.isNotEmpty
+        ? QashIcons.categoryFor(resolvedCategoryName)
+        : (isTransfer ? QashIcons.categoryTransfer : null);
     final title = item.description.isNotEmpty
         ? item.description
         : resolvedCategoryName;
@@ -682,7 +684,22 @@ class TransactionsScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
-                  child: Text(iconText, style: const TextStyle(fontSize: 16)),
+                  child: categoryIcon != null
+                      ? QashIcon(
+                          assetPath: categoryIcon,
+                          fallback: isTransfer
+                              ? Icons.swap_horiz
+                              : Icons.category_outlined,
+                          size: 24,
+                        )
+                      : Text(
+                          resolvedCategoryName.isNotEmpty
+                              ? resolvedCategoryName
+                                    .substring(0, 1)
+                                    .toUpperCase()
+                              : '?',
+                          style: const TextStyle(fontSize: 16),
+                        ),
                 ),
               ),
               const SizedBox(width: 12),

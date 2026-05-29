@@ -641,6 +641,7 @@ class HomeScreen extends ConsumerWidget {
               ),
               for (final currency in supportedCurrencies)
                 ListTile(
+                  leading: CurrencyBadge(currencyCode: currency, size: 36),
                   title: Text(currency),
                   subtitle: Text(CurrencyFormatter.symbolFor(currency)),
                   trailing: current == currency

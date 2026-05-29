@@ -4,6 +4,8 @@ import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../../auth/domain/entities/auth_requests.dart';
 import '../../auth/presentation/widgets/auth_password_field.dart';
+import '../../../core/assets/qash_icons.dart';
+import '../../../core/widgets/qash_icon.dart';
 import '../../auth/presentation/widgets/auth_screen_helpers.dart';
 import '../../auth/providers/auth_providers.dart';
 
@@ -128,10 +130,10 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
                   color: qash.accent.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Icon(
-                  Icons.check,
+                child: const QashIcon(
+                  assetPath: QashIcons.actionSuccess,
+                  fallback: Icons.check,
                   size: 40,
-                  color: qash.textPrimary,
                 ),
               ),
               const SizedBox(height: 16),
