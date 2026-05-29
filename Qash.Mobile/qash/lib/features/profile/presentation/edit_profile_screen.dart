@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/profile_providers.dart';
+import '../../../core/utils/profile_form_validators.dart';
 import '../domain/entities/profile_update.dart';
+import '../providers/profile_providers.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -19,6 +20,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   bool _loading = false;
   bool _initialized = false;
+  String? _firstNameError;
+  String? _lastNameError;
+  String? _emailError;
 
   @override
   void dispose() {
@@ -29,7 +33,31 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.dispose();
   }
 
+  bool _validateFields() {
+    final firstName = _firstNameController.text;
+    final lastName = _lastNameController.text;
+    final email = _emailController.text;
+
+    final firstNameError = ProfileFormValidators.validateFirstName(firstName);
+    final lastNameError = ProfileFormValidators.validateLastName(lastName);
+    final emailError = ProfileFormValidators.validateEmail(email);
+
+    setState(() {
+      _firstNameError = firstNameError;
+      _lastNameError = lastNameError;
+      _emailError = emailError;
+    });
+
+    return firstNameError == null &&
+        lastNameError == null &&
+        emailError == null;
+  }
+
   Future<void> _handleSave() async {
+    if (!_validateFields()) {
+      return;
+    }
+
     setState(() => _loading = true);
 
     final result = await ref.read(updateProfileUseCaseProvider)(
@@ -126,6 +154,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 controller: _firstNameController,
                 keyboardType: TextInputType.name,
                 hintText: 'First name',
+                errorText: _firstNameError,
+                onChanged: (_) {
+                  if (_firstNameError != null) {
+                    setState(
+                      () => _firstNameError = ProfileFormValidators.validateFirstName(
+                        _firstNameController.text,
+                      ),
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 16),
               _InputField(
@@ -133,6 +171,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 controller: _lastNameController,
                 keyboardType: TextInputType.name,
                 hintText: 'Last name',
+                errorText: _lastNameError,
+                onChanged: (_) {
+                  if (_lastNameError != null) {
+                    setState(
+                      () => _lastNameError = ProfileFormValidators.validateLastName(
+                        _lastNameController.text,
+                      ),
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 16),
               _InputField(
@@ -140,6 +188,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 hintText: 'your@email.com',
+                errorText: _emailError,
+                onChanged: (_) {
+                  if (_emailError != null) {
+                    setState(
+                      () => _emailError = ProfileFormValidators.validateEmail(
+                        _emailController.text,
+                      ),
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 16),
               _InputField(
@@ -187,6 +245,8 @@ class _InputField extends StatelessWidget {
     required this.keyboardType,
     required this.hintText,
     this.enabled = true,
+    this.errorText,
+    this.onChanged,
   });
 
   final String label;
@@ -194,6 +254,8 @@ class _InputField extends StatelessWidget {
   final TextInputType keyboardType;
   final String hintText;
   final bool enabled;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -209,6 +271,7 @@ class _InputField extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           enabled: enabled,
+          onChanged: onChanged,
           style: TextStyle(
             fontSize: 14,
             color: enabled ? const Color(0xFF111111) : const Color(0xFF6B7280),
@@ -216,6 +279,7 @@ class _InputField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
+            errorText: errorText,
             filled: true,
             fillColor: enabled ? Colors.white : const Color(0xFFF3F4F6),
             contentPadding: const EdgeInsets.symmetric(
@@ -225,6 +289,18 @@ class _InputField extends StatelessWidget {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20),
               borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: BorderSide.none,
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: const BorderSide(color: Color(0xFFEF4444)),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: const BorderSide(color: Color(0xFFEF4444)),
             ),
           ),
         ),

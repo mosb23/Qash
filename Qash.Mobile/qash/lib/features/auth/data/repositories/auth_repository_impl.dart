@@ -111,7 +111,6 @@ class AuthRepositoryImpl implements AuthRepository {
         ChangePasswordData(
           userId: resolvedUserId,
           oldPassword: data.oldPassword,
-          verificationCode: data.verificationCode,
           newPassword: data.newPassword,
           confirmPassword: data.confirmPassword,
         ),

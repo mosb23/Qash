@@ -192,7 +192,7 @@ class ProfileScreen extends ConsumerWidget {
                       icon: Icons.shield_outlined,
                       label: 'Change Password',
                       sublabel: 'Keep your account secure',
-                      onTap: () => context.push('/profile/change-verify'),
+                      onTap: () => context.push('/profile/change-password'),
                     ),
                   ],
                 ),

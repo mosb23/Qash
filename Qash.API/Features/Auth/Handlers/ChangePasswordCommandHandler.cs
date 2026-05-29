@@ -15,31 +15,19 @@ public class ChangePasswordCommandHandler
 {
     private readonly ApplicationDbContext _context;
     private readonly IPasswordHasherService _passwordHasherService;
-    private readonly IConfiguration _configuration;
 
     public ChangePasswordCommandHandler(
         ApplicationDbContext context,
-        IPasswordHasherService passwordHasherService,
-        IConfiguration configuration)
+        IPasswordHasherService passwordHasherService)
     {
         _context = context;
         _passwordHasherService = passwordHasherService;
-        _configuration = configuration;
     }
 
     public async Task<ApiResponse<string>> Handle(
         ChangePasswordCommand request,
         CancellationToken cancellationToken)
     {
-        var demoCode = _configuration["DemoOtp:VerificationCode"] ?? "00000";
-
-        if (request.VerificationCode != demoCode)
-        {
-            return ApiResponse<string>.FailResponse(
-                "Change password failed.",
-                ["Invalid verification code."]);
-        }
-
         var user = await _context.Users
             .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
 

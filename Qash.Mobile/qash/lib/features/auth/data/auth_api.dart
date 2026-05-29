@@ -118,7 +118,7 @@ class AuthApi implements AuthRemoteDataSource {
   ) async {
     try {
       final response = await _dio.post(
-        '/api/auth/change-password',
+        '/api/profile/change-password',
         data: request.toJson(),
       );
       final data = response.data as Map<String, dynamic>;

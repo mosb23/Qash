@@ -15,7 +15,6 @@ class ChangePasswordScreen extends ConsumerStatefulWidget {
 
 class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   final TextEditingController _oldPasswordController = TextEditingController();
-  final TextEditingController _codeController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
   bool _isLoading = false;
@@ -23,7 +22,6 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   @override
   void dispose() {
     _oldPasswordController.dispose();
-    _codeController.dispose();
     _newPasswordController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -37,14 +35,10 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
   Future<void> _changePassword() async {
     final oldPassword = _oldPasswordController.text.trim();
-    final code = _codeController.text.trim();
     final newPassword = _newPasswordController.text.trim();
     final confirm = _confirmController.text.trim();
 
-    if (oldPassword.isEmpty ||
-        code.isEmpty ||
-        newPassword.isEmpty ||
-        confirm.isEmpty) {
+    if (oldPassword.isEmpty || newPassword.isEmpty || confirm.isEmpty) {
       _showMessage('Fill all fields to continue.');
       return;
     }
@@ -63,7 +57,6 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       ChangePasswordData(
         userId: '',
         oldPassword: oldPassword,
-        verificationCode: code,
         newPassword: newPassword,
         confirmPassword: confirm,
       ),
@@ -111,7 +104,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Enter your current password and verification code.',
+                  'Enter your current password and choose a new one.',
                   style: TextStyle(
                     color: Color(0xFF8B8B8B),
                     fontSize: 16,
@@ -125,12 +118,6 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   controller: _oldPasswordController,
                   obscure: true,
                   hint: 'Enter current password',
-                ),
-                const SizedBox(height: 16),
-                _buildField(
-                  label: 'Verification code',
-                  controller: _codeController,
-                  hint: 'Enter code',
                 ),
                 const SizedBox(height: 16),
                 _buildField(

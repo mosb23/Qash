@@ -14,7 +14,6 @@ class ProfileChangePasswordScreen extends ConsumerStatefulWidget {
 
 class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScreen> {
   final TextEditingController _currentController = TextEditingController();
-  final TextEditingController _codeController = TextEditingController();
   final TextEditingController _nextController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
 
@@ -25,19 +24,26 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
   @override
   void dispose() {
     _currentController.dispose();
-    _codeController.dispose();
     _nextController.dispose();
     _confirmController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSave() async {
-    if (_currentController.text.isEmpty ||
-        _nextController.text.isEmpty ||
-        _confirmController.text.isEmpty ||
-        _codeController.text.isEmpty) {
+    final oldPassword = _currentController.text.trim();
+    final newPassword = _nextController.text.trim();
+    final confirmPassword = _confirmController.text.trim();
+
+    if (oldPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all fields.')),
+      );
+      return;
+    }
+
+    if (newPassword != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match.')),
       );
       return;
     }
@@ -49,10 +55,9 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
     final result = await ref.read(changePasswordUseCaseProvider)(
       ChangePasswordData(
         userId: '',
-        oldPassword: _currentController.text,
-        verificationCode: _codeController.text,
-        newPassword: _nextController.text,
-        confirmPassword: _confirmController.text,
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
       ),
     );
 
@@ -197,13 +202,6 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
           ),
           const SizedBox(height: 16),
           _PasswordField(
-            label: 'Verification Code',
-            controller: _codeController,
-            showPassword: false,
-            hintText: '00000',
-          ),
-          const SizedBox(height: 16),
-          _PasswordField(
             label: 'New Password',
             controller: _nextController,
             showPassword: _showPassword,
@@ -265,7 +263,7 @@ class _PasswordField extends StatelessWidget {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          obscureText: showToggle ? !showPassword : label != 'Verification Code',
+          obscureText: showToggle ? !showPassword : true,
           decoration: InputDecoration(
             hintText: hintText,
             filled: true,

@@ -52,7 +52,7 @@ class SettingsScreen extends ConsumerWidget {
                 iconColor: const Color(0xFF8B5CF6),
                 label: 'Change Password',
                 sublabel: 'Update your password',
-                onTap: () => context.push('/profile/change-verify'),
+                onTap: () => context.push('/profile/change-password'),
               ),
             ],
           ),
