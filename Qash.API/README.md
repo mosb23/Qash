@@ -138,8 +138,19 @@ Edit `appsettings.json`:
 ```json
 "ConnectionStrings": {
   "DefaultConnection": "Host=localhost;Port=5432;Database=QashDb;Username=postgres;Password=YOUR_PASSWORD"
+},
+"ExchangeRates": {
+  "Rates": {
+    "USD": 1.00,
+    "EGP": 49.50,
+    "EUR": 0.86,
+    "GBP": 0.74,
+    "JPY": 143.20
+  }
 }
 ```
+
+Rates are **units of each currency per 1 USD** (for example, 1 USD = 49.50 EGP). Wallet transfers between different currencies use these rates automatically.
 
 ### 4) Apply Migration
 

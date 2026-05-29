@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/currency/currency_format.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../../budgets/domain/entities/budget_status.dart';
@@ -16,6 +17,7 @@ import '../../transactions/domain/entities/transaction.dart';
 import '../../transactions/providers/transactions_providers.dart';
 import '../../wallets/domain/entities/wallet.dart';
 import '../../wallets/providers/wallets_providers.dart';
+import '../../wallets/utils/wallet_balance_utils.dart';
 import '../domain/entities/dashboard.dart';
 import '../providers/dashboard_providers.dart';
 
@@ -56,6 +58,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ref.watch(savingGoalsProvider),
     );
     final recents = _resolveRecentTransactions(ref.watch(transactionsProvider));
+    final exchangeRates = ref.watch(exchangeRatesProvider).maybeWhen(
+      data: (rates) => defaultRatesOr(rates),
+      orElse: () => defaultRatesOr(null),
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -154,7 +160,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         : _formatCurrencyWithCode(
                                             _walletsTotalForCurrency(
                                               wallets,
+                                              transactions,
                                               activeCurrency,
+                                              exchangeRates,
                                             ),
                                             activeCurrency,
                                           ),
@@ -311,7 +319,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _walletsSection(context, wallets, _hideBalances),
+                      _walletsSection(
+                        context,
+                        wallets,
+                        transactions,
+                        exchangeRates,
+                        _hideBalances,
+                      ),
                       const SizedBox(height: 24),
                       // -- Quick Actions --
                       Padding(
@@ -582,14 +596,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   double _walletsTotalForCurrency(
     AsyncValue<List<WalletEntity>> wallets,
+    AsyncValue<List<TransactionEntity>> transactions,
     String currency,
+    Map<String, double> exchangeRates,
   ) {
     return wallets.maybeWhen(
       data: (items) {
+        final walletTransactions = transactions.maybeWhen(
+          data: (txItems) => txItems,
+          orElse: () => const <TransactionEntity>[],
+        );
+        final walletsById = walletsByIdMap(items);
         final target = currency.toUpperCase();
         return items
             .where((item) => item.currency.toUpperCase() == target)
-            .fold(0.0, (sum, item) => sum + item.balance);
+            .fold<double>(
+              0,
+              (sum, item) =>
+                  sum +
+                  displayWalletBalance(
+                    wallet: item,
+                    allTransactions: walletTransactions,
+                    walletsById: walletsById,
+                    exchangeRates: exchangeRates,
+                  ),
+            );
       },
       orElse: () => 0,
     );
@@ -677,6 +708,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _walletsSection(
     BuildContext context,
     AsyncValue<List<WalletEntity>> wallets,
+    AsyncValue<List<TransactionEntity>> transactions,
+    Map<String, double> exchangeRates,
     bool hideBalances,
   ) {
     return wallets.when(
@@ -691,6 +724,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           );
         }
 
+        final walletTransactions = transactions.maybeWhen(
+          data: (txItems) => txItems,
+          orElse: () => const <TransactionEntity>[],
+        );
+        final walletsById = walletsByIdMap(items);
+
         return SizedBox(
           height: 148,
           child: ListView(
@@ -703,7 +742,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     '/wallets/${wallet.walletId}',
                     extra: wallet,
                   ),
-                  child: _walletCard(wallet, hideBalances),
+                  child: _walletCard(
+                    wallet,
+                    hideBalances,
+                    displayWalletBalance(
+                      wallet: wallet,
+                      allTransactions: walletTransactions,
+                      walletsById: walletsById,
+                      exchangeRates: exchangeRates,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
               ],
@@ -886,7 +934,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return 'Failed to load data.';
   }
 
-  Widget _walletCard(WalletEntity wallet, bool hideBalances) {
+  Widget _walletCard(
+    WalletEntity wallet,
+    bool hideBalances,
+    double balance,
+  ) {
     final currencyCode = wallet.currency.trim().toUpperCase();
     return Container(
       width: 240,
@@ -967,7 +1019,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Text(
             hideBalances
                 ? '****'
-                : _formatCurrencyWithSymbol(wallet.balance, currencyCode),
+                : _formatCurrencyWithSymbol(balance, currencyCode),
             style: const TextStyle(
               color: Color(0xFF111111),
               fontSize: 24,
@@ -1283,7 +1335,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
             Text(
-              '$amountSign${_formatCurrency(item.amount)}',
+              '$amountSign${_formatTransactionAmount(item)}',
               style: TextStyle(
                 color: amountColor,
                 fontSize: 14,
@@ -1294,6 +1346,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
     );
+  }
+
+  String _formatTransactionAmount(TransactionEntity item) {
+    final code = item.walletCurrency.isNotEmpty ? item.walletCurrency : 'USD';
+    return formatMoney(item.amount, code);
   }
 
   String _formatCurrency(double value) {

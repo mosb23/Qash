@@ -20,6 +20,12 @@ public class TransactionDto
 
     public decimal Amount { get; set; }
 
+    public decimal? ToAmount { get; set; }
+
+    public string WalletCurrency { get; set; } = string.Empty;
+
+    public string? ToWalletCurrency { get; set; }
+
     public CategoryType TransactionType { get; set; }
 
     public Guid CategoryId { get; set; }

@@ -9,6 +9,9 @@ class TransactionModel extends TransactionEntity {
     super.toWalletName,
     required super.userId,
     required super.amount,
+    super.toAmount,
+    super.walletCurrency,
+    super.toWalletCurrency,
     required super.type,
     required super.categoryId,
     required super.categoryName,
@@ -18,19 +21,50 @@ class TransactionModel extends TransactionEntity {
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     return TransactionModel(
-      id: json['transactionId']?.toString() ?? '',
-      walletId: json['walletId']?.toString() ?? '',
-      walletName: json['walletName']?.toString() ?? '',
-      toWalletId: json['toWalletId']?.toString(),
-      toWalletName: json['toWalletName']?.toString(),
-      userId: json['userId']?.toString() ?? '',
-      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      id: _readString(json, 'transactionId') ?? '',
+      walletId: _readString(json, 'walletId') ?? '',
+      walletName: _readString(json, 'walletName') ?? '',
+      toWalletId: _readString(json, 'toWalletId'),
+      toWalletName: _readString(json, 'toWalletName'),
+      userId: _readString(json, 'userId') ?? '',
+      amount: _readDouble(json, 'amount') ?? 0,
+      toAmount: _readDouble(json, 'toAmount'),
+      walletCurrency: _readString(json, 'walletCurrency') ?? 'USD',
+      toWalletCurrency: _readString(json, 'toWalletCurrency'),
       type: _parseTransactionType(json['transactionType']),
-      categoryId: json['categoryId']?.toString() ?? '',
-      categoryName: json['categoryName']?.toString() ?? '',
-      description: json['description']?.toString() ?? '',
+      categoryId: _readString(json, 'categoryId') ?? '',
+      categoryName: _readString(json, 'categoryName') ?? '',
+      description: _readString(json, 'description') ?? '',
       transactionDate: _parseDate(json['transactionDate']),
     );
+  }
+
+  static String? _readString(Map<String, dynamic> json, String key) {
+    final camel = json[key];
+    if (camel != null) {
+      return camel.toString();
+    }
+    final pascal = json[_pascalCase(key)];
+    return pascal?.toString();
+  }
+
+  static double? _readDouble(Map<String, dynamic> json, String key) {
+    final camel = json[key];
+    if (camel is num) {
+      return camel.toDouble();
+    }
+    final pascal = json[_pascalCase(key)];
+    if (pascal is num) {
+      return pascal.toDouble();
+    }
+    return null;
+  }
+
+  static String _pascalCase(String key) {
+    if (key.isEmpty) {
+      return key;
+    }
+    return key[0].toUpperCase() + key.substring(1);
   }
 
   static TransactionType _parseTransactionType(dynamic value) {

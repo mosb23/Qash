@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/currency/currency_format.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
@@ -185,13 +186,26 @@ class _TransactionDetailBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  '${_style.amountPrefix}${_formatCurrency(transaction.amount)}',
+                  _summaryAmountText(),
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: _style.accent,
                     fontSize: 32,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                if (transaction.isCrossCurrencyTransfer) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '−${formatMoney(transaction.amount, transaction.walletCurrency)} → +${formatMoney(transaction.creditAmount, transaction.toWalletCurrency!)}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF2B7FFF),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Text(
                   title,
@@ -235,7 +249,27 @@ class _TransactionDetailBody extends StatelessWidget {
                 _divider(),
                 _detailRow('Date', _formatLongDate(transaction.transactionDate)),
                 _divider(),
-                _detailRow('Currency', _currencyLabel(currency)),
+                _detailRow(
+                  'Currency',
+                  transaction.isCrossCurrencyTransfer
+                      ? '${transaction.walletCurrency.toUpperCase()} → ${transaction.toWalletCurrency!.toUpperCase()}'
+                      : _currencyLabel(
+                          transaction.walletCurrency.isNotEmpty
+                              ? transaction.walletCurrency
+                              : currency,
+                        ),
+                ),
+                if (transaction.isCrossCurrencyTransfer) ...[
+                  _divider(),
+                  _detailRow(
+                    'Received',
+                    formatMoney(
+                      transaction.creditAmount,
+                      transaction.toWalletCurrency!,
+                    ),
+                    valueColor: const Color(0xFF2B7FFF),
+                  ),
+                ],
               ],
             ),
           ),
@@ -328,8 +362,17 @@ class _TransactionDetailBody extends StatelessWidget {
     return code;
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
+  String _summaryAmountText() {
+    if (transaction.isCrossCurrencyTransfer) {
+      return formatMoney(
+        transaction.creditAmount,
+        transaction.toWalletCurrency!,
+      );
+    }
+    final code = transaction.walletCurrency.isNotEmpty
+        ? transaction.walletCurrency
+        : currency;
+    return '${_style.amountPrefix}${formatMoney(transaction.amount, code)}';
   }
 
   String _formatLongDate(DateTime value) {

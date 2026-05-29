@@ -12,6 +12,9 @@ class BudgetScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budgets = ref.watch(budgetStatusesProvider);
+    final filteredBudgets = ref.watch(filteredBudgetStatusesProvider);
+    final filter = ref.watch(budgetsFilterProvider);
+    final hasExpiredBudgets = ref.watch(hasExpiredBudgetsProvider);
     final period = ref.watch(budgetPeriodProvider);
 
     return Scaffold(
@@ -27,7 +30,10 @@ class BudgetScreen extends ConsumerWidget {
               color: Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 6,
+                ),
               ],
             ),
             child: IconButton(
@@ -57,88 +63,252 @@ class BudgetScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: budgets.when(
-          data: (result) {
-            if (result.isFailure) {
-              return Text(
-                result.message,
-                style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
-              );
-            }
-            final items = result.data ?? const <BudgetStatusEntity>[];
-            final totalBudget = items.fold<double>(
-              0,
-              (sum, item) => sum + item.budgetAmount,
-            );
-            final totalSpent = items.fold<double>(
-              0,
-              (sum, item) => sum + item.spentAmount,
-            );
-            final overBudgetCount = items
-                .where((item) => item.isOverBudget)
-                .length;
-
-            return Column(
-              children: [
-                BudgetSummaryCard(
-                  period: period,
-                  totalBudget: totalBudget,
-                  totalSpent: totalSpent,
-                ),
-                const SizedBox(height: 20),
-                if (overBudgetCount > 0) ...[
-                  _OverBudgetAlert(count: overBudgetCount),
-                  const SizedBox(height: 20),
-                ],
-                if (items.isEmpty)
-                  const Text(
-                    'No budgets for this month.',
-                    style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
-                  )
-                else
-                  ...items.map(
-                    (budget) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: GestureDetector(
-                        onTap: () => context.push(
-                          '/budgets/${budget.budgetId}',
-                          extra: budget,
+      body: Column(
+        children: [
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(budgetStatusesProvider);
+                await ref.read(budgetStatusesProvider.future);
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: budgets.when(
+                  data: (result) {
+                    if (result.isFailure) {
+                      return Text(
+                        result.message,
+                        style: const TextStyle(
+                          color: Color(0xFF8B8B8B),
+                          fontSize: 12,
                         ),
-                        child: BudgetCard(budget: budget),
-                      ),
-                    ),
+                      );
+                    }
+
+                    final allItems = result.data ?? const <BudgetStatusEntity>[];
+                    final totalBudget = allItems.fold<double>(
+                      0,
+                      (sum, item) => sum + item.budgetAmount,
+                    );
+                    final totalSpent = allItems.fold<double>(
+                      0,
+                      (sum, item) => sum + item.spentAmount,
+                    );
+                    final overBudgetCount = allItems
+                        .where((item) => item.isAtOrOverLimit)
+                        .length;
+
+                    return Column(
+                      children: [
+                        BudgetSummaryCard(
+                          period: period,
+                          totalBudget: totalBudget,
+                          totalSpent: totalSpent,
+                        ),
+                        const SizedBox(height: 20),
+                        if (overBudgetCount > 0) ...[
+                          _OverBudgetAlert(count: overBudgetCount),
+                          const SizedBox(height: 20),
+                        ],
+                        if (hasExpiredBudgets) ...[
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                                _filterTab(
+                                  label: 'All',
+                                  isActive: filter == BudgetFilter.all,
+                                  onTap: () => _updateFilter(
+                                    ref,
+                                    BudgetFilter.all,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                _filterTab(
+                                  label: 'Current',
+                                  isActive: filter == BudgetFilter.current,
+                                  onTap: () => _updateFilter(
+                                    ref,
+                                    BudgetFilter.current,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                _filterTab(
+                                  label: 'Expired',
+                                  isActive: filter == BudgetFilter.expired,
+                                  onTap: () => _updateFilter(
+                                    ref,
+                                    BudgetFilter.expired,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                          const SizedBox(height: 16),
+                        ],
+                        filteredBudgets.when(
+                          data: (items) {
+                            if (items.isEmpty) {
+                              return Text(
+                                _emptyMessage(filter, hasExpiredBudgets),
+                                style: const TextStyle(
+                                  color: Color(0xFF8B8B8B),
+                                  fontSize: 12,
+                                ),
+                              );
+                            }
+
+                            return Column(
+                              children: [
+                                for (final budget in items)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: GestureDetector(
+                                      onTap: () => context.push(
+                                        '/budgets/${budget.budgetId}',
+                                        extra: budget,
+                                      ),
+                                      child: BudgetCard(budget: budget),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                          loading: () => const SizedBox(
+                            height: 120,
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                          error: (error, stack) => const Text(
+                            'Failed to load budgets.',
+                            style: TextStyle(
+                              color: Color(0xFF8B8B8B),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                  loading: () => const SizedBox(
+                    height: 240,
+                    child: Center(child: CircularProgressIndicator()),
                   ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push('/budgets/create'),
-                    icon: const Icon(Icons.add, color: Colors.grey),
-                    label: const Text(
-                      'Add Budget Category',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFE5E7EB)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
+                  error: (error, stack) => const Text(
+                    'Failed to load budgets.',
+                    style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
                   ),
                 ),
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => Text(
-            'Failed to load budgets.',
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            child: _addBudgetButton(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _updateFilter(WidgetRef ref, BudgetFilter filter) {
+    ref.read(budgetsFilterProvider.notifier).state = filter;
+  }
+
+  String _emptyMessage(BudgetFilter filter, bool hasExpiredBudgets) {
+    if (!hasExpiredBudgets) {
+      return 'No budgets for this month.';
+    }
+
+    return switch (filter) {
+      BudgetFilter.current => 'No current budgets.',
+      BudgetFilter.expired => 'No expired budgets.',
+      BudgetFilter.all => 'No budgets for this month.',
+    };
+  }
+
+  Widget _filterTab({
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF111111) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: isActive
+              ? null
+              : const [
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 2,
+                    offset: Offset(0, 1),
+                    spreadRadius: -1,
+                  ),
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? Colors.white : const Color(0xFF8B8B8B),
+            fontSize: 14,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _addBudgetButton(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push('/budgets/create'),
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          width: double.infinity,
+          height: 56,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF4D93A),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 8,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add_rounded, color: Color(0xFF111111), size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Add Budget Category',
+                style: TextStyle(
+                  color: Color(0xFF111111),
+                  fontSize: 16,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -164,6 +334,13 @@ class BudgetSummaryCard extends StatelessWidget {
         ? (totalSpent / totalBudget).clamp(0, 1).toDouble()
         : 0.0;
     final percentage = (progress * 100).toInt();
+    final isAtOrOverLimit = totalBudget > 0 && totalSpent >= totalBudget;
+    final progressColor = isAtOrOverLimit
+        ? const Color(0xFFEF4444)
+        : const Color(0xFFF4D93A);
+    final ringColor = isAtOrOverLimit
+        ? const Color(0xFFEF4444)
+        : const Color(0xFFF4D93A);
 
     return Container(
       width: double.infinity,
@@ -205,13 +382,13 @@ class BudgetSummaryCard extends StatelessWidget {
                 height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFF4D93A), width: 3),
+                  border: Border.all(color: ringColor, width: 3),
                 ),
                 child: Center(
                   child: Text(
                     '$percentage%',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isAtOrOverLimit ? const Color(0xFFEF4444) : Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -226,7 +403,7 @@ class BudgetSummaryCard extends StatelessWidget {
               value: progress,
               minHeight: 8,
               backgroundColor: Colors.white24,
-              valueColor: const AlwaysStoppedAnimation(Color(0xFFF4D93A)),
+              valueColor: AlwaysStoppedAnimation(progressColor),
             ),
           ),
         ],
@@ -243,12 +420,12 @@ class BudgetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = budget.progress;
-    final isOverBudget = budget.isOverBudget;
-    final indicatorColor = isOverBudget
-        ? const Color(0xFFFB2C36)
+    final isAtOrOverLimit = budget.isAtOrOverLimit;
+    final indicatorColor = isAtOrOverLimit
+        ? const Color(0xFFEF4444)
         : const Color(0xFF10B981);
-    final iconBg = isOverBudget
-        ? const Color(0xFFFEF2F2)
+    final iconBg = isAtOrOverLimit
+        ? const Color(0xFFFEE2E2)
         : const Color(0xFFEFF6FF);
 
     return Container(
@@ -256,13 +433,17 @@ class BudgetCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: isAtOrOverLimit
+            ? Border.all(color: const Color(0xFFFECACA), width: 1.4)
+            : null,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
         ],
       ),
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 44,
@@ -276,7 +457,12 @@ class BudgetCard extends StatelessWidget {
                     budget.categoryName.isNotEmpty
                         ? budget.categoryName.substring(0, 1).toUpperCase()
                         : '?',
-                    style: const TextStyle(color: Colors.black, fontSize: 20),
+                    style: TextStyle(
+                      color: isAtOrOverLimit
+                          ? const Color(0xFFEF4444)
+                          : Colors.black,
+                      fontSize: 20,
+                    ),
                   ),
                 ),
               ),
@@ -285,21 +471,51 @@ class BudgetCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      budget.categoryName,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            budget.categoryName,
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isAtOrOverLimit) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEE2E2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Expired',
+                              style: TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      isOverBudget
-                          ? 'Over by ${_formatCurrency(budget.spentAmount - budget.budgetAmount)}'
+                      isAtOrOverLimit
+                          ? budget.isOverBudget
+                              ? 'Over by ${_formatCurrency(budget.spentAmount - budget.budgetAmount)}'
+                              : 'Budget limit reached'
                           : '${_formatCurrency(budget.remainingAmount)} left',
                       style: TextStyle(
-                        color: isOverBudget
-                            ? const Color(0xFFFB2C36)
+                        color: isAtOrOverLimit
+                            ? const Color(0xFFEF4444)
                             : Colors.grey,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -313,8 +529,10 @@ class BudgetCard extends StatelessWidget {
                 children: [
                   Text(
                     _formatCurrency(budget.spentAmount),
-                    style: const TextStyle(
-                      color: Colors.black,
+                    style: TextStyle(
+                      color: isAtOrOverLimit
+                          ? const Color(0xFFEF4444)
+                          : Colors.black,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -348,8 +566,12 @@ class BudgetCard extends StatelessWidget {
               Text(
                 '${(progress * 100).toInt()}%',
                 style: TextStyle(
-                  color: isOverBudget ? const Color(0xFFFB2C36) : Colors.grey,
+                  color: isAtOrOverLimit
+                      ? const Color(0xFFEF4444)
+                      : Colors.grey,
                   fontSize: 12,
+                  fontWeight:
+                      isAtOrOverLimit ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
             ],
@@ -368,31 +590,54 @@ class _OverBudgetAlert extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final message = count == 1
-        ? 'One category exceeded this month'
-        : '$count categories exceeded this month';
+        ? 'One category reached its budget limit'
+        : '$count categories reached their budget limit';
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2),
+        color: const Color(0xFFFFE4E6),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFEF4444),
+          width: 1.5,
+        ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: Color(0xFFFB2C36)),
-          const SizedBox(width: 12),
+          Container(
+            width: 42,
+            height: 42,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEF4444),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Over budget alert',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  'Budget limit reached',
+                  style: TextStyle(
+                    color: Color(0xFFB91C1C),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   message,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: const TextStyle(
+                    color: Color(0xFF7F1D1D),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),

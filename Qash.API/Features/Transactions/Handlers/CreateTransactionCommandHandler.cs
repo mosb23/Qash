@@ -7,6 +7,7 @@ using Qash.API.Domain.Enums;
 using Qash.API.Features.Transactions.Commands;
 using Qash.API.Features.Transactions.DTOs;
 using Qash.API.Infrastructure.Data;
+using Qash.API.Infrastructure.Services;
 
 using WalletEntity = Qash.API.Domain.Entities.Wallet;
 
@@ -16,11 +17,16 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
 {
     private readonly ApplicationDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IExchangeRateService _exchangeRateService;
 
-    public CreateTransactionCommandHandler(ApplicationDbContext context, IMapper mapper)
+    public CreateTransactionCommandHandler(
+        ApplicationDbContext context,
+        IMapper mapper,
+        IExchangeRateService exchangeRateService)
     {
         _context = context;
         _mapper = mapper;
+        _exchangeRateService = exchangeRateService;
     }
 
     public async Task<ApiResponse<TransactionDto>> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
@@ -70,6 +76,7 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
         }
 
         WalletEntity? targetWallet = null;
+        decimal? transferCreditAmount = null;
 
         if (request.TransactionType == CategoryType.Transfer)
         {
@@ -98,6 +105,33 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
                     "Create transaction failed.",
                     ["Target wallet was not found."]);
             }
+
+            if (wallet.Balance < request.Amount)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Create transaction failed.",
+                    ["Insufficient balance in the source wallet."]);
+            }
+
+            try
+            {
+                transferCreditAmount = _exchangeRateService.GetTransferCreditAmount(
+                    request.Amount,
+                    wallet.Currency,
+                    targetWallet.Currency);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Create transaction failed.",
+                    [ex.Message]);
+            }
+        }
+        else if (request.TransactionType == CategoryType.Expense && wallet.Balance < request.Amount)
+        {
+            return ApiResponse<TransactionDto>.FailResponse(
+                "Create transaction failed.",
+                ["Insufficient balance in the wallet."]);
         }
 
         var transaction = new Transaction
@@ -109,6 +143,9 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
                 : null,
             CategoryId = category.Id,
             Amount = request.Amount,
+            ToAmount = request.TransactionType == CategoryType.Transfer
+                ? transferCreditAmount
+                : null,
             TransactionType = request.TransactionType,
             Description = request.Description.Trim(),
             TransactionDate = request.TransactionDate == default
@@ -118,8 +155,11 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
 
         if (transaction.TransactionType == CategoryType.Transfer)
         {
-            wallet.Balance -= transaction.Amount;
-            targetWallet!.Balance += transaction.Amount;
+            TransferBalanceHelper.ApplyTransfer(
+                wallet,
+                targetWallet!,
+                transaction.Amount,
+                transferCreditAmount!.Value);
         }
         else
         {

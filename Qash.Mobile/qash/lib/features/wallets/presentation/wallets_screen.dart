@@ -7,7 +7,10 @@ import 'package:intl/intl.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../domain/entities/wallet.dart';
+import '../../transactions/domain/entities/transaction.dart';
+import '../../transactions/providers/transactions_providers.dart';
 import '../providers/wallets_providers.dart';
+import '../utils/wallet_balance_utils.dart';
 
 class WalletsScreen extends ConsumerStatefulWidget {
   const WalletsScreen({super.key});
@@ -22,6 +25,18 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
   @override
   Widget build(BuildContext context) {
     final wallets = ref.watch(walletsProvider);
+    final transactionsAsync = ref.watch(transactionsProvider);
+    final exchangeRatesAsync = ref.watch(exchangeRatesProvider);
+
+    final typedTransactions = transactionsAsync.maybeWhen(
+      data: (result) =>
+          result.isFailure ? const <TransactionEntity>[] : (result.data ?? const []),
+      orElse: () => const <TransactionEntity>[],
+    );
+    final exchangeRates = exchangeRatesAsync.maybeWhen(
+      data: (rates) => defaultRatesOr(rates),
+      orElse: () => defaultRatesOr(null),
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -85,10 +100,18 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               final activeCurrency = _resolveActiveCurrency(
                 availableCurrencies,
               );
+              final walletsById = walletsByIdMap(items);
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _summaryCard(items, availableCurrencies, activeCurrency),
+                  _summaryCard(
+                    items,
+                    availableCurrencies,
+                    activeCurrency,
+                    typedTransactions,
+                    walletsById,
+                    exchangeRates,
+                  ),
                   const SizedBox(height: 20),
                   if (items.isEmpty)
                     const Text(
@@ -97,7 +120,13 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                     )
                   else
                     for (final wallet in items) ...[
-                      _walletCard(context, ref, wallet),
+                      _walletCard(
+                        context,
+                        wallet,
+                        typedTransactions,
+                        walletsById,
+                        exchangeRates,
+                      ),
                       const SizedBox(height: 12),
                     ],
                   const SizedBox(height: 4),
@@ -147,8 +176,17 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
     List<WalletEntity> wallets,
     List<String> currencies,
     String activeCurrency,
+    List<TransactionEntity> transactions,
+    Map<String, WalletEntity> walletsById,
+    Map<String, double> exchangeRates,
   ) {
-    final total = _walletsTotalForCurrency(wallets, activeCurrency);
+    final total = _walletsTotalForCurrency(
+      wallets,
+      activeCurrency,
+      transactions,
+      walletsById,
+      exchangeRates,
+    );
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -188,7 +226,20 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
     );
   }
 
-  Widget _walletCard(BuildContext context, WidgetRef ref, WalletEntity wallet) {
+  Widget _walletCard(
+    BuildContext context,
+    WalletEntity wallet,
+    List<TransactionEntity> transactions,
+    Map<String, WalletEntity> walletsById,
+    Map<String, double> exchangeRates,
+  ) {
+    final balance = displayWalletBalance(
+      wallet: wallet,
+      allTransactions: transactions,
+      walletsById: walletsById,
+      exchangeRates: exchangeRates,
+    );
+
     return GestureDetector(
       onTap: () => context.push('/wallets/${wallet.walletId}', extra: wallet),
       child: Container(
@@ -244,7 +295,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               children: [
                 Text(
                   _formatCurrencyWithSymbol(
-                    wallet.balance,
+                    balance,
                     wallet.currency.trim().toUpperCase(),
                   ),
                   style: const TextStyle(
@@ -333,11 +384,27 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
     return _selectedCurrency!;
   }
 
-  double _walletsTotalForCurrency(List<WalletEntity> wallets, String currency) {
+  double _walletsTotalForCurrency(
+    List<WalletEntity> wallets,
+    String currency,
+    List<TransactionEntity> transactions,
+    Map<String, WalletEntity> walletsById,
+    Map<String, double> exchangeRates,
+  ) {
     final target = currency.toUpperCase();
     return wallets
         .where((wallet) => wallet.currency.toUpperCase() == target)
-        .fold(0.0, (sum, wallet) => sum + wallet.balance);
+        .fold<double>(
+          0,
+          (sum, wallet) =>
+              sum +
+              displayWalletBalance(
+                wallet: wallet,
+                allTransactions: transactions,
+                walletsById: walletsById,
+                exchangeRates: exchangeRates,
+              ),
+        );
   }
 
   Widget _currencyDropdown(List<String> items, String value) {

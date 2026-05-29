@@ -159,6 +159,9 @@ public class ApplicationDbContext : DbContext
                 .HasColumnType("decimal(18,2)")
                 .IsRequired();
 
+            entity.Property(x => x.ToAmount)
+                .HasColumnType("decimal(18,2)");
+
             entity.Property(x => x.Description)
                 .HasMaxLength(500);
 

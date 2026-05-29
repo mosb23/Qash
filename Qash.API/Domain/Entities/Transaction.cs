@@ -21,6 +21,11 @@ public class Transaction : BaseEntity
 
     public decimal Amount { get; set; }
 
+    /// <summary>
+    /// Amount credited to <see cref="ToWallet"/> for transfers (destination currency).
+    /// </summary>
+    public decimal? ToAmount { get; set; }
+
     public Guid CategoryId { get; set; }
 
     public Category Category { get; set; } = null!;

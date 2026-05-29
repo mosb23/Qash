@@ -7,6 +7,7 @@ using Qash.API.Domain.Enums;
 using Qash.API.Features.Transactions.Commands;
 using Qash.API.Features.Transactions.DTOs;
 using Qash.API.Infrastructure.Data;
+using Qash.API.Infrastructure.Services;
 
 using WalletEntity = Qash.API.Domain.Entities.Wallet;
 
@@ -16,11 +17,16 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
 {
     private readonly ApplicationDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IExchangeRateService _exchangeRateService;
 
-    public UpdateTransactionCommandHandler(ApplicationDbContext context, IMapper mapper)
+    public UpdateTransactionCommandHandler(
+        ApplicationDbContext context,
+        IMapper mapper,
+        IExchangeRateService exchangeRateService)
     {
         _context = context;
         _mapper = mapper;
+        _exchangeRateService = exchangeRateService;
     }
 
     public async Task<ApiResponse<TransactionDto>> Handle(UpdateTransactionCommand request, CancellationToken cancellationToken)
@@ -85,6 +91,7 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
         }
 
         WalletEntity? targetTransferWallet = null;
+        decimal? transferCreditAmount = null;
 
         if (request.TransactionType == CategoryType.Transfer)
         {
@@ -113,10 +120,70 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
                     "Update transaction failed.",
                     ["Target wallet was not found."]);
             }
+
+            try
+            {
+                transferCreditAmount = _exchangeRateService.GetTransferCreditAmount(
+                    request.Amount,
+                    targetWallet.Currency,
+                    targetTransferWallet.Currency);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Update transaction failed.",
+                    [ex.Message]);
+            }
         }
 
         ReverseTransactionEffect(transaction);
-        ApplyTransactionEffect(targetWallet, targetTransferWallet, request.TransactionType, request.Amount);
+
+        if (request.TransactionType == CategoryType.Transfer)
+        {
+            var projectedSourceBalance = targetWallet.Balance;
+            if (targetWallet.Id == transaction.WalletId)
+            {
+                projectedSourceBalance += transaction.Amount;
+            }
+
+            if (projectedSourceBalance < request.Amount)
+            {
+                ApplyTransactionEffect(
+                    transaction.Wallet,
+                    transaction.ToWallet,
+                    transaction.TransactionType,
+                    transaction.Amount,
+                    TransferBalanceHelper.ResolveCreditAmount(transaction));
+
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Update transaction failed.",
+                    ["Insufficient balance in the source wallet."]);
+            }
+
+            TransferBalanceHelper.ApplyTransfer(
+                targetWallet,
+                targetTransferWallet!,
+                request.Amount,
+                transferCreditAmount!.Value);
+        }
+        else
+        {
+            if (request.TransactionType == CategoryType.Expense && targetWallet.Balance < request.Amount)
+            {
+                ApplyTransactionEffect(
+                    transaction.Wallet,
+                    transaction.ToWallet,
+                    transaction.TransactionType,
+                    transaction.Amount,
+                    TransferBalanceHelper.ResolveCreditAmount(transaction));
+
+                return ApiResponse<TransactionDto>.FailResponse(
+                    "Update transaction failed.",
+                    ["Insufficient balance in the wallet."]);
+            }
+
+            ApplyEffect(targetWallet, request.TransactionType, request.Amount);
+        }
 
         transaction.WalletId = targetWallet.Id;
         transaction.ToWalletId = request.TransactionType == CategoryType.Transfer
@@ -124,6 +191,9 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
             : null;
         transaction.CategoryId = category.Id;
         transaction.Amount = request.Amount;
+        transaction.ToAmount = request.TransactionType == CategoryType.Transfer
+            ? transferCreditAmount
+            : null;
         transaction.TransactionType = request.TransactionType;
         transaction.Description = request.Description.Trim();
         transaction.TransactionDate = request.TransactionDate == default
@@ -175,8 +245,11 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
                 return;
             }
 
-            transaction.Wallet.Balance += transaction.Amount;
-            transaction.ToWallet.Balance -= transaction.Amount;
+            TransferBalanceHelper.ReverseTransfer(
+                transaction.Wallet,
+                transaction.ToWallet,
+                transaction.Amount,
+                TransferBalanceHelper.ResolveCreditAmount(transaction));
             return;
         }
 
@@ -187,7 +260,8 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
         WalletEntity sourceWallet,
         WalletEntity? targetWallet,
         CategoryType transactionType,
-        decimal amount)
+        decimal amount,
+        decimal creditAmount)
     {
         if (transactionType == CategoryType.Transfer)
         {
@@ -196,8 +270,11 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
                 return;
             }
 
-            sourceWallet.Balance -= amount;
-            targetWallet.Balance += amount;
+            TransferBalanceHelper.ApplyTransfer(
+                sourceWallet,
+                targetWallet,
+                amount,
+                creditAmount);
             return;
         }
 

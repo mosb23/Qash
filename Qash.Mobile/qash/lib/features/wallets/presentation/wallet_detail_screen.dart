@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/currency/currency_format.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../transactions/domain/entities/transaction.dart';
 import '../../transactions/providers/transactions_providers.dart';
+import '../../transactions/utils/transaction_wallet_display.dart';
+import '../utils/wallet_balance_utils.dart';
 import '../domain/entities/wallet.dart';
 import '../providers/wallets_providers.dart';
 import 'delete_wallet_screen.dart';
@@ -18,12 +21,36 @@ class WalletDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final walletsAsync = ref.watch(walletsProvider);
+    final exchangeRatesAsync = ref.watch(exchangeRatesProvider);
     final transactions = _resolveResultList<TransactionEntity>(
       ref.watch(transactionsProvider),
     );
+
+    final wallets = walletsAsync.maybeWhen(
+      data: (result) =>
+          result.isFailure ? const <WalletEntity>[] : (result.data ?? const []),
+      orElse: () => const <WalletEntity>[],
+    );
+    final walletsById = walletsByIdMap(wallets);
+    final currentWallet = resolveLiveWallet(
+      fallback: wallet,
+      wallets: wallets.isEmpty ? [wallet] : wallets,
+    );
+    final exchangeRates = exchangeRatesAsync.maybeWhen(
+      data: (rates) => defaultRatesOr(rates),
+      orElse: () => defaultRatesOr(null),
+    );
+
     final walletTransactions = _walletTransactions(
       transactions,
-      wallet.walletId,
+      currentWallet.walletId,
+    );
+    final displayBalance = adjustWalletBalanceForTransfers(
+      wallet: currentWallet,
+      walletTransactions: walletTransactions,
+      walletsById: walletsById,
+      exchangeRates: exchangeRates,
     );
     final summary = _walletSummary(walletTransactions);
 
@@ -47,7 +74,7 @@ class WalletDetailScreen extends ConsumerWidget {
           ),
         ),
         title: Text(
-          wallet.name,
+          currentWallet.name,
           style: const TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.w600,
@@ -60,16 +87,16 @@ class WalletDetailScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _balanceCard(wallet),
+            _balanceCard(currentWallet, displayBalance),
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: _summaryTile(
                     label: 'Income',
-                    value: _formatCurrencyWithSymbol(
+                    value:                     _formatCurrencyWithSymbol(
                       summary.income,
-                      wallet.currency,
+                      currentWallet.currency,
                     ),
                     icon: Icons.arrow_downward,
                     iconBg: const Color(0xFFD9F0C8),
@@ -80,9 +107,9 @@ class WalletDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: _summaryTile(
                     label: 'Expenses',
-                    value: _formatCurrencyWithSymbol(
+                    value:                     _formatCurrencyWithSymbol(
                       summary.expenses,
-                      wallet.currency,
+                      currentWallet.currency,
                     ),
                     icon: Icons.arrow_upward,
                     iconBg: const Color(0xFFFFD3D4),
@@ -122,7 +149,13 @@ class WalletDetailScreen extends ConsumerWidget {
               Column(
                 children: [
                   for (final transaction in walletTransactions) ...[
-                    _transactionCard(transaction, wallet.currency),
+                    _transactionCard(
+                      transaction,
+                      currentWallet.currency,
+                      walletsById: walletsById,
+                      exchangeRates: exchangeRates,
+                      walletId: currentWallet.walletId,
+                    ),
                     const SizedBox(height: 8),
                   ],
                 ],
@@ -132,7 +165,7 @@ class WalletDetailScreen extends ConsumerWidget {
               width: double.infinity,
               height: 52,
               child: OutlinedButton.icon(
-                onPressed: () => _confirmDelete(context, ref, wallet),
+                onPressed: () => _confirmDelete(context, ref, currentWallet),
                 icon: const Icon(
                   Icons.delete_outline,
                   color: Color(0xFFFB2C36),
@@ -158,7 +191,7 @@ class WalletDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _balanceCard(WalletEntity wallet) {
+  Widget _balanceCard(WalletEntity wallet, double balance) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -175,7 +208,7 @@ class WalletDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            _formatCurrencyWithSymbol(wallet.balance, wallet.currency),
+            _formatCurrencyWithSymbol(balance, wallet.currency),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 28,
@@ -244,18 +277,29 @@ class WalletDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _transactionCard(TransactionEntity item, String currencyCode) {
+  Widget _transactionCard(
+    TransactionEntity item,
+    String currencyCode, {
+    required String walletId,
+    required Map<String, WalletEntity> walletsById,
+    required Map<String, double> exchangeRates,
+  }) {
+    final display = walletTransactionDisplay(
+      item,
+      walletId: walletId,
+      fallbackCurrency: currencyCode,
+      walletsById: walletsById,
+      exchangeRates: exchangeRates,
+    );
     final isTransfer = item.isTransfer;
-    final amountColor = isTransfer
+    final amountColor = display.isIncomingTransfer
+        ? const Color(0xFF00A63E)
+        : isTransfer
         ? const Color(0xFF2B7FFF)
         : item.isIncome
         ? const Color(0xFF00A63E)
         : const Color(0xFFFF0004);
-    final amountSign = isTransfer
-        ? ''
-        : item.isIncome
-        ? '+'
-        : '-';
+    final amountSign = display.sign;
     final iconBg = isTransfer
         ? const Color(0xFFE1EBFF)
         : item.isIncome
@@ -326,7 +370,7 @@ class WalletDetailScreen extends ConsumerWidget {
             ],
           ),
           Text(
-            '$amountSign${_formatCurrencyWithSymbol(item.amount, currencyCode)}',
+            '$amountSign${formatMoney(display.amount, display.currencyCode)}',
             style: TextStyle(
               color: amountColor,
               fontSize: 14,
@@ -383,9 +427,10 @@ class WalletDetailScreen extends ConsumerWidget {
   ) {
     return transactions.maybeWhen(
       data: (items) {
-        final filtered =
-            items.where((item) => item.walletId == walletId).toList()
-              ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+        final filtered = items
+            .where((item) => transactionInvolvesWallet(item, walletId))
+            .toList()
+          ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
         return filtered;
       },
       orElse: () => const [],

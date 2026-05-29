@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/currency/currency_format.dart';
+import '../../../core/currency/exchange_rates.dart';
 import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
@@ -41,11 +43,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   void initState() {
     super.initState();
     _transactionType = widget.initialType;
+    _amountController.addListener(_onAmountChanged);
     _loadFormData();
+  }
+
+  void _onAmountChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
+    _amountController.removeListener(_onAmountChanged);
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -171,6 +181,64 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final minute = date.minute.toString().padLeft(2, '0');
     final ampm = date.hour < 12 ? 'AM' : 'PM';
     return '${months[date.month - 1]} ${date.day}, ${date.year}   $hour:$minute $ampm';
+  }
+
+  WalletEntity? _walletById(String? id) {
+    if (id == null) {
+      return null;
+    }
+    for (final wallet in _wallets) {
+      if (wallet.walletId == id) {
+        return wallet;
+      }
+    }
+    return null;
+  }
+
+  String? _transferConversionPreview(Map<String, double> rates) {
+    if (_transactionType != 3) {
+      return null;
+    }
+
+    final source = _walletById(_walletId);
+    final target = _walletById(_toWalletId);
+    if (source == null || target == null) {
+      return null;
+    }
+
+    final fromCurrency = source.currency.trim().toUpperCase();
+    final toCurrency = target.currency.trim().toUpperCase();
+    if (fromCurrency == toCurrency) {
+      return null;
+    }
+
+    final amount = double.tryParse(_amountController.text.trim());
+    if (amount == null || amount <= 0) {
+      return 'Enter an amount to preview conversion to $toCurrency.';
+    }
+
+    try {
+      final converted = convertCurrencyAmount(
+        amount: amount,
+        fromCurrency: fromCurrency,
+        toCurrency: toCurrency,
+        rates: rates,
+      );
+      return 'Destination receives ${formatMoney(converted, toCurrency)}';
+    } catch (_) {
+      return 'Exchange rate unavailable for $fromCurrency → $toCurrency.';
+    }
+  }
+
+  String _amountFieldLabel() {
+    if (_transactionType != 3) {
+      return 'Amount';
+    }
+    final source = _walletById(_walletId);
+    if (source == null || source.currency.isEmpty) {
+      return 'Amount (source wallet)';
+    }
+    return 'Amount (${source.currency.toUpperCase()})';
   }
 
   String _typeLabel(int type) {
@@ -359,6 +427,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final ratesAsync = ref.watch(exchangeRatesProvider);
+    final rates = ratesAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => defaultExchangeRates,
+    );
+    final conversionPreview = _transferConversionPreview(rates);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
@@ -428,7 +503,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          _label('Amount'),
+                          _label(_amountFieldLabel()),
                           const SizedBox(height: 8),
                           _textField(
                             controller: _amountController,
@@ -437,6 +512,40 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               decimal: true,
                             ),
                           ),
+                          if (conversionPreview != null) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE1EBFF),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.currency_exchange,
+                                    size: 18,
+                                    color: Color(0xFF2B7FFF),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      conversionPreview,
+                                      style: const TextStyle(
+                                        color: Color(0xFF1D4ED8),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           _label('Description'),
                           const SizedBox(height: 8),
@@ -514,8 +623,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                       );
                                     })
                                     .toList(),
-                                onChanged: (value) =>
-                                    setState(() => _toWalletId = value),
+                                onChanged: (value) => setState(() {
+                                  _toWalletId = value;
+                                }),
                               ),
                           ],
                           const SizedBox(height: 16),

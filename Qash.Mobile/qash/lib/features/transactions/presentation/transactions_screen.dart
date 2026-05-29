@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/currency/currency_format.dart';
+import '../utils/transaction_wallet_display.dart';
+
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
@@ -11,6 +14,7 @@ import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
 import '../../wallets/domain/entities/wallet.dart';
 import '../../wallets/providers/wallets_providers.dart';
+import '../../wallets/utils/wallet_balance_utils.dart';
 import '../domain/entities/transaction.dart';
 import '../providers/transactions_providers.dart';
 
@@ -24,6 +28,19 @@ class TransactionsScreen extends ConsumerWidget {
     final listOptions = ref.watch(transactionListOptionsProvider);
     final transactions = ref.watch(filteredTransactionsProvider);
     final categories = ref.watch(categoriesProvider);
+    final walletsAsync = ref.watch(walletsProvider);
+    final exchangeRatesAsync = ref.watch(exchangeRatesProvider);
+
+    final walletsById = walletsAsync.maybeWhen(
+      data: (result) => walletsByIdMap(
+        result.isFailure ? const <WalletEntity>[] : (result.data ?? const []),
+      ),
+      orElse: () => const <String, WalletEntity>{},
+    );
+    final exchangeRates = exchangeRatesAsync.maybeWhen(
+      data: (rates) => defaultRatesOr(rates),
+      orElse: () => defaultRatesOr(null),
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -140,6 +157,8 @@ class TransactionsScreen extends ConsumerWidget {
                             categories,
                             listOptions.sort,
                             listOptions.walletId,
+                            walletsById,
+                            exchangeRates,
                           ),
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
@@ -280,6 +299,8 @@ class TransactionsScreen extends ConsumerWidget {
     AsyncValue<Result<List<CategoryEntity>>> categories,
     TransactionListSort sort,
     String? walletId,
+    Map<String, WalletEntity> walletsById,
+    Map<String, double> exchangeRates,
   ) {
     if (items.isEmpty) {
       final message = walletId != null && walletId.isNotEmpty
@@ -307,7 +328,14 @@ class TransactionsScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final item in items) ...[
-            _transactionItem(context, item, categoryMap),
+            _transactionItem(
+              context,
+              item,
+              categoryMap,
+              walletId: walletId,
+              walletsById: walletsById,
+              exchangeRates: exchangeRates,
+            ),
             const SizedBox(height: 8),
           ],
         ],
@@ -334,7 +362,14 @@ class TransactionsScreen extends ConsumerWidget {
           _sectionLabel(_formatSectionLabel(day)),
           const SizedBox(height: 8),
           for (final item in grouped[day]!) ...[
-            _transactionItem(context, item, categoryMap),
+            _transactionItem(
+              context,
+              item,
+              categoryMap,
+              walletId: walletId,
+              walletsById: walletsById,
+              exchangeRates: exchangeRates,
+            ),
             const SizedBox(height: 8),
           ],
           const SizedBox(height: 16),
@@ -743,19 +778,29 @@ class TransactionsScreen extends ConsumerWidget {
   Widget _transactionItem(
     BuildContext context,
     TransactionEntity item,
-    Map<String, CategoryEntity> categoryMap,
-  ) {
+    Map<String, CategoryEntity> categoryMap, {
+    String? walletId,
+    Map<String, WalletEntity>? walletsById,
+    Map<String, double>? exchangeRates,
+  }) {
+    final display = walletTransactionDisplay(
+      item,
+      walletId: walletId,
+      fallbackCurrency: item.walletCurrency.isNotEmpty
+          ? item.walletCurrency
+          : 'USD',
+      walletsById: walletsById,
+      exchangeRates: exchangeRates,
+    );
     final isTransfer = item.isTransfer;
-    final amountColor = isTransfer
+    final amountColor = display.isIncomingTransfer
+        ? const Color(0xFF00A63E)
+        : isTransfer
         ? const Color(0xFF2B7FFF)
         : item.isIncome
         ? const Color(0xFF00A63E)
         : const Color(0xFFFF0000);
-    final amountSign = isTransfer
-        ? ''
-        : item.isIncome
-        ? '+'
-        : '-';
+    final amountSign = display.sign;
     final iconBg = isTransfer
         ? const Color(0xFFE1EBFF)
         : item.isIncome
@@ -776,6 +821,11 @@ class TransactionsScreen extends ConsumerWidget {
     }
     if (item.walletName.isNotEmpty) {
       subtitleParts.add(item.walletName);
+    }
+    if (item.isCrossCurrencyTransfer && !display.isIncomingTransfer) {
+      subtitleParts.add(
+        '→ ${formatMoney(item.creditAmount, item.toWalletCurrency!)}',
+      );
     }
     final subtitle = subtitleParts.join(' · ');
 
@@ -842,7 +892,7 @@ class TransactionsScreen extends ConsumerWidget {
               ],
             ),
             Text(
-              '$amountSign${_formatCurrency(item.amount)}',
+              '$amountSign${formatMoney(display.amount, display.currencyCode)}',
               style: TextStyle(
                 color: amountColor,
                 fontSize: 14,

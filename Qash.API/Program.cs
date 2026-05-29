@@ -15,7 +15,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 QuestPDF.Settings.License = LicenseType.Community;
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy =
+            System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
@@ -35,6 +40,10 @@ builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"))
 
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasherService, PasswordHasherService>();
+
+builder.Services.Configure<ExchangeRateOptions>(
+    builder.Configuration.GetSection(ExchangeRateOptions.SectionName));
+builder.Services.AddSingleton<IExchangeRateService, ExchangeRateService>();
 
 builder.Services.AddHostedService<RecurringTransactionsBackgroundService>();
 

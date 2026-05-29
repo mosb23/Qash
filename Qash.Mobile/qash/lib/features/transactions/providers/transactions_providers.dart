@@ -4,6 +4,7 @@ import '../../../config/providers.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../data/datasources/transactions_remote_data_source.dart';
+import '../data/exchange_rates_api.dart';
 import '../data/transactions_api.dart';
 import '../data/repositories/transactions_repository_impl.dart';
 import '../domain/entities/transaction.dart';
@@ -115,6 +116,14 @@ final transactionsRemoteDataSourceProvider =
     Provider<TransactionsRemoteDataSource>((ref) {
       return TransactionsApi(ref.read(dioProvider));
     });
+
+final exchangeRatesApiProvider = Provider<ExchangeRatesApi>((ref) {
+  return ExchangeRatesApi(ref.read(dioProvider));
+});
+
+final exchangeRatesProvider = FutureProvider<Map<String, double>>((ref) async {
+  return ref.read(exchangeRatesApiProvider).fetchRates();
+});
 
 final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {
   return TransactionsRepositoryImpl(

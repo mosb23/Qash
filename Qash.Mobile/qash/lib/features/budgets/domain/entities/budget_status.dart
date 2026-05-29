@@ -27,6 +27,9 @@ class BudgetStatusEntity {
   }
 
   bool get isOverBudget => spentAmount > budgetAmount;
+
+  bool get isAtOrOverLimit =>
+      budgetAmount > 0 && spentAmount >= budgetAmount;
 }
 
 class BudgetPeriod {

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/providers.dart';
+import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../data/budgets_api.dart';
 import '../data/datasources/budgets_remote_data_source.dart';
@@ -47,3 +48,57 @@ final budgetStatusesProvider = FutureProvider<Result<List<BudgetStatusEntity>>>(
     return useCase(period);
   },
 );
+
+enum BudgetFilter { all, current, expired }
+
+bool isBudgetExpired(BudgetStatusEntity budget) => budget.isAtOrOverLimit;
+
+final budgetsFilterProvider = StateProvider<BudgetFilter>((ref) {
+  return BudgetFilter.all;
+});
+
+final hasExpiredBudgetsProvider = Provider<bool>((ref) {
+  final budgetsAsync = ref.watch(budgetStatusesProvider);
+
+  return budgetsAsync.maybeWhen(
+    data: (result) {
+      if (result.isFailure) {
+        return false;
+      }
+      return (result.data ?? const []).any(isBudgetExpired);
+    },
+    orElse: () => false,
+  );
+});
+
+final filteredBudgetStatusesProvider =
+    Provider<AsyncValue<List<BudgetStatusEntity>>>((ref) {
+      final budgetsAsync = ref.watch(budgetStatusesProvider);
+      final filter = ref.watch(budgetsFilterProvider);
+
+      return budgetsAsync.when(
+        data: (result) {
+          if (result.isFailure) {
+            return AsyncValue.error(
+              result.failure ??
+                  const AppFailure(message: 'Failed to load budgets.'),
+              StackTrace.current,
+            );
+          }
+
+          var items = List<BudgetStatusEntity>.from(result.data ?? const []);
+          switch (filter) {
+            case BudgetFilter.current:
+              items = items.where((budget) => !isBudgetExpired(budget)).toList();
+            case BudgetFilter.expired:
+              items = items.where(isBudgetExpired).toList();
+            case BudgetFilter.all:
+              break;
+          }
+
+          return AsyncValue.data(items);
+        },
+        loading: () => const AsyncValue.loading(),
+        error: (error, stack) => AsyncValue.error(error, stack),
+      );
+    });
