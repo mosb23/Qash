@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
 
+import 'forgot_password_flow.dart';
 import 'widgets/auth_screen_helpers.dart';
 import 'widgets/auth_text_field.dart';
+import 'widgets/demo_otp_banner.dart';
 
 class ForgotVerifyScreen extends StatefulWidget {
   final String? phoneNumber;
@@ -17,13 +19,6 @@ class ForgotVerifyScreen extends StatefulWidget {
 
 class _ForgotVerifyScreenState extends State<ForgotVerifyScreen> {
   final TextEditingController _codeController = TextEditingController();
-  bool _isLoading = false;
-
-  @override
-  void dispose() {
-    _codeController.dispose();
-    super.dispose();
-  }
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(
@@ -31,32 +26,34 @@ class _ForgotVerifyScreenState extends State<ForgotVerifyScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _verifyCode() async {
+  void _continueToReset() {
     final code = _codeController.text.trim();
+    final phone = widget.phoneNumber?.trim() ?? '';
 
     if (code.isEmpty) {
       _showMessage('Enter the verification code.');
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
-
-    await Future.delayed(const Duration(milliseconds: 700));
-
-    if (!mounted) {
+    if (phone.isEmpty) {
+      _showMessage('Phone number is missing. Go back and try again.');
       return;
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    // Code is validated on the server when resetting the password.
+    context.go(
+      '/forgot-reset',
+      extra: ForgotPasswordFlowPayload(
+        phoneNumber: phone,
+        verificationCode: code,
+      ),
+    );
+  }
 
-    final phone = widget.phoneNumber ?? '';
-    final phoneParam = Uri.encodeComponent(phone);
-    final codeParam = Uri.encodeComponent(code);
-    context.go('/forgot-reset?phone=$phoneParam&code=$codeParam');
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
   }
 
   @override
@@ -76,12 +73,14 @@ class _ForgotVerifyScreenState extends State<ForgotVerifyScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 56),
+                const DemoOtpBanner(),
+                const SizedBox(height: 16),
                 Text('Verify code', style: authTitleStyle(context)),
                 const SizedBox(height: 8),
                 Text(
                   phone.isEmpty
-                      ? 'Enter the code sent to your phone.'
-                      : 'Enter the code sent to $phone.',
+                      ? 'Enter the demo verification code.'
+                      : 'Enter the code for $phone.',
                   style: authSubtitleStyle(context),
                 ),
                 const SizedBox(height: 40),
@@ -89,14 +88,14 @@ class _ForgotVerifyScreenState extends State<ForgotVerifyScreen> {
                 const SizedBox(height: 8),
                 AuthTextField(
                   controller: _codeController,
-                  hintText: '000000',
+                  hintText: '00000',
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 12),
                 Text(
                   demoCode.isEmpty
-                      ? 'Did not receive the code? Resend in 30s'
-                      : 'Demo code: $demoCode',
+                      ? 'If an account exists, use the demo code from the previous step.'
+                      : 'Demo code (coursework): $demoCode',
                   style: TextStyle(
                     color: qash.textSecondary,
                     fontSize: 12,
@@ -106,9 +105,8 @@ class _ForgotVerifyScreenState extends State<ForgotVerifyScreen> {
                 const SizedBox(height: 24),
                 authPrimaryButton(
                   context: context,
-                  label: _isLoading ? 'Verifying...' : 'Verify',
-                  onTap: _isLoading ? null : _verifyCode,
-                  enabled: !_isLoading,
+                  label: 'Continue',
+                  onTap: _continueToReset,
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -123,7 +121,10 @@ class _ForgotVerifyScreenState extends State<ForgotVerifyScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: const Text('Change phone number', style: TextStyle(fontSize: 16)),
+                    child: const Text(
+                      'Change phone number',
+                      style: TextStyle(fontSize: 16),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),

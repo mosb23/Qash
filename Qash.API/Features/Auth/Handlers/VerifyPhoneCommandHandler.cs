@@ -6,6 +6,7 @@ using Qash.API.Features.Auth.Commands;
 using Qash.API.Features.Auth.DTOs;
 using Qash.API.Infrastructure.Authentication;
 using Qash.API.Infrastructure.Data;
+using Qash.API.Infrastructure.Demo;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,7 +33,8 @@ public class VerifyPhoneCommandHandler : IRequestHandler<VerifyPhoneCommand, Api
         VerifyPhoneCommand request,
         CancellationToken cancellationToken)
     {
-        var demoCode = _configuration["DemoOtp:VerificationCode"] ?? "00000";
+        // Demo/university only — compares against configured code, not SMS.
+        var demoCode = DemoOtpOptions.GetVerificationCode(_configuration);
 
         if (request.VerificationCode != demoCode)
         {

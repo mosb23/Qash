@@ -14,7 +14,8 @@ class AuthInterceptor extends Interceptor {
 
   final SecureStorageService _storage;
   final RefreshSessionCallback onRefreshSession;
-  bool _isRefreshing = false;
+
+  Future<bool>? _refreshInFlight;
 
   @override
   Future<void> onRequest(
@@ -49,14 +50,8 @@ class AuthInterceptor extends Interceptor {
       return;
     }
 
-    if (_isRefreshing) {
-      handler.next(err);
-      return;
-    }
-
-    _isRefreshing = true;
     try {
-      final refreshed = await onRefreshSession();
+      final refreshed = await _refreshSessionOnce();
       if (!refreshed) {
         await _handleSessionExpired();
         handler.next(err);
@@ -75,9 +70,18 @@ class AuthInterceptor extends Interceptor {
     } catch (_) {
       await _handleSessionExpired();
       handler.next(err);
-    } finally {
-      _isRefreshing = false;
     }
+  }
+
+  Future<bool> _refreshSessionOnce() {
+    if (_refreshInFlight != null) {
+      return _refreshInFlight!;
+    }
+
+    _refreshInFlight = onRefreshSession();
+    return _refreshInFlight!.whenComplete(() {
+      _refreshInFlight = null;
+    });
   }
 
   Future<void> _handleSessionExpired() async {

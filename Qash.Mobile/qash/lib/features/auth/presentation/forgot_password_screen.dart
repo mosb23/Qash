@@ -5,6 +5,7 @@ import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../domain/entities/auth_requests.dart';
 import '../providers/auth_providers.dart';
+import 'forgot_password_flow.dart';
 import 'widgets/auth_screen_helpers.dart';
 import 'widgets/auth_text_field.dart';
 
@@ -61,12 +62,17 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
     if (response.isSuccess) {
       final code = response.data?.verificationCode ?? '';
-      final phoneParam = Uri.encodeComponent(phone);
-      final codeParam = Uri.encodeComponent(code);
-      final route = code.isEmpty
-          ? '/forgot-verify?phone=$phoneParam'
-          : '/forgot-verify?phone=$phoneParam&code=$codeParam';
-      context.go(route);
+      _showMessage(
+        'If an account exists, a code was sent. '
+        '${code.isNotEmpty ? 'Demo code is on the next screen.' : ''}',
+      );
+      context.go(
+        '/forgot-verify',
+        extra: ForgotPasswordFlowPayload(
+          phoneNumber: phone,
+          demoVerificationCode: code.isEmpty ? null : code,
+        ),
+      );
     } else {
       _showMessage(
         response.errors.isNotEmpty

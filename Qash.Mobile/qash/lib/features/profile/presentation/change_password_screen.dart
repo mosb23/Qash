@@ -175,6 +175,20 @@ class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScre
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
         children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: qash.surfaceElevated,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: qash.border),
+            ),
+            child: Text(
+              'You are signed in. Enter your current password to update — no SMS code required.',
+              style: TextStyle(color: qash.textSecondary, fontSize: 12, height: 1.35),
+            ),
+          ),
+          const SizedBox(height: 16),
           Text('Current Password', style: authLabelStyle(context)),
           const SizedBox(height: 8),
           AuthPasswordField(

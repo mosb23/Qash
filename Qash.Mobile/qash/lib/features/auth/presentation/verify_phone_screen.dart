@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
 
+import '../../../core/config/demo_otp.dart';
 import '../domain/entities/auth_requests.dart';
 import '../providers/auth_providers.dart';
 import 'widgets/auth_screen_helpers.dart';
 import 'widgets/auth_text_field.dart';
+import 'widgets/demo_otp_banner.dart';
 
 class VerifyPhoneScreen extends ConsumerStatefulWidget {
   final String? phoneNumber;
@@ -96,10 +98,12 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 56),
+                const DemoOtpBanner(),
+                const SizedBox(height: 16),
                 Text('Verify your phone', style: authTitleStyle(context)),
                 const SizedBox(height: 8),
                 Text(
-                  'Use the 5-digit code sent to your phone.',
+                  'Enter the demo verification code (no SMS in coursework mode).',
                   style: authSubtitleStyle(context),
                 ),
                 const SizedBox(height: 40),
@@ -120,7 +124,7 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Demo code: 00000',
+                  'Demo code (coursework): ${DemoOtp.defaultCode}',
                   style: TextStyle(
                     color: qash.textSecondary,
                     fontSize: 12,

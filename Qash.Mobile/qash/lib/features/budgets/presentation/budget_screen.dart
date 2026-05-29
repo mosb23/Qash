@@ -93,6 +93,14 @@ class BudgetScreen extends ConsumerWidget {
                   totalSpent: totalSpent,
                   displayCurrency: displayCurrency,
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  'Amounts in $displayCurrency (no conversion between wallets).',
+                  style: TextStyle(
+                    color: qash.textSecondary,
+                    fontSize: 11,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 if (overBudgetCount > 0) ...[
                   _OverBudgetAlert(count: overBudgetCount),

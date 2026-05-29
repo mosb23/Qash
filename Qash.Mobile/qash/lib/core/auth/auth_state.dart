@@ -16,9 +16,30 @@ class AuthStatusNotifier extends StateNotifier<AuthStatus> {
 
   final SecureStorageService _storage;
 
-  Future<void> bootstrap() async {
-    final token = await _storage.getAccessToken();
-    state = token != null && token.isNotEmpty
+  /// Restores session from secure storage. When a refresh token exists,
+  /// attempts refresh so expired access tokens recover on cold start.
+  Future<void> bootstrap({Future<bool> Function()? tryRefreshSession}) async {
+    final accessToken = await _storage.getAccessToken();
+    final refreshToken = await _storage.getRefreshToken();
+
+    if (accessToken == null || accessToken.isEmpty) {
+      state = AuthStatus.unauthenticated;
+      return;
+    }
+
+    if (tryRefreshSession != null &&
+        refreshToken != null &&
+        refreshToken.isNotEmpty) {
+      final refreshed = await tryRefreshSession();
+      if (!refreshed) {
+        await _storage.clearTokens();
+        state = AuthStatus.unauthenticated;
+        return;
+      }
+    }
+
+    final tokenAfterRefresh = await _storage.getAccessToken();
+    state = tokenAfterRefresh != null && tokenAfterRefresh.isNotEmpty
         ? AuthStatus.authenticated
         : AuthStatus.unauthenticated;
   }

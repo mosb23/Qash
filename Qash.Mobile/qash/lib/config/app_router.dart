@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/auth/auth_state.dart';
 import '../features/analytics/presentation/analytics_screen.dart';
+import '../features/auth/presentation/forgot_password_flow.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/forgot_reset_password_screen.dart';
 import '../features/auth/presentation/forgot_verify_screen.dart';
@@ -111,19 +112,32 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/forgot-verify',
         builder: (context, state) {
-          final phone = state.uri.queryParameters['phone'];
-          final code = state.uri.queryParameters['code'];
-          return ForgotVerifyScreen(phoneNumber: phone, demoCode: code);
+          final payload = state.extra;
+          if (payload is ForgotPasswordFlowPayload) {
+            return ForgotVerifyScreen(
+              phoneNumber: payload.phoneNumber,
+              demoCode: payload.demoVerificationCode,
+            );
+          }
+          return ForgotVerifyScreen(
+            phoneNumber: state.uri.queryParameters['phone'],
+            demoCode: state.uri.queryParameters['code'],
+          );
         },
       ),
       GoRoute(
         path: '/forgot-reset',
         builder: (context, state) {
-          final phone = state.uri.queryParameters['phone'];
-          final code = state.uri.queryParameters['code'];
+          final payload = state.extra;
+          if (payload is ForgotPasswordFlowPayload) {
+            return ForgotResetPasswordScreen(
+              phoneNumber: payload.phoneNumber,
+              verificationCode: payload.verificationCode ?? '',
+            );
+          }
           return ForgotResetPasswordScreen(
-            phoneNumber: phone,
-            verificationCode: code,
+            phoneNumber: state.uri.queryParameters['phone'],
+            verificationCode: state.uri.queryParameters['code'],
           );
         },
       ),

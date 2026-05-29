@@ -16,7 +16,10 @@ final appInitializationProvider = FutureProvider<void>((ref) async {
   globalSessionExpiredHandler = () async {
     ref.read(authStatusProvider.notifier).setUnauthenticated();
   };
-  await ref.read(authStatusProvider.notifier).bootstrap();
+  final storage = ref.read(secureStorageProvider);
+  await ref.read(authStatusProvider.notifier).bootstrap(
+        tryRefreshSession: () => tryRefreshTokens(storage),
+      );
 });
 
 final dioProvider = Provider<Dio>((ref) {
