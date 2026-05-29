@@ -85,19 +85,14 @@ class ProfileScreen extends ConsumerWidget {
                               height: 64,
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Color(0xFF4ADE80),
-                                    Color(0xFF10B981),
-                                  ],
-                                ),
+                                color: Color(0xFFF4D93A),
                               ),
                               child: Center(
                                 child: Text(
                                   initials,
                                   style: const TextStyle(
                                     fontSize: 18,
-                                    color: Colors.white,
+                                    color: Colors.black,
                                   ),
                                 ),
                               ),

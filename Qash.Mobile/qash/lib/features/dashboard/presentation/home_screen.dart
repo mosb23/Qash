@@ -704,15 +704,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF05DF72), Color(0xFF00BC7D)],
-        ),
+        color: const Color(0xFFF4D93A),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Center(
         child: Text(
           alias,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: Colors.black, fontSize: 14),
         ),
       ),
     );

@@ -111,14 +111,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   height: 96,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF4ADE80), Color(0xFF10B981)],
-                    ),
+                    color: Color(0xFFF4D93A),
                   ),
                   child: Center(
                     child: Text(
                       profile?.alias ?? 'UN',
-                      style: const TextStyle(fontSize: 28, color: Colors.white),
+                      style: const TextStyle(fontSize: 28, color: Colors.black),
                     ),
                   ),
                 ),
