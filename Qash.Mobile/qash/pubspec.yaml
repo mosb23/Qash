@@ -23,39 +23,16 @@ dependencies:
   flutter_secure_storage: ^9.2.4
 
   # Local Storage
-  hive: ^2.2.3
-  hive_flutter: ^1.1.0
-
-  # Models
-  freezed_annotation: ^3.1.0
-  json_annotation: ^4.9.0
-
-  # Equality
-  equatable: ^2.0.7
-
-  # Functional Programming
-  dartz: ^0.10.1
+  shared_preferences: ^2.5.3
 
   # Environment
   flutter_dotenv: ^5.2.1
 
-  # Loading
-  flutter_spinkit: ^5.2.1
-
   # SVG
   flutter_svg: ^2.2.0
 
-  # Responsive UI
-  flutter_screenutil: ^5.9.3
-
-  # Toasts
-  fluttertoast: ^8.2.12
-
   # Intl
   intl: ^0.20.2
-
-  # Animations
-  animations: ^2.0.11
 
   # Icons
   cupertino_icons: ^1.0.8
@@ -76,7 +53,4 @@ flutter:
 
   assets:
     - .env
-    - assets/icons/flags/
-    - assets/icons/QuickActions/
-    - assets/icons/Categories/
-    - assets/icons/Goals/
+    - assets/icons/

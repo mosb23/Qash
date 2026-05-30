@@ -11,28 +11,32 @@ public class CreateTransactionCommandValidator : AbstractValidator<CreateTransac
         RuleFor(x => x.WalletId)
             .NotEmpty();
 
-        RuleFor(x => x.CategoryId)
-            .NotEmpty()
-            .When(x => x.TransactionType != CategoryType.Transfer)
-            .WithMessage("Category is required for income and expense.");
-
-        RuleFor(x => x.TransactionType)
-            .Must(
-                x =>
-                    x == CategoryType.Income ||
-                    x == CategoryType.Expense ||
-                    x == CategoryType.Transfer)
-            .WithMessage("Transaction type must be Income, Expense, or Transfer.");
-
-        RuleFor(x => x.ToWalletId)
-            .NotEmpty()
-            .When(x => x.TransactionType == CategoryType.Transfer)
-            .WithMessage("Target wallet is required for transfers.");
-
         RuleFor(x => x.Amount)
             .GreaterThan(0);
 
         RuleFor(x => x.Description)
             .MaximumLength(500);
+
+        When(x => x.TransactionType == CategoryType.Transfer, () =>
+        {
+            RuleFor(x => x.ToWalletId)
+                .NotEmpty()
+                .WithMessage("Destination wallet is required for transfers.");
+
+            RuleFor(x => x)
+                .Must(x => x.ToWalletId != x.WalletId)
+                .WithMessage("Source and destination wallets must be different.")
+                .When(x => x.ToWalletId.HasValue);
+        });
+
+        When(x => x.TransactionType != CategoryType.Transfer, () =>
+        {
+            RuleFor(x => x.CategoryId)
+                .NotEmpty();
+
+            RuleFor(x => x.TransactionType)
+                .Must(x => x == CategoryType.Income || x == CategoryType.Expense)
+                .WithMessage("Transaction type must be Income or Expense.");
+        });
     }
 }

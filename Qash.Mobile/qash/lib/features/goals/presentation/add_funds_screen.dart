@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/utils/currency_formatter.dart';
 
-import '../../../core/input/text_input_formatters.dart';
-import '../../../core/currency/currency_conversion_service.dart';
-import '../../../core/currency/currency_format.dart';
-import '../../../core/currency/currency_providers.dart';
-import '../../../core/widgets/currency_flag.dart';
+import '../../dashboard/providers/home_preferences_provider.dart';
 import '../domain/entities/saving_goal.dart';
 import '../domain/entities/saving_goal_contribution.dart';
 import '../providers/saving_goals_providers.dart';
-import '../utils/saving_goal_currency.dart';
 
 class AddFundsScreen extends ConsumerStatefulWidget {
   final SavingGoalEntity goal;
@@ -24,7 +20,6 @@ class AddFundsScreen extends ConsumerStatefulWidget {
 
 class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
   final TextEditingController _amountController = TextEditingController();
-  String _selectedCurrency = goalBaseCurrency;
   bool _submitting = false;
   String? _errorMessage;
 
@@ -35,12 +30,10 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
   }
 
   Future<void> _submit() async {
-    final conversion = ref.read(currencyConversionServiceProvider);
-    final remainingUsd =
-        widget.goal.targetAmount - widget.goal.currentAmount;
     final amount = double.tryParse(_amountController.text.trim());
+    final remaining = widget.goal.targetAmount - widget.goal.currentAmount;
 
-    if (remainingUsd <= 0) {
+    if (remaining <= 0) {
       setState(() => _errorMessage = 'This goal is already completed.');
       return;
     }
@@ -48,21 +41,10 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
       setState(() => _errorMessage = 'Enter a valid amount.');
       return;
     }
-
-    final amountUsd = goalAmountToUsd(
-      amount: amount,
-      inputCurrency: _selectedCurrency,
-      conversion: conversion,
-    );
-
-    if (amountUsd > remainingUsd + 0.001) {
-      final maxInSelected = conversion.convertFromBase(
-        remainingUsd,
-        _selectedCurrency,
-      );
+    if (amount > remaining) {
       setState(
         () => _errorMessage =
-            'Amount exceeds remaining balance (${formatMoney(maxInSelected, _selectedCurrency)}).',
+            'Amount exceeds remaining balance (${_formatCurrency(remaining, ref.read(displayCurrencyProvider))}).',
       );
       return;
     }
@@ -75,9 +57,7 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     final result = await ref.read(contributeToSavingGoalUseCaseProvider)(
       SavingGoalContributionData(
         savingGoalId: widget.goal.savingGoalId,
-        amountUsd: amountUsd,
-        inputAmount: amount,
-        inputCurrency: _selectedCurrency,
+        amount: amount,
       ),
     );
 
@@ -95,38 +75,31 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final conversion = ref.watch(currencyConversionServiceProvider);
-    final remainingUsd =
-        widget.goal.targetAmount - widget.goal.currentAmount;
-    final maxInSelected = conversion.convertFromBase(
-      remainingUsd,
-      _selectedCurrency,
-    );
-    final maxHint = formatMoney(maxInSelected, _selectedCurrency);
+    final qash = context.qash;
+    final displayCurrency = ref.watch(displayCurrencyProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
+      backgroundColor: qash.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
         elevation: 0,
         centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => context.pop(),
             ),
           ),
         ),
-        title: const Text(
+        title: Text(
           'Add Funds',
           style: TextStyle(
-            color: Colors.black,
+            color: qash.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -138,32 +111,25 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _goalSummary(widget.goal),
+              _goalSummary(widget.goal, displayCurrency),
               const SizedBox(height: 20),
-              _sectionTitle('Deposit currency'),
-              const SizedBox(height: 8),
-              _currencySelector(),
-              const SizedBox(height: 16),
-              _label('Amount (${currencySymbol(_selectedCurrency)})'),
+              _label(context, 'Amount'),
               const SizedBox(height: 8),
               _textField(
                 controller: _amountController,
-                hint: 'Max $maxHint',
+                hint:
+                    'Max ${_formatCurrency(widget.goal.targetAmount - widget.goal.currentAmount, displayCurrency)}',
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
               ),
-              if (_selectedCurrency != goalBaseCurrency) ...[
-                const SizedBox(height: 8),
-                _usdPreview(conversion),
-              ],
               const SizedBox(height: 16),
               if (_errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                    style: TextStyle(color: qash.danger, fontSize: 12),
                   ),
                 ),
               SizedBox(
@@ -172,26 +138,30 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
                 child: ElevatedButton(
                   onPressed: _submitting ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    disabledBackgroundColor: const Color(0xFF111111),
-                    foregroundColor: Colors.white,
-                    disabledForegroundColor: Colors.white,
+                    backgroundColor: qash.primaryButton,
+                    disabledBackgroundColor:
+                        qash.primaryButton.withValues(alpha: 0.45),
+                    foregroundColor: qash.onPrimaryButton,
+                    disabledForegroundColor: qash.onPrimaryButton,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: qash.onPrimaryButton,
+                          strokeWidth: 2,
+                        ),
+                      )
+                      : Text(
                           'Add Funds',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
+                          style: TextStyle(
+                            color: qash.onPrimaryButton,
+                            fontSize: 16,
+                          ),
                         ),
                 ),
               ),
@@ -202,41 +172,17 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     );
   }
 
-  Widget _usdPreview(CurrencyConversionService conversion) {
-    final amount = double.tryParse(_amountController.text.trim());
-    if (amount == null || amount <= 0) {
-      return const SizedBox.shrink();
-    }
-    final usd = goalAmountToUsd(
-      amount: amount,
-      inputCurrency: _selectedCurrency,
-      conversion: conversion,
-    );
-    return Text(
-      '≈ ${formatMoney(usd, goalBaseCurrency)} will be added to your goal',
-      style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
-    );
-  }
-
-  Widget _goalSummary(SavingGoalEntity goal) {
+  Widget _goalSummary(SavingGoalEntity goal, String displayCurrency) {
+    final qash = context.qash;
+    final progress = goal.progress;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
+        color: qash.surface,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-            spreadRadius: -1,
-          ),
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
+        boxShadow: [
+          BoxShadow(color: qash.cardShadow, blurRadius: 2, offset: const Offset(0, 1)),
         ],
       ),
       child: Column(
@@ -244,27 +190,25 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
         children: [
           Text(
             goal.name,
-            style: const TextStyle(
-              color: Color(0xFF111111),
+            style: TextStyle(
+              color: qash.textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Saved ${formatMoney(goal.currentAmount, goalBaseCurrency)} of ${formatMoney(goal.targetAmount, goalBaseCurrency)}',
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            'Saved ${_formatCurrency(goal.currentAmount, displayCurrency)} of ${_formatCurrency(goal.targetAmount, displayCurrency)}',
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
-              value: goal.progress,
+              value: progress,
               minHeight: 8,
-              backgroundColor: const Color(0xFFF3F4F6),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF111111),
-              ),
+              backgroundColor: qash.border,
+              valueColor: AlwaysStoppedAnimation<Color>(qash.primaryButton),
             ),
           ),
         ],
@@ -272,63 +216,12 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     );
   }
 
-  Widget _currencySelector() {
-    const currencies = ['USD', 'EGP', 'EUR', 'GBP', 'JPY'];
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: currencies.map((code) {
-        final selected = _selectedCurrency == code;
-        return GestureDetector(
-          onTap: () => setState(() => _selectedCurrency = code),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: selected ? Colors.black : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: selected ? Colors.black : const Color(0xFFE5E7EB),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CurrencyFlag(currencyCode: code, width: 22, height: 14),
-                const SizedBox(width: 6),
-                Text(
-                  code,
-                  style: TextStyle(
-                    color: selected ? Colors.white : const Color(0xFF111111),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _sectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: Color(0xFF111111),
-        fontWeight: FontWeight.w600,
-        fontSize: 14,
-      ),
-    );
-  }
-
-  Widget _label(String text) {
+  Widget _label(BuildContext context, String text) {
+    final qash = context.qash;
     return Text(
       text,
-      style: const TextStyle(
-        color: Color(0xFF111111),
+      style: TextStyle(
+        color: qash.textPrimary,
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
@@ -340,35 +233,24 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     required String hint,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    final qash = context.qash;
     return Container(
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-            spreadRadius: -1,
-          ),
-          BoxShadow(
-            color: Color(0x19000000),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
+        boxShadow: [
+          BoxShadow(color: qash.cardShadow, blurRadius: 2, offset: const Offset(0, 1)),
         ],
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        onChanged: (_) => setState(() {}),
-        inputFormatters: amountInputFormatters,
-        style: const TextStyle(color: Color(0xFF111111), fontSize: 16),
+        style: TextStyle(color: qash.textPrimary, fontSize: 16),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Color(0xFFC4C4C4), fontSize: 16),
+          hintStyle: TextStyle(color: qash.textHint, fontSize: 16),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -378,5 +260,8 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
       ),
     );
   }
-}
 
+  String _formatCurrency(double value, String currencyCode) {
+    return CurrencyFormatter.format(value, currencyCode);
+  }
+}

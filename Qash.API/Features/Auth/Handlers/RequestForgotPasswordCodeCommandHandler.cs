@@ -4,6 +4,7 @@ using Qash.API.Common.Responses;
 using Qash.API.Features.Auth.Commands;
 using Qash.API.Features.Auth.DTOs;
 using Qash.API.Infrastructure.Data;
+using Qash.API.Infrastructure.Demo;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,21 +33,17 @@ public class RequestForgotPasswordCodeCommandHandler
         var userExists = await _context.Users
             .AnyAsync(x => x.PhoneNumber == phone, cancellationToken);
 
-        if (!userExists)
-        {
-            return ApiResponse<ForgotPasswordCodeResponseDto>.FailResponse(
-                "Request failed.",
-                ["No account found with this phone number."]);
-        }
-
-        var code = _configuration["DemoOtp:VerificationCode"] ?? "00000";
+        // Generic message to limit account enumeration; demo code only when account exists.
+        var demoCode = userExists
+            ? DemoOtpOptions.GetVerificationCode(_configuration)
+            : string.Empty;
 
         return ApiResponse<ForgotPasswordCodeResponseDto>.SuccessResponse(
             new ForgotPasswordCodeResponseDto
             {
                 PhoneNumber = phone,
-                VerificationCode = code
+                VerificationCode = demoCode
             },
-            "Verification code generated successfully.");
+            "If an account exists for this phone number, a verification code was sent.");
     }
 }

@@ -7,7 +7,7 @@ class TransactionCreateRequestModel {
   final double amount;
   final int transactionType;
   final String categoryId;
-  final String? description;
+  final String description;
   final DateTime transactionDate;
 
   const TransactionCreateRequestModel({
@@ -17,7 +17,7 @@ class TransactionCreateRequestModel {
     required this.amount,
     required this.transactionType,
     required this.categoryId,
-    this.description,
+    required this.description,
     required this.transactionDate,
   });
 
@@ -35,18 +35,15 @@ class TransactionCreateRequestModel {
   }
 
   Map<String, dynamic> toJson() {
-    final map = {
+    return {
       'userId': userId,
       'walletId': walletId,
-      'toWalletId': toWalletId,
+      if (toWalletId != null && toWalletId!.isNotEmpty) 'toWalletId': toWalletId,
       'amount': amount,
       'transactionType': transactionType,
-      'categoryId': categoryId,
+      if (categoryId.isNotEmpty) 'categoryId': categoryId,
+      'description': description,
       'transactionDate': transactionDate.toUtc().toIso8601String(),
     };
-    if (description != null) {
-      map['description'] = description;
-    }
-    return map;
   }
 }

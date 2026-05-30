@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
+
+import '../../../core/assets/qash_icons.dart';
+import '../../../core/widgets/qash_icon.dart';
+import 'widgets/auth_screen_helpers.dart';
 
 class PasswordChangedScreen extends StatelessWidget {
   const PasswordChangedScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
+      backgroundColor: qash.scaffoldBackground,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -23,52 +29,34 @@ class PasswordChangedScreen extends StatelessWidget {
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD9F0C8),
+                        color: qash.accent.withValues(alpha: 0.35),
                         borderRadius: BorderRadius.circular(18),
                       ),
-                      child: const Icon(
-                        Icons.check_circle_outline,
-                        size: 32,
-                        color: Color(0xFF111111),
+                      child: const QashIcon(
+                        assetPath: QashIcons.actionSuccess,
+                        fallback: Icons.check_circle_outline,
+                        size: 36,
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
+                    Text(
                       'Password changed',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111111),
-                      ),
+                      style: authTitleStyle(context).copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Your password has been updated. You can sign in now.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF8B8B8B),
-                        height: 1.4,
-                      ),
+                      style: authSubtitleStyle(context).copyWith(height: 1.4),
                     ),
                   ],
                 ),
               ),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF111111),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  onPressed: () => context.go('/login'),
-                  child: const Text('Back to login'),
-                ),
+              authPrimaryButton(
+                context: context,
+                label: 'Back to login',
+                onTap: () => context.go('/login'),
               ),
               const SizedBox(height: 24),
             ],

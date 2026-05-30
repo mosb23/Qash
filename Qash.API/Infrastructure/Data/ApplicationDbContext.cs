@@ -205,7 +205,8 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(x => x.ToWallet)
                 .WithMany()
                 .HasForeignKey(x => x.ToWalletId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
 
             entity.HasOne(x => x.Category)
                 .WithMany(x => x.Transactions)

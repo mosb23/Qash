@@ -1,9 +1,10 @@
 using MediatR;
 using Qash.API.Common.Responses;
+using Qash.API.Features.Auth.DTOs;
 
 namespace Qash.API.Features.Auth.Commands;
 
-public class VerifyPhoneCommand : IRequest<ApiResponse<string>>
+public class VerifyPhoneCommand : IRequest<ApiResponse<AuthResponseDto>>
 {
     public string PhoneNumber { get; set; } = string.Empty;
 

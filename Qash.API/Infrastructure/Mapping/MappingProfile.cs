@@ -35,8 +35,8 @@ public class MappingProfile : Profile
         CreateMap<TransactionEntity, TransactionDtoModel>()
             .ForMember(dest => dest.TransactionId, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.WalletId, opt => opt.MapFrom(src => src.WalletId))
-            .ForMember(dest => dest.WalletName, opt => opt.MapFrom(src => src.Wallet.Name))
-            .ForMember(dest => dest.WalletCurrency, opt => opt.MapFrom(src => src.Wallet.Currency))
+            .ForMember(dest => dest.WalletName, opt => opt.MapFrom(src => src.Wallet != null ? src.Wallet.Name : string.Empty))
+            .ForMember(dest => dest.WalletCurrency, opt => opt.MapFrom(src => src.Wallet != null ? src.Wallet.Currency : string.Empty))
             .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.ApplicationUserId))
             .ForMember(dest => dest.ToWalletId, opt => opt.MapFrom(src => src.ToWalletId))
             .ForMember(
@@ -50,7 +50,8 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.AmountInBaseCurrency, opt => opt.MapFrom(src => src.AmountInBaseCurrency))
             .ForMember(dest => dest.ExchangeRateUsed, opt => opt.MapFrom(src => src.ExchangeRateUsed))
             .ForMember(dest => dest.TransferGroupId, opt => opt.MapFrom(src => src.TransferGroupId))
-            .ForMember(dest => dest.LinkedTransactionId, opt => opt.MapFrom(src => src.LinkedTransactionId));
+            .ForMember(dest => dest.LinkedTransactionId, opt => opt.MapFrom(src => src.LinkedTransactionId))
+            .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : string.Empty));
 
         CreateMap<Category, CategoryDto>();
 

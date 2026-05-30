@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Qash.API.Common.Responses;
 using Qash.API.Features.Auth.Commands;
 using Qash.API.Infrastructure.Data;
+using Qash.API.Infrastructure.Demo;
 using Qash.API.Infrastructure.Services;
 using System;
 using System.Threading;
@@ -31,7 +32,8 @@ public class ResetForgotPasswordCommandHandler
         ResetForgotPasswordCommand request,
         CancellationToken cancellationToken)
     {
-        var demoCode = _configuration["DemoOtp:VerificationCode"] ?? "00000";
+        // Demo/university only — server-side check; never trust client-only delays.
+        var demoCode = DemoOtpOptions.GetVerificationCode(_configuration);
 
         if (request.VerificationCode != demoCode)
         {

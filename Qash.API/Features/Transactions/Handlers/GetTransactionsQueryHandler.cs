@@ -28,6 +28,7 @@ public class GetTransactionsQueryHandler : IRequestHandler<GetTransactionsQuery,
         var transactions = await _context.Transactions
             .AsNoTracking()
             .Include(x => x.Wallet)
+            .Include(x => x.Category)
             .Include(x => x.ToWallet)
             .Where(x => x.ApplicationUserId == request.UserId)
             .OrderByDescending(x => x.TransactionDate)

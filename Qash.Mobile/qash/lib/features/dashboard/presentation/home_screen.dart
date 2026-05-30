@@ -1,73 +1,63 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
-import '../../../core/currency/currency_aggregation.dart';
-import '../../../core/currency/currency_conversion_service.dart';
-import '../../../core/currency/currency_format.dart';
-import '../../../core/currency/currency_providers.dart';
 import '../../../core/errors/app_failure.dart';
-import '../../../core/widgets/currency_flag.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
-import '../../../core/widgets/goal_logo.dart';
-import '../../../core/widgets/transaction_category_icon.dart';
+import '../../../core/widgets/currency_badge.dart';
+import '../providers/home_preferences_provider.dart';
 import '../../budgets/domain/entities/budget_status.dart';
 import '../../budgets/providers/budgets_providers.dart';
 import '../../goals/domain/entities/saving_goal.dart';
 import '../../goals/providers/saving_goals_providers.dart';
-import '../../goals/utils/saving_goal_currency.dart';
 import '../../profile/domain/entities/profile.dart';
 import '../../profile/providers/profile_providers.dart';
 import '../../transactions/domain/entities/transaction.dart';
 import '../../transactions/providers/transactions_providers.dart';
 import '../../wallets/domain/entities/wallet.dart';
 import '../../wallets/providers/wallets_providers.dart';
-import '../../wallets/utils/wallet_balance_utils.dart';
 import '../domain/entities/dashboard.dart';
 import '../providers/dashboard_providers.dart';
-import '../providers/dashboard_computed_providers.dart';
 
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  bool _hideBalances = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final qash = context.qash;
     final profile = _resolveResult<ProfileEntity>(ref.watch(profileProvider));
-    final topCategories = ref.watch(clientTopCategoriesProvider);
+    final dashboard = _resolveResult<DashboardEntity>(
+      ref.watch(dashboardProvider),
+    );
     final wallets = _resolveResultList<WalletEntity>(
       ref.watch(walletsProvider),
     );
-    final transactions = _resolveResultList<TransactionEntity>(
-      ref.watch(transactionsProvider),
+    final budgets = _resolveResultList<BudgetStatusEntity>(
+      ref.watch(budgetStatusesProvider),
     );
-    final conversion = ref.watch(currencyConversionServiceProvider);
-    final activeCurrency = ref.watch(effectiveDisplayCurrencyProvider);
-    final availableCurrencies = _dropdownCurrencies(wallets, activeCurrency);
-    final currencyTotals = _monthlyTotals(
-      transactions,
-      wallets,
-      activeCurrency,
-      conversion,
-    );
-    final walletsTotal = _walletsTotal(wallets, transactions, activeCurrency, conversion);
-    final budgets = ref.watch(adjustedBudgetStatusesProvider);
     final goals = _resolveResultList<SavingGoalEntity>(
       ref.watch(savingGoalsProvider),
     );
     final recents = _resolveRecentTransactions(ref.watch(transactionsProvider));
-    final exchangeRates = conversion.rates;
+    final hideBalance = ref.watch(balanceHiddenProvider);
+    final displayCurrency = ref.watch(displayCurrencyProvider);
+
+    ref.listen(walletsProvider, (_, next) {
+      next.whenData((result) {
+        if (result.isFailure) {
+          return;
+        }
+        final items = result.data ?? const <WalletEntity>[];
+        ref
+            .read(displayCurrencyProvider.notifier)
+            .applyDefaultFromWallets(items);
+      });
+    });
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
         child: Column(
           children: [
@@ -97,22 +87,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           children: [
                             Row(
                               children: [
-                                _profileAvatar(profile),
+                                _profileAvatar(context, profile),
                                 const SizedBox(width: 12),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'Welcome back,',
                                       style: TextStyle(
-                                        color: Color(0xFF8B8B8B),
+                                        color: qash.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
                                     Text(
                                       _profileName(profile),
-                                      style: const TextStyle(
-                                        color: Color(0xFF111111),
+                                      style: TextStyle(
+                                        color: qash.textPrimary,
                                         fontSize: 14,
                                       ),
                                     ),
@@ -131,7 +121,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF111111),
+                            color: qash.primaryButton,
                             borderRadius: BorderRadius.circular(24),
                           ),
                           child: Column(
@@ -141,57 +131,77 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Total Balance',
                                     style: TextStyle(
-                                      color: Color(0xFF8B8B8B),
+                                      color: qash.onPrimaryButton
+                                          .withValues(alpha: 0.7),
                                       fontSize: 12,
                                     ),
                                   ),
-                                  _currencyDropdown(
-                                    availableCurrencies,
-                                    activeCurrency,
+                                  GestureDetector(
+                                    onTap: () => _pickDisplayCurrency(
+                                      context,
+                                      ref,
+                                      displayCurrency,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          displayCurrency,
+                                          style: TextStyle(
+                                            color: qash.onPrimaryButton
+                                                .withValues(alpha: 0.7),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        Icon(
+                                          Icons.keyboard_arrow_down,
+                                          color: qash.onPrimaryButton
+                                              .withValues(alpha: 0.7),
+                                          size: 18,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  CurrencyFlag(
-                                    currencyCode: activeCurrency,
-                                    width: 28,
-                                    height: 18,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    _hideBalances
-                                        ? '****'
-                                        : formatMoney(
-                                            walletsTotal,
-                                            activeCurrency,
-                                          ),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 30,
-                                      fontWeight: FontWeight.w400,
+                                  Expanded(
+                                    child: Text(
+                                      hideBalance
+                                          ? CurrencyFormatter.formatHidden()
+                                          : _formatCurrency(
+                                              _walletsTotal(
+                                                wallets,
+                                                displayCurrency,
+                                              ),
+                                              displayCurrency,
+                                            ),
+                                      style: TextStyle(
+                                        color: qash.onPrimaryButton,
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.w400,
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
                                   IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _hideBalances = !_hideBalances;
-                                      });
-                                    },
-                                    icon: Icon(
-                                      _hideBalances
-                                          ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
-                                      color: const Color(0xFF8B8B8B),
-                                      size: 20,
-                                    ),
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
+                                    onPressed: () => ref
+                                        .read(balanceHiddenProvider.notifier)
+                                        .toggle(),
+                                    icon: Icon(
+                                      hideBalance
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: qash.onPrimaryButton
+                                          .withValues(alpha: 0.7),
+                                      size: 22,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -220,22 +230,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          const Text(
+                                          Text(
                                             'Income',
                                             style: TextStyle(
-                                              color: Color(0xFF8B8B8B),
+                                              color: qash.onPrimaryButton
+                                                  .withValues(alpha: 0.7),
                                               fontSize: 12,
                                             ),
                                           ),
                                           Text(
-                                            _hideBalances
-                                                ? '****'
-                                                : formatMoney(
-                                                    currencyTotals.income,
-                                                    activeCurrency,
+                                            hideBalance
+                                                ? CurrencyFormatter.formatHidden()
+                                                : _formatCurrency(
+                                                    _dashboardValue(
+                                                      dashboard,
+                                                      (value) =>
+                                                          value.monthlyIncome,
+                                                    ),
+                                                    displayCurrency,
                                                   ),
-                                            style: const TextStyle(
-                                              color: Colors.white,
+                                            style: TextStyle(
+                                              color: qash.onPrimaryButton,
                                               fontSize: 14,
                                             ),
                                           ),
@@ -266,22 +281,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          const Text(
+                                          Text(
                                             'Expenses',
                                             style: TextStyle(
-                                              color: Color(0xFF8B8B8B),
+                                              color: qash.onPrimaryButton
+                                                  .withValues(alpha: 0.7),
                                               fontSize: 12,
                                             ),
                                           ),
                                           Text(
-                                            _hideBalances
-                                                ? '****'
-                                                : formatMoney(
-                                                    currencyTotals.expenses,
-                                                    activeCurrency,
+                                            hideBalance
+                                                ? CurrencyFormatter.formatHidden()
+                                                : _formatCurrency(
+                                                    _dashboardValue(
+                                                      dashboard,
+                                                      (value) =>
+                                                          value.monthlyExpenses,
+                                                    ),
+                                                    displayCurrency,
                                                   ),
-                                            style: const TextStyle(
-                                              color: Colors.white,
+                                            style: TextStyle(
+                                              color: qash.onPrimaryButton,
                                               fontSize: 14,
                                             ),
                                           ),
@@ -302,23 +322,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            GestureDetector(
-                              onTap: () => context.push('/wallets'),
-                              child: const Text(
-                                'Wallets',
-                                style: TextStyle(
-                                  color: Color(0xFF111111),
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            Text(
+                              'Wallets',
+                              style: TextStyle(
+                                color: qash.textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             GestureDetector(
                               onTap: () => context.push('/wallets'),
-                              child: const Text(
+                              child: Text(
                                 'See all >',
                                 style: TextStyle(
-                                  color: Color(0xFF8B8B8B),
+                                  color: qash.textSecondary,
                                   fontSize: 14,
                                 ),
                               ),
@@ -330,9 +347,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       _walletsSection(
                         context,
                         wallets,
-                        transactions,
-                        exchangeRates,
-                        _hideBalances,
+                        displayCurrency,
+                        hideBalance,
                       ),
                       const SizedBox(height: 24),
                       // -- Quick Actions --
@@ -341,54 +357,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Quick Actions',
                               style: TextStyle(
-                                color: Color(0xFF111111),
+                                color: qash.textPrimary,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                             const SizedBox(height: 12),
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(
-                                  child: _quickAction(
-                                    'Income',
-                                    'assets/icons/QuickActions/income.png',
-                                    const Color(0xFFD9F0C8),
-                                    onTap: () => context.push(
-                                      '/transactions/add?type=1',
-                                    ),
-                                  ),
+                                _quickAction(
+                                  context,
+                                  'Income',
+                                  '\u2199',
+                                  const Color(0xFFD9F0C8),
+                                  onTap: () =>
+                                      context.push('/transactions/add?type=1'),
                                 ),
-                                Expanded(
-                                  child: _quickAction(
-                                    'Expense',
-                                    'assets/icons/QuickActions/expense.png',
-                                    const Color(0xFFFEE2E2),
-                                    onTap: () => context.push(
-                                      '/transactions/add?type=2',
-                                    ),
-                                  ),
+                                _quickAction(
+                                  context,
+                                  'Expense',
+                                  '\u2197',
+                                  const Color(0xFFFEE2E2),
+                                  onTap: () =>
+                                      context.push('/transactions/add?type=2'),
                                 ),
-                                Expanded(
-                                  child: _quickAction(
-                                    'Transfer',
-                                    'assets/icons/QuickActions/exchange.png',
-                                    const Color.fromARGB(255, 214, 231, 252),
-                                    onTap: () => context.push(
-                                      '/transactions/add?type=3',
-                                    ),
-                                  ),
+                                _quickAction(
+                                  context,
+                                  'Transfer',
+                                  '\u21c4',
+                                  const Color(0xFFEFF6FF),
+                                  onTap: () =>
+                                      context.push('/transactions/add?type=3'),
                                 ),
-                                Expanded(
-                                  child: _quickAction(
-                                    'Wallets',
-                                    'assets/icons/QuickActions/wallet.png',
-                                    const Color.fromARGB(255, 203, 205, 209),
-                                    onTap: () => context.push('/wallets'),
-                                  ),
+                                _quickAction(
+                                  context,
+                                  'Wallets',
+                                  '\u25a4',
+                                  const Color(0xFFF3F4F6),
+                                  onTap: () => context.push('/wallets'),
                                 ),
                               ],
                             ),
@@ -405,23 +415,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                GestureDetector(
-                                  onTap: () => context.push('/budgets'),
-                                  child: const Text(
-                                    'Budget',
-                                    style: TextStyle(
-                                      color: Color(0xFF111111),
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                Text(
+                                  'Budget',
+                                  style: TextStyle(
+                                    color: qash.textPrimary,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 GestureDetector(
                                   onTap: () => context.push('/budgets'),
-                                  child: const Text(
+                                  child: Text(
                                     'See all >',
                                     style: TextStyle(
-                                      color: Color(0xFF8B8B8B),
+                                      color: qash.textSecondary,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -429,7 +436,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            _budgetSection(budgets),
+                            _budgetSection(
+                              context,
+                              budgets,
+                              displayCurrency,
+                              hideBalance,
+                            ),
                           ],
                         ),
                       ),
@@ -440,16 +452,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Top Categories',
                               style: TextStyle(
-                                color: Color(0xFF111111),
+                                color: qash.textPrimary,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                             const SizedBox(height: 12),
-                            _topCategoriesSection(topCategories, activeCurrency),
+                            _topCategoriesSection(
+                              context,
+                              dashboard,
+                              displayCurrency,
+                              hideBalance,
+                            ),
                           ],
                         ),
                       ),
@@ -463,23 +480,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                GestureDetector(
-                                  onTap: () => context.push('/goals'),
-                                  child: const Text(
-                                    'Goals',
-                                    style: TextStyle(
-                                      color: Color(0xFF111111),
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                Text(
+                                  'Goals',
+                                  style: TextStyle(
+                                    color: qash.textPrimary,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 GestureDetector(
                                   onTap: () => context.push('/goals'),
-                                  child: const Text(
+                                  child: Text(
                                     'See all >',
                                     style: TextStyle(
-                                      color: Color(0xFF8B8B8B),
+                                      color: qash.textSecondary,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -487,7 +501,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            _goalsSection(goals),
+                            _goalsSection(
+                              context,
+                              goals,
+                              displayCurrency,
+                              hideBalance,
+                            ),
                           ],
                         ),
                       ),
@@ -501,20 +520,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
+                                Text(
                                   'Recent Transactions',
                                   style: TextStyle(
-                                    color: Color(0xFF111111),
+                                    color: qash.textPrimary,
                                     fontSize: 20,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 GestureDetector(
                                   onTap: () => context.push('/transactions'),
-                                  child: const Text(
+                                  child: Text(
                                     'See all >',
                                     style: TextStyle(
-                                      color: Color(0xFF8B8B8B),
+                                      color: qash.textSecondary,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -525,9 +544,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             _recentSection(
                               context,
                               recents,
-                              wallets,
-                              conversion,
-                              activeCurrency,
+                              displayCurrency,
+                              hideBalance,
                             ),
                           ],
                         ),
@@ -583,63 +601,69 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
-  List<String> _dropdownCurrencies(
-    AsyncValue<List<WalletEntity>> wallets,
-    String activeCurrency,
+  double _dashboardValue(
+    AsyncValue<DashboardEntity> dashboard,
+    double Function(DashboardEntity) selector,
   ) {
-    final currencies = wallets.maybeWhen(
-      data: collectWalletCurrencies,
-      orElse: () => [kBaseCurrency],
-    );
-    if (!currencies.contains(activeCurrency)) {
-      return [...currencies, activeCurrency]..sort();
-    }
-    return currencies;
+    return dashboard.maybeWhen(data: selector, orElse: () => 0);
   }
 
   double _walletsTotal(
     AsyncValue<List<WalletEntity>> wallets,
-    AsyncValue<List<TransactionEntity>> transactions,
-    String targetCurrency,
-    CurrencyConversionService conversion,
+    String displayCurrency,
   ) {
     return wallets.maybeWhen(
       data: (items) {
-        final walletTransactions = transactions.maybeWhen(
-          data: (txItems) => txItems,
-          orElse: () => const <TransactionEntity>[],
-        );
-        return sumWalletBalancesInCurrency(
-          wallets: items,
-          transactions: walletTransactions,
-          targetCurrency: targetCurrency,
-          conversion: conversion,
-        );
+        if (items.isEmpty) {
+          return 0;
+        }
+        final code = displayCurrency.toUpperCase();
+        return items
+            .where((item) => item.currency.toUpperCase() == code)
+            .fold(0, (sum, item) => sum + item.balance);
       },
       orElse: () => 0,
     );
   }
 
-  MonthlyCurrencyTotals _monthlyTotals(
-    AsyncValue<List<TransactionEntity>> transactions,
-    AsyncValue<List<WalletEntity>> wallets,
-    String targetCurrency,
-    CurrencyConversionService conversion,
-  ) {
-    final walletsById = wallets.maybeWhen(
-      data: (items) => walletsByIdMap(items),
-      orElse: () => const <String, WalletEntity>{},
+  Future<void> _pickDisplayCurrency(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Display currency',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+              ),
+              for (final currency in supportedCurrencies)
+                ListTile(
+                  leading: CurrencyBadge(currencyCode: currency, size: 36),
+                  title: Text(currency),
+                  subtitle: Text(CurrencyFormatter.symbolFor(currency)),
+                  trailing: current == currency
+                      ? const Icon(Icons.check)
+                      : null,
+                  onTap: () => Navigator.pop(context, currency),
+                ),
+            ],
+          ),
+        );
+      },
     );
 
-    return transactions.maybeWhen(
-      data: (items) => sumMonthlyIncomeExpenseInCurrency(
-        transactions: items,
-        targetCurrency: targetCurrency,
-        conversion: conversion,
-        walletsById: walletsById,
-      ),
-      orElse: () => const MonthlyCurrencyTotals(income: 0, expenses: 0),
-    );
+    if (selected != null) {
+      await ref.read(displayCurrencyProvider.notifier).setCurrency(selected);
+    }
   }
 
   String _profileName(AsyncValue<ProfileEntity> profile) {
@@ -649,7 +673,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _profileAvatar(AsyncValue<ProfileEntity> profile) {
+  Widget _profileAvatar(
+    BuildContext context,
+    AsyncValue<ProfileEntity> profile,
+  ) {
     final alias = profile.maybeWhen(
       data: (value) => value.alias,
       orElse: () => 'UN',
@@ -659,13 +686,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: const Color(0xFFF4D93A),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF05DF72), Color(0xFF00BC7D)],
+        ),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Center(
         child: Text(
           alias,
-          style: const TextStyle(color: Colors.black, fontSize: 14),
+          style: const TextStyle(color: Colors.white, fontSize: 14),
         ),
       ),
     );
@@ -674,27 +703,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _walletsSection(
     BuildContext context,
     AsyncValue<List<WalletEntity>> wallets,
-    AsyncValue<List<TransactionEntity>> transactions,
-    Map<String, double> exchangeRates,
-    bool hideBalances,
+    String displayCurrency,
+    bool hideBalance,
   ) {
     return wallets.when(
       data: (items) {
         if (items.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
               'No wallets yet.',
-              style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+              style: TextStyle(
+                color: context.qash.textSecondary,
+                fontSize: 12,
+              ),
             ),
           );
         }
-
-        final walletTransactions = transactions.maybeWhen(
-          data: (txItems) => txItems,
-          orElse: () => const <TransactionEntity>[],
-        );
-        final walletsById = walletsByIdMap(items);
 
         return SizedBox(
           height: 148,
@@ -703,22 +728,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             padding: const EdgeInsets.only(left: 24),
             children: [
               for (final wallet in items) ...[
-                GestureDetector(
-                  onTap: () => context.push(
-                    '/wallets/${wallet.walletId}',
-                    extra: wallet,
-                  ),
-                  child: _walletCard(
-                    wallet,
-                    hideBalances,
-                    displayWalletBalance(
-                      wallet: wallet,
-                      allTransactions: walletTransactions,
-                      walletsById: walletsById,
-                      exchangeRates: exchangeRates,
-                    ),
-                  ),
-                ),
+                _walletCard(context, wallet, hideBalance),
                 const SizedBox(width: 12),
               ],
               _addWalletCard(context),
@@ -737,13 +747,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Text(
           _errorText(error),
-          style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+          style: TextStyle(color: context.qash.textSecondary, fontSize: 12),
         ),
       ),
     );
   }
 
-  Widget _budgetSection(AsyncValue<List<BudgetStatusEntity>> budgets) {
+  Widget _budgetSection(
+    BuildContext context,
+    AsyncValue<List<BudgetStatusEntity>> budgets,
+    String displayCurrency,
+    bool hideBalance,
+  ) {
+    final qash = context.qash;
     return budgets.when(
       data: (items) {
         if (items.isEmpty) {
@@ -753,9 +769,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               color: const Color(0xFFF3F4F6),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Text(
+            child: Text(
               'No budgets for this month.',
-              style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+              style: TextStyle(color: qash.textSecondary, fontSize: 12),
             ),
           );
         }
@@ -764,23 +780,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return Row(
           children: [
             Expanded(
-              child: GestureDetector(
-                onTap: () => context.push(
-                  '/budgets/${cards.first.budgetId}',
-                  extra: cards.first,
-                ),
-                child: _budgetStatusCard(cards.first),
+              child: _budgetStatusCard(
+                context,
+                cards.first,
+                displayCurrency,
+                hideBalance,
               ),
             ),
             if (cards.length > 1) ...[
               const SizedBox(width: 12),
               Expanded(
-                child: GestureDetector(
-                  onTap: () => context.push(
-                    '/budgets/${cards.last.budgetId}',
-                    extra: cards.last,
-                  ),
-                  child: _budgetStatusCard(cards.last),
+                child: _budgetStatusCard(
+                  context,
+                  cards.last,
+                  displayCurrency,
+                  hideBalance,
                 ),
               ),
             ],
@@ -793,27 +807,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
 
   Widget _topCategoriesSection(
-    AsyncValue<List<TopCategoryEntity>> topCategories,
+    BuildContext context,
+    AsyncValue<DashboardEntity> dashboard,
     String displayCurrency,
+    bool hideBalance,
   ) {
-    return topCategories.when(
-      data: (categories) {
-        if (categories.isEmpty) {
-          return const Text(
+    final qash = context.qash;
+    return dashboard.when(
+      data: (value) {
+        if (value.topCategories.isEmpty) {
+          return Text(
             'No category spendings yet.',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           );
         }
         return Column(
           children: [
-            for (final category in categories) ...[
-              _topCategoryRow(category, displayCurrency),
+            for (final category in value.topCategories) ...[
+              _topCategoryRow(
+                context,
+                category,
+                displayCurrency,
+                hideBalance,
+              ),
               const SizedBox(height: 12),
             ],
           ],
@@ -825,28 +847,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
 
-  Widget _goalsSection(AsyncValue<List<SavingGoalEntity>> goals) {
+  Widget _goalsSection(
+    BuildContext context,
+    AsyncValue<List<SavingGoalEntity>> goals,
+    String displayCurrency,
+    bool hideBalance,
+  ) {
+    final qash = context.qash;
     return goals.when(
       data: (items) {
         if (items.isEmpty) {
-          return const Text(
+          return Text(
             'No goals yet.',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           );
         }
         final list = items.take(2).toList();
         return Column(
           children: [
             for (final goal in list) ...[
-              GestureDetector(
-                onTap: () =>
-                    context.push('/goals/${goal.savingGoalId}', extra: goal),
-                child: _goalCardFromData(goal),
+              _goalCardFromData(
+                context,
+                goal,
+                displayCurrency,
+                hideBalance,
               ),
               const SizedBox(height: 12),
             ],
@@ -859,7 +888,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
@@ -867,21 +896,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _recentSection(
     BuildContext context,
     AsyncValue<List<TransactionEntity>> transactions,
-    AsyncValue<List<WalletEntity>> wallets,
-    CurrencyConversionService conversion,
     String displayCurrency,
+    bool hideBalance,
   ) {
-    final walletsById = wallets.maybeWhen(
-      data: (items) => walletsByIdMap(items),
-      orElse: () => const <String, WalletEntity>{},
-    );
-
+    final qash = context.qash;
     return transactions.when(
       data: (items) {
         if (items.isEmpty) {
-          return const Text(
+          return Text(
             'No recent transactions.',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           );
         }
         return Column(
@@ -890,9 +914,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               _transactionCard(
                 context,
                 item,
-                conversion,
                 displayCurrency,
-                walletsById,
+                hideBalance,
               ),
               const SizedBox(height: 8),
             ],
@@ -905,7 +928,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       error: (error, stack) => Text(
         _errorText(error),
-        style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+        style: TextStyle(color: qash.textSecondary, fontSize: 12),
       ),
     );
   }
@@ -917,25 +940,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return 'Failed to load data.';
   }
 
-  Widget _walletCard(WalletEntity wallet, bool hideBalances, double balance) {
-    final currencyCode = wallet.currency.trim().toUpperCase();
-    return Container(
+  Widget _walletCard(
+    BuildContext context,
+    WalletEntity wallet,
+    bool hideBalance,
+  ) {
+    final qash = context.qash;
+    return GestureDetector(
+      onTap: () => context.push('/wallets/${wallet.walletId}/edit', extra: wallet),
+      child: Container(
       width: 240,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -947,26 +976,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Center(
-                      child: CurrencyFlag(
-                        currencyCode: currencyCode,
-                        width: 22,
-                        height: 14,
-                      ),
-                    ),
-                  ),
+                  CurrencyBadge(currencyCode: wallet.currency),
                   const SizedBox(width: 8),
                   Text(
                     wallet.name,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -976,16 +991,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF111111),
+                  color: qash.border,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: const Color(0xFF2E2E2E)),
                 ),
                 child: Text(
-                  currencyCode,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                  wallet.currency,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: qash.textPrimary,
                   ),
                 ),
               ),
@@ -993,11 +1007,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            hideBalances
-                ? '****'
-                : formatMoney(balance, currencyCode),
-            style: const TextStyle(
-              color: Color(0xFF111111),
+            hideBalance
+                ? CurrencyFormatter.formatHidden()
+                : _formatCurrency(wallet.balance, wallet.currency),
+            style: TextStyle(
+              color: qash.textPrimary,
               fontSize: 24,
               fontWeight: FontWeight.w500,
             ),
@@ -1005,31 +1019,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 8),
           Text(
             wallet.currency,
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
         ],
       ),
+    ),
     );
   }
 
   Widget _addWalletCard(BuildContext context) {
+    final qash = context.qash;
     return GestureDetector(
       onTap: () => context.push('/wallets/create'),
       child: Container(
         width: 80,
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 1.4),
+          border: Border.all(color: qash.border, width: 1.4),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.add, color: Color(0xFF8B8B8B)),
-            SizedBox(height: 8),
+          children: [
+            Icon(Icons.add, color: qash.textSecondary),
+            const SizedBox(height: 8),
             Text(
               'Add',
               style: TextStyle(
-                color: Color(0xFF8B8B8B),
+                color: qash.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -1040,64 +1056,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _budgetStatusCard(BudgetStatusEntity budget) {
-    return Container(
+  Widget _budgetStatusCard(
+    BuildContext context,
+    BudgetStatusEntity budget,
+    String displayCurrency,
+    bool hideBalance,
+  ) {
+    final qash = context.qash;
+    return GestureDetector(
+      onTap: () => context.push(
+        '/budgets/${budget.budgetId}/edit',
+        extra: budget,
+      ),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              TransactionCategoryIcon(
-                categoryName: budget.categoryName,
-                categoryIcon: budget.categoryName,
-                isTransfer: false,
-                size: 36,
-                iconSize: 18,
-                backgroundColor: const Color(0xFFF3F4F6),
-                borderRadius: 8,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  budget.categoryName,
-                  style: const TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            budget.categoryName,
+            style: TextStyle(
+              color: qash.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
-            '${formatMoney(budget.spentAmount, budget.currency)} / ${formatMoney(budget.budgetAmount, budget.currency)}',
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            hideBalance
+                ? CurrencyFormatter.formatHidden()
+                : '${_formatCurrency(budget.spentAmount, displayCurrency)} / ${_formatCurrency(budget.budgetAmount, displayCurrency)}',
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: budget.progress,
-            backgroundColor: const Color(0xFFF3F4F6),
+            backgroundColor: qash.border,
             color: budget.isOverBudget
-                ? const Color(0xFFEF4444)
+                ? qash.danger
                 : const Color(0xFF10B981),
             minHeight: 6,
             borderRadius: BorderRadius.circular(999),
@@ -1105,32 +1118,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (budget.isOverBudget) ...[
             const SizedBox(height: 4),
             Text(
-              'Over by ${formatMoney((budget.spentAmount - budget.budgetAmount).abs(), budget.currency)}',
+              hideBalance
+                  ? 'Over budget'
+                  : 'Over by ${_formatCurrency((budget.spentAmount - budget.budgetAmount).abs(), displayCurrency)}',
               style: const TextStyle(color: Color(0xFFFB2C36), fontSize: 12),
             ),
           ],
         ],
       ),
+    ),
     );
   }
 
-  Widget _topCategoryRow(TopCategoryEntity category, String displayCurrency) {
+  Widget _topCategoryRow(
+    BuildContext context,
+    TopCategoryEntity category,
+    String displayCurrency,
+    bool hideBalance,
+  ) {
+    final qash = context.qash;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -1140,32 +1162,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  TransactionCategoryIcon(
-                    categoryName: category.categoryName,
-                    categoryIcon: category.categoryName,
-                    isTransfer: false,
-                    size: 36,
-                    iconSize: 16,
-                    backgroundColor: const Color(0xFFF3F4F6),
-                    borderRadius: 8,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    category.categoryName,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              Text(
+                category.categoryName,
+                style: TextStyle(
+                  color: qash.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               Text(
-                formatMoney(category.totalAmount, displayCurrency),
-                style: const TextStyle(
-                  color: Color(0xFF111111),
+                hideBalance
+                    ? CurrencyFormatter.formatHidden()
+                    : _formatCurrency(category.totalAmount, displayCurrency),
+                style: TextStyle(
+                  color: qash.textPrimary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -1175,8 +1185,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: (category.percentage / 100).clamp(0, 1),
-            backgroundColor: const Color(0xFFF3F4F6),
-            color: const Color(0xFF111111),
+            backgroundColor: qash.border,
+            color: qash.textPrimary,
             minHeight: 6,
             borderRadius: BorderRadius.circular(999),
           ),
@@ -1185,25 +1195,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _goalCardFromData(SavingGoalEntity goal) {
-    final savedDisplay = goal.currentAmount;
-    final targetDisplay = goal.targetAmount;
+  Widget _goalCardFromData(
+    BuildContext context,
+    SavingGoalEntity goal,
+    String displayCurrency,
+    bool hideBalance,
+  ) {
+    final qash = context.qash;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
             spreadRadius: -1,
           ),
           BoxShadow(
-            color: Color(0x19000000),
+            color: qash.cardShadow,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -1214,12 +1228,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               Row(
                 children: [
-                  const GoalLogo(size: 40, padding: 6),
+                  Text('G',
+                      style: TextStyle(fontSize: 20, color: qash.textPrimary)),
                   const SizedBox(width: 8),
                   Text(
                     goal.name,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1228,15 +1243,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               Text(
                 '${goal.progressPercent.toStringAsFixed(0)}%',
-                style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+                style: TextStyle(color: qash.textSecondary, fontSize: 12),
               ),
             ],
           ),
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: goal.progress,
-            backgroundColor: const Color(0xFFF3F4F6),
-            color: const Color(0xFF111111),
+            backgroundColor: qash.border,
+            color: qash.textPrimary,
             minHeight: 8,
             borderRadius: BorderRadius.circular(999),
           ),
@@ -1245,12 +1260,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                formatMoney(savedDisplay, goalBaseCurrency),
-                style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+                hideBalance
+                    ? CurrencyFormatter.formatHidden()
+                    : _formatCurrency(goal.currentAmount, displayCurrency),
+                style: TextStyle(color: qash.textSecondary, fontSize: 12),
               ),
               Text(
-                formatMoney(targetDisplay, goalBaseCurrency),
-                style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+                hideBalance
+                    ? CurrencyFormatter.formatHidden()
+                    : _formatCurrency(goal.targetAmount, displayCurrency),
+                style: TextStyle(color: qash.textSecondary, fontSize: 12),
               ),
             ],
           ),
@@ -1262,167 +1281,107 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _transactionCard(
     BuildContext context,
     TransactionEntity item,
-    CurrencyConversionService conversion,
     String displayCurrency,
-    Map<String, WalletEntity> walletsById,
+    bool hideBalance,
   ) {
+    final qash = context.qash;
     final isTransfer = item.isTransfer;
     final amountColor = isTransfer
         ? const Color(0xFF2B7FFF)
         : item.isIncome
         ? const Color(0xFF00A63E)
-        : const Color(0xFFFF0000);
+        : const Color(0xFFFF0004);
     final amountSign = isTransfer
         ? ''
         : item.isIncome
         ? '+'
         : '-';
-    final convertedAmount = convertTransactionAmount(
-      transaction: item,
-      targetCurrency: displayCurrency,
-      conversion: conversion,
-      walletsById: walletsById,
-    );
-    final amountText =
-        '$amountSign${formatMoney(convertedAmount, displayCurrency)}';
     final iconBg = isTransfer
         ? const Color(0xFFE1EBFF)
         : item.isIncome
         ? const Color(0xFFD9F0C8)
         : const Color(0xFFFFD3D4);
-    return GestureDetector(
-      onTap: () => context.push('/transactions/${item.id}'),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x19000000),
-              blurRadius: 2,
-              offset: Offset(0, 1),
-              spreadRadius: -1,
-            ),
-            BoxShadow(
-              color: Color(0x19000000),
-              blurRadius: 3,
-              offset: Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                TransactionCategoryIcon(
-                  categoryName: item.categoryName,
-                  categoryIcon: item.categoryName,
-                  isTransfer: item.isTransfer,
-                  backgroundColor: iconBg,
+    final iconText = item.categoryName.isNotEmpty
+        ? item.categoryName.substring(0, 1).toUpperCase()
+        : '?';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: qash.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: qash.cardShadow,
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+            spreadRadius: -1,
+          ),
+          BoxShadow(
+            color: qash.cardShadow,
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      (item.description?.isNotEmpty == true)
-                          ? item.description!
-                          : item.categoryName,
-                      style: const TextStyle(
-                        color: Color(0xFF111111),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      _formatDate(item.transactionDate),
-                      style: const TextStyle(
-                        color: Color(0xFF8B8B8B),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+                child: Center(
+                  child: Text(iconText, style: const TextStyle(fontSize: 18)),
                 ),
-              ],
-            ),
-            Text(
-              amountText,
-              style: TextStyle(
-                color: amountColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
               ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.description.isNotEmpty
+                        ? item.description
+                        : item.categoryName,
+                    style: TextStyle(
+                      color: qash.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    _formatDate(item.transactionDate),
+                    style: TextStyle(
+                      color: qash.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Text(
+            hideBalance
+                ? CurrencyFormatter.formatHidden()
+                : '$amountSign${_formatCurrency(item.amount, displayCurrency)}',
+            style: TextStyle(
+              color: amountColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _currencyDropdown(List<String> items, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F1F),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF2E2E2E)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          icon: const Icon(
-            Icons.keyboard_arrow_down,
-            color: Color(0xFF8B8B8B),
-            size: 18,
-          ),
-          dropdownColor: const Color(0xFF1F1F1F),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-          isDense: true,
-          items: items
-              .map(
-                (currency) => DropdownMenuItem<String>(
-                  value: currency,
-                  child: Text(
-                    currency,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-          selectedItemBuilder: (context) => items
-              .map(
-                (currency) => Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    currency,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: (next) {
-            if (next == null) {
-              return;
-            }
-            ref.read(selectedDisplayCurrencyProvider.notifier).state = next;
-          },
-        ),
-      ),
-    );
+  String _formatCurrency(double value, String currencyCode) {
+    return CurrencyFormatter.format(value, currencyCode);
   }
 
   String _formatDate(DateTime value) {
@@ -1448,15 +1407,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _quickAction(
+    BuildContext context,
     String label,
     String icon,
     Color color, {
     VoidCallback? onTap,
   }) {
+    final qash = context.qash;
     return GestureDetector(
       onTap: onTap,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 56,
@@ -1466,19 +1426,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Center(
-              child: Image.asset(
-                icon,
-                width: 20,
-                height: 20,
-                fit: BoxFit.contain,
-              ),
+              child: Text(icon, style: const TextStyle(fontSize: 20)),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
         ],
       ),

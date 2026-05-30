@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/utils/currency_formatter.dart';
 
-import '../../../core/currency/currency_format.dart';
-import '../../../core/input/text_input_formatters.dart';
-import '../../../core/widgets/goal_logo.dart';
+import '../../dashboard/providers/home_preferences_provider.dart';
+import '../domain/entities/saving_goal.dart';
 import '../domain/entities/saving_goal_create.dart';
+import '../domain/entities/saving_goal_update.dart';
 import '../providers/saving_goals_providers.dart';
-import '../utils/saving_goal_currency.dart';
 
 class CreateGoalScreen extends ConsumerStatefulWidget {
-  const CreateGoalScreen({super.key});
+  final String? goalId;
+  final SavingGoalEntity? initialGoal;
+
+  const CreateGoalScreen({super.key, this.goalId, this.initialGoal});
 
   @override
   ConsumerState<CreateGoalScreen> createState() => _CreateGoalScreenState();
@@ -22,24 +24,43 @@ class CreateGoalScreen extends ConsumerStatefulWidget {
 class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
   final TextEditingController _goalNameController = TextEditingController();
   final TextEditingController _targetController = TextEditingController();
+  final TextEditingController _savedController = TextEditingController();
 
+  String _selectedEmoji = '💻';
   DateTime? _selectedDeadline;
   bool _submitting = false;
   String? _errorMessage;
+  bool _initializedFromGoal = false;
 
-  static const Color _goalCardColor = Color(0xFFE5E7EB);
+  bool get _isEdit => widget.goalId != null;
+
+  final List<String> _emojis = const [
+    '💻',
+    '✈️',
+    '🛡️',
+    '🏠',
+    '🚗',
+    '📚',
+    '💍',
+    '🎓',
+    '🏋️',
+    '🎵',
+    '📱',
+    '🌴',
+  ];
 
   @override
   void dispose() {
     _goalNameController.dispose();
     _targetController.dispose();
+    _savedController.dispose();
     super.dispose();
   }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDeadline ?? DateTime.now(),
+      initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2100),
     );
@@ -64,7 +85,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
       return;
     }
     if (_selectedDeadline == null) {
-      setState(() => _errorMessage = 'Select a target date.');
+      setState(() => _errorMessage = 'Select a deadline.');
       return;
     }
 
@@ -73,24 +94,22 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
       _errorMessage = null;
     });
 
-    final deadline = DateTime(
-      _selectedDeadline!.year,
-      _selectedDeadline!.month,
-      _selectedDeadline!.day,
-      23,
-      59,
-      59,
-    );
-
-    final result = await ref.read(createSavingGoalUseCaseProvider)(
-      SavingGoalCreateData(
-        name: name,
-        targetAmount: targetAmount,
-        deadline: deadline,
-        colorHex: _toHexColor(_goalCardColor),
-        currency: goalBaseCurrency,
-      ),
-    );
+    final result = _isEdit
+        ? await ref.read(updateSavingGoalUseCaseProvider)(
+            SavingGoalUpdateData(
+              savingGoalId: widget.goalId!,
+              name: name,
+              targetAmount: targetAmount,
+              deadline: _selectedDeadline!,
+            ),
+          )
+        : await ref.read(createSavingGoalUseCaseProvider)(
+            SavingGoalCreateData(
+              name: name,
+              targetAmount: targetAmount,
+              deadline: _selectedDeadline!,
+            ),
+          );
 
     if (!mounted) return;
 
@@ -98,49 +117,61 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
 
     if (result.isSuccess) {
       ref.invalidate(savingGoalsProvider);
-      if (!mounted) return;
+      if (_isEdit) {
+        ref.invalidate(savingGoalByIdProvider(widget.goalId!));
+      }
       context.pop(true);
     } else {
-      final message = result.errors.isNotEmpty
-          ? result.errors.join('\n')
-          : (result.message.isNotEmpty
-                ? result.message
-                : 'Failed to create goal.');
-      setState(() => _errorMessage = message);
+      setState(() => _errorMessage = result.message);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+    final editGoalAsync = _isEdit
+        ? ref.watch(savingGoalByIdProvider(widget.goalId!))
+        : null;
+    if (_isEdit &&
+        !_initializedFromGoal &&
+        widget.initialGoal != null &&
+        _goalNameController.text.isEmpty) {
+      _applyGoal(widget.initialGoal!);
+    }
+    if (_isEdit && !_initializedFromGoal && editGoalAsync?.value?.isSuccess == true) {
+      _applyGoal(editGoalAsync!.value!.data!);
+    }
+    final displayCurrency = ref.watch(displayCurrencyProvider);
     final goalName = _goalNameController.text.isEmpty
         ? 'Goal Name'
         : _goalNameController.text;
-    final targetAmount =
-        double.tryParse(_targetController.text.trim()) ?? 0;
+    final target = _targetController.text.isEmpty
+        ? '0'
+        : _targetController.text;
+    final saved = _savedController.text.isEmpty ? '0' : _savedController.text;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
+      backgroundColor: qash.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
         elevation: 0,
         centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => context.pop(),
             ),
           ),
         ),
-        title: const Text(
-          'New Goal',
+        title: Text(
+          _isEdit ? 'Edit Goal' : 'New Goal',
           style: TextStyle(
-            color: Colors.black,
+            color: qash.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -153,9 +184,55 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
           child: Column(
             children: [
               GoalPreviewCard(
+                emoji: _selectedEmoji,
                 goalName: goalName,
-                targetAmount: targetAmount,
-                color: _goalCardColor,
+                target: target,
+                saved: saved,
+                color: qash.surfaceElevated,
+                displayCurrency: displayCurrency,
+              ),
+              const SizedBox(height: 24),
+              _sectionTitle('Icon'),
+              const SizedBox(height: 12),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _emojis.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 6,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                ),
+                itemBuilder: (context, index) {
+                  final emoji = _emojis[index];
+                  final selected = _selectedEmoji == emoji;
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedEmoji = emoji;
+                      });
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: selected ? qash.primaryButton : qash.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: qash.cardShadow,
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 24),
               CustomInputField(
@@ -165,29 +242,76 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 16),
-              CustomInputField(
-                label: 'Target (${currencySymbol(goalBaseCurrency)})',
-                hint: '2000',
-                controller: _targetController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                inputFormatters: amountInputFormatters,
-                onChanged: (_) => setState(() {}),
+              Row(
+                children: [
+                  Expanded(
+                    child: CustomInputField(
+                      label: 'Target',
+                      hint: '2000',
+                      controller: _targetController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: CustomInputField(
+                      label: 'Saved so far',
+                      hint: '0',
+                      controller: _savedController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
-              _DatePickerField(
-                label: 'Target Date',
-                value: _selectedDeadline,
+              _sectionTitle('Deadline'),
+              const SizedBox(height: 8),
+              GestureDetector(
                 onTap: _pickDate,
+                child: Container(
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: qash.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: qash.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        color: qash.iconMuted,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        _selectedDeadline == null
+                            ? 'Select Deadline'
+                            : DateFormat(
+                                'dd/MM/yyyy',
+                              ).format(_selectedDeadline!),
+                        style: TextStyle(
+                          color: qash.textPrimary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+              const SizedBox(height: 24),
               const SizedBox(height: 24),
               if (_errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                    style: TextStyle(color: qash.danger, fontSize: 12),
                   ),
                 ),
               SizedBox(
@@ -196,25 +320,30 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                 child: ElevatedButton(
                   onPressed: _submitting ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    disabledBackgroundColor: const Color(0xFF111111),
+                    backgroundColor: qash.primaryButton,
+                    disabledBackgroundColor:
+                        qash.primaryButton.withValues(alpha: 0.45),
+                    foregroundColor: qash.onPrimaryButton,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: qash.onPrimaryButton,
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
-                          'Create Goal',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
+                    : Text(
+                        _isEdit ? 'Save Goal' : 'Create Goal',
+                        style: TextStyle(
+                          color: qash.onPrimaryButton,
+                          fontSize: 16,
                         ),
+                      ),
                 ),
               ),
             ],
@@ -224,50 +353,76 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
     );
   }
 
-  String _toHexColor(Color color) {
-    final value = color.value.toRadixString(16).padLeft(8, '0').toUpperCase();
-    return '#${value.substring(2)}';
+  void _applyGoal(SavingGoalEntity goal) {
+    _goalNameController.text = goal.name;
+    _targetController.text = goal.targetAmount.toStringAsFixed(2);
+    _savedController.text = goal.currentAmount.toStringAsFixed(2);
+    _selectedDeadline = goal.deadline;
+    _initializedFromGoal = true;
   }
+
+  Widget _sectionTitle(String title) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        title,
+        style: TextStyle(
+          color: context.qash.textPrimary,
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+
 }
 
 class GoalPreviewCard extends StatelessWidget {
+  final String emoji;
   final String goalName;
-  final double targetAmount;
+  final String target;
+  final String saved;
   final Color color;
+  final String displayCurrency;
 
   const GoalPreviewCard({
     super.key,
+    required this.emoji,
     required this.goalName,
-    required this.targetAmount,
+    required this.target,
+    required this.saved,
     required this.color,
+    required this.displayCurrency,
   });
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: qash.border),
       ),
       child: Column(
         children: [
-          const GoalLogo(size: 48, padding: 8),
+          Text(emoji, style: const TextStyle(fontSize: 36)),
           const SizedBox(height: 12),
           Text(
             goalName,
-            style: const TextStyle(
-              color: Color(0xFF111111),
+            style: TextStyle(
+              color: qash.textPrimary,
               fontSize: 18,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Target ${formatMoney(targetAmount, goalBaseCurrency)}',
+            '${CurrencyFormatter.format(double.tryParse(saved) ?? 0, displayCurrency)} / ${CurrencyFormatter.format(double.tryParse(target) ?? 0, displayCurrency)}',
             style: TextStyle(
-              color: Colors.black.withValues(alpha: 0.55),
+              color: qash.textPrimary.withValues(alpha: 0.6),
               fontSize: 14,
             ),
           ),
@@ -277,100 +432,20 @@ class GoalPreviewCard extends StatelessWidget {
   }
 }
 
-class _DatePickerField extends StatelessWidget {
-  final String label;
-  final DateTime? value;
-  final VoidCallback onTap;
-
-  const _DatePickerField({
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final hasDate = value != null;
-    final dateText =
-        hasDate ? DateFormat('dd/MM/yyyy').format(value!) : 'Select Target Date';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF111111),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              height: 56,
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              alignment: Alignment.centerLeft,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: 20,
-                    color: hasDate
-                        ? const Color(0xFF111111)
-                        : const Color(0xFFC4C4C4),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      dateText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: hasDate
-                            ? const Color(0xFF111111)
-                            : const Color(0xFFC4C4C4),
-                        fontSize: 16,
-                        height: 1.2,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class CustomInputField extends StatelessWidget {
   final String label;
   final String hint;
   final TextEditingController controller;
-  final TextInputType keyboardType;
+  final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
-  final List<TextInputFormatter>? inputFormatters;
 
   const CustomInputField({
     super.key,
     required this.label,
     required this.hint,
     required this.controller,
-    this.keyboardType = TextInputType.text,
+    this.keyboardType,
     this.onChanged,
-    this.inputFormatters,
   });
 
   @override
@@ -380,33 +455,35 @@ class CustomInputField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF111111),
+          style: TextStyle(
+            color: context.qash.textPrimary,
+            fontWeight: FontWeight.w600,
             fontSize: 14,
-            fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          height: 56,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            onChanged: onChanged,
-            inputFormatters: inputFormatters,
-            style: const TextStyle(color: Color(0xFF111111), fontSize: 16),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: const TextStyle(color: Color(0xFFC4C4C4), fontSize: 16),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
+          style: TextStyle(color: context.qash.textPrimary),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: context.qash.textHint, fontSize: 14),
+            filled: true,
+            fillColor: context.qash.surface,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: context.qash.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: context.qash.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: context.qash.primaryButton),
             ),
           ),
         ),

@@ -1,36 +1,31 @@
 import 'package:dio/dio.dart';
 
 import '../storage/secure_storage_service.dart';
-import 'access_token_utils.dart';
-import 'token_refresher.dart';
+import 'dio_provider.dart';
+import 'session_expired_handler.dart';
+
+typedef RefreshSessionCallback = Future<bool> Function();
 
 class AuthInterceptor extends Interceptor {
-  AuthInterceptor(this._storage, this._dio, this._tokenRefresher);
+  AuthInterceptor(
+    this._storage, {
+    required this.onRefreshSession,
+  });
 
   final SecureStorageService _storage;
-  final Dio _dio;
-  final TokenRefresher _tokenRefresher;
+  final RefreshSessionCallback onRefreshSession;
+
+  Future<bool>? _refreshInFlight;
 
   @override
   Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final path = options.uri.path;
+    final token = await _storage.getAccessToken();
 
-    if (isProtectedApiPath(path)) {
-      var token = await _storage.getAccessToken();
-
-      if (token != null &&
-          token.isNotEmpty &&
-          isAccessTokenExpired(token)) {
-        await _tokenRefresher.refresh();
-        token = await _storage.getAccessToken();
-      }
-
-      if (token != null && token.isNotEmpty) {
-        options.headers['Authorization'] = 'Bearer $token';
-      }
+    if (token != null && token.isNotEmpty) {
+      options.headers['Authorization'] = 'Bearer $token';
     }
 
     handler.next(options);
@@ -41,38 +36,59 @@ class AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    if (!_shouldAttemptRefresh(err)) {
+    if (err.response?.statusCode != 401) {
       handler.next(err);
       return;
     }
 
-    final refreshed = await _tokenRefresher.refresh();
-    if (!refreshed) {
+    final path = err.requestOptions.path;
+    if (path.contains('/api/auth/login') ||
+        path.contains('/api/auth/register') ||
+        path.contains('/api/auth/refresh-token') ||
+        path.contains('/api/auth/verify-phone')) {
       handler.next(err);
       return;
     }
 
     try {
+      final refreshed = await _refreshSessionOnce();
+      if (!refreshed) {
+        await _handleSessionExpired();
+        handler.next(err);
+        return;
+      }
+
       final token = await _storage.getAccessToken();
-      final options = err.requestOptions;
-      options.extra['retriedAfterRefresh'] = true;
-      options.headers['Authorization'] = 'Bearer $token';
-      final response = await _dio.fetch(options);
-      handler.resolve(response);
-    } on DioException catch (retryError) {
-      handler.next(retryError);
+      final retryOptions = err.requestOptions;
+      if (token != null && token.isNotEmpty) {
+        retryOptions.headers['Authorization'] = 'Bearer $token';
+      }
+
+      final client = Dio(DioProvider.dio.options);
+      final retryResponse = await client.fetch(retryOptions);
+      handler.resolve(retryResponse);
+    } catch (_) {
+      await _handleSessionExpired();
+      handler.next(err);
     }
   }
 
-  bool _shouldAttemptRefresh(DioException err) {
-    if (err.response?.statusCode != 401) {
-      return false;
+  Future<bool> _refreshSessionOnce() {
+    if (_refreshInFlight != null) {
+      return _refreshInFlight!;
     }
 
-    if (err.requestOptions.extra['retriedAfterRefresh'] == true) {
-      return false;
-    }
+    _refreshInFlight = onRefreshSession();
+    return _refreshInFlight!.whenComplete(() {
+      _refreshInFlight = null;
+    });
+  }
 
-    return isProtectedApiPath(err.requestOptions.uri.path);
+  Future<void> _handleSessionExpired() async {
+    await _storage.clearTokens();
+    final callback = globalSessionExpiredHandler;
+    if (callback != null) {
+      await callback();
+    }
   }
 }

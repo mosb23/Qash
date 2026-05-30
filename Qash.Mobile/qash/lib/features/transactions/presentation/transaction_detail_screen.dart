@@ -2,419 +2,204 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/utils/currency_formatter.dart';
 
-import '../../../core/currency/currency_conversion_service.dart';
-import '../../../core/currency/currency_format.dart';
-import '../../../core/currency/currency_providers.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
-import '../../../core/widgets/bottom_nav_bar.dart';
-import '../../../core/widgets/transaction_category_icon.dart';
+import '../../dashboard/providers/home_preferences_provider.dart';
 import '../../wallets/domain/entities/wallet.dart';
 import '../../wallets/providers/wallets_providers.dart';
 import '../domain/entities/transaction.dart';
 import '../providers/transactions_providers.dart';
 
 class TransactionDetailScreen extends ConsumerWidget {
-  const TransactionDetailScreen({super.key, required this.transactionId});
-
   final String transactionId;
+
+  const TransactionDetailScreen({super.key, required this.transactionId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(transactionDetailProvider(transactionId));
-    final walletsAsync = ref.watch(walletsProvider);
-    final conversion = ref.watch(currencyConversionServiceProvider);
-    final displayCurrency = ref.watch(effectiveDisplayCurrencyProvider);
+    final qash = context.qash;
+    final displayCurrency = ref.watch(displayCurrencyProvider);
+    final wallets = ref.watch(walletsProvider);
+    final detail = ref.watch(transactionDetailProvider(transactionId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
-        elevation: 0,
-        centerTitle: true,
-        leading: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-              onPressed: () => context.pop(),
-            ),
-          ),
-        ),
-        title: const Text(
-          'Transaction',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-          ),
-        ),
-      ),
-      bottomNavigationBar: AppBottomNavBar(
-        currentTab: AppTab.transactions,
-        onSelected: (tab) => _onTabSelected(context, tab),
-      ),
-      body: detailAsync.when(
-        data: (result) {
-          if (result.isFailure) {
-            return _messageState(
-              result.message.isNotEmpty
-                  ? result.message
-                  : 'Failed to load transaction.',
-            );
-          }
-
-          final transaction = result.data;
-          if (transaction == null) {
-            return _messageState('Transaction not found.');
-          }
-
-          final currency = _resolveCurrency(transaction.walletId, walletsAsync);
-
-          return _TransactionDetailBody(
-            transaction: transaction,
-            currency: currency,
-            transactionId: transactionId,
-            conversion: conversion,
-            displayCurrency: displayCurrency,
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _messageState(
-          error is AppFailure ? error.message : 'Failed to load transaction.',
-        ),
-      ),
-    );
-  }
-
-  Widget _messageState(String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 14),
-        ),
-      ),
-    );
-  }
-
-  String _resolveCurrency(
-    String walletId,
-    AsyncValue<Result<List<WalletEntity>>> walletsAsync,
-  ) {
-    return walletsAsync.maybeWhen(
-      data: (result) {
-        if (result.isFailure) {
-          return 'USD';
-        }
-        final wallets = result.data ?? const <WalletEntity>[];
-        final target = normalizeTransactionId(walletId);
-        for (final wallet in wallets) {
-          if (normalizeTransactionId(wallet.walletId) == target) {
-            return wallet.currency;
-          }
-        }
-        return 'USD';
-      },
-      orElse: () => 'USD',
-    );
-  }
-
-  void _onTabSelected(BuildContext context, AppTab tab) {
-    switch (tab) {
-      case AppTab.home:
-        context.go('/home');
-      case AppTab.transactions:
-        context.go('/transactions');
-      case AppTab.analytics:
-        context.go('/analytics');
-      case AppTab.goals:
-        context.go('/goals');
-      case AppTab.profile:
-        context.go('/profile');
-    }
-  }
-}
-
-class _TransactionDetailBody extends StatelessWidget {
-  const _TransactionDetailBody({
-    required this.transaction,
-    required this.currency,
-    required this.transactionId,
-    required this.conversion,
-    required this.displayCurrency,
-  });
-
-  final TransactionEntity transaction;
-  final String currency;
-  final String transactionId;
-  final CurrencyConversionService conversion;
-  final String displayCurrency;
-
-  TransactionStyle get _style => TransactionStyle.from(transaction);
-
-  @override
-  Widget build(BuildContext context) {
-    final title = (transaction.description?.isNotEmpty == true)
-        ? transaction.description!
-        : transaction.categoryName;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-            decoration: BoxDecoration(
-              color: _style.summaryBackground,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Column(
-              children: [
-                TransactionCategoryIcon(
-                  categoryName: transaction.categoryName,
-                  categoryIcon: transaction.categoryName,
-                  isTransfer: transaction.isTransfer,
-                  backgroundColor: Colors.white,
-                  size: 72,
-                  iconSize: 32,
-                  borderRadius: 20,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  _summaryAmountText(),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: _style.accent,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w700,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => context.pop(),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: qash.surface,
+                        borderRadius: BorderRadius.circular(999),
+                        boxShadow: [
+                          BoxShadow(
+                            color: qash.cardShadow,
+                            blurRadius: 2,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.arrow_back,
+                        size: 20,
+                        color: qash.textPrimary,
+                      ),
+                    ),
                   ),
-                ),
-                if (transaction.isCrossCurrencyTransfer) ...[
-                  const SizedBox(height: 6),
+                  const SizedBox(width: 16),
                   Text(
-                    '−${formatMoney(transaction.amount, transaction.walletCurrency)} → +${formatMoney(transaction.creditAmount, transaction.toWalletCurrency!)}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFF2B7FFF),
-                      fontSize: 14,
+                    'Transaction Details',
+                    style: TextStyle(
+                      color: qash.textPrimary,
+                      fontSize: 20,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFF8B8B8B),
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x19000000),
-                  blurRadius: 2,
-                  offset: Offset(0, 1),
-                  spreadRadius: -1,
-                ),
-                BoxShadow(
-                  color: Color(0x19000000),
-                  blurRadius: 3,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                _detailRow('Type', _style.typeLabel, valueColor: _style.accent),
-                _divider(),
-                _detailRow('Category', transaction.categoryName),
-                _divider(),
-                _detailRow('Wallet', _walletLabel(transaction)),
-                _divider(),
-                _detailRow(
-                  'Date',
-                  _formatLongDate(transaction.transactionDate),
-                ),
-                _divider(),
-                _detailRow(
-                  'Currency',
-                  transaction.isCrossCurrencyTransfer
-                      ? '${transaction.walletCurrency.toUpperCase()} → ${transaction.toWalletCurrency!.toUpperCase()}'
-                      : _currencyLabel(
-                          transaction.walletCurrency.isNotEmpty
-                              ? transaction.walletCurrency
-                              : currency,
-                        ),
-                ),
-                if (transaction.isCrossCurrencyTransfer) ...[
-                  _divider(),
-                  _detailRow(
-                    'Received',
-                    formatMoney(
-                      transaction.creditAmount,
-                      transaction.toWalletCurrency!,
-                    ),
-                    valueColor: const Color(0xFF2B7FFF),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: OutlinedButton.icon(
-              onPressed: () =>
-                  context.push('/transactions/$transactionId/delete'),
-              icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
-              label: const Text(
-                'Delete',
-                style: TextStyle(
-                  color: Color(0xFFEF4444),
-                  fontWeight: FontWeight.w600,
-                ),
               ),
-              style: OutlinedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFE8E8),
-                side: const BorderSide(color: Color(0xFFFECACA)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+            ),
+            Expanded(
+              child: detail.when(
+                data: (result) {
+                  if (result.isFailure) {
+                    return Center(
+                      child: Text(
+                        result.failure?.message ?? 'Failed to load transaction.',
+                        style: TextStyle(color: qash.textSecondary),
+                      ),
+                    );
+                  }
+                  final item = result.data;
+                  if (item == null) {
+                    return Center(
+                      child: Text(
+                        'Transaction not found.',
+                        style: TextStyle(color: qash.textSecondary),
+                      ),
+                    );
+                  }
+                  return _detailBody(
+                    context,
+                    item,
+                    displayCurrency,
+                    wallets,
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(
+                  child: Text(
+                    error is AppFailure
+                        ? error.message
+                        : 'Failed to load transaction.',
+                    style: TextStyle(color: qash.textSecondary),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _divider() {
-    return const Divider(height: 1, color: Color(0xFFF3F4F6));
-  }
+  Widget _detailBody(
+    BuildContext context,
+    TransactionEntity item,
+    String displayCurrency,
+    AsyncValue<Result<List<WalletEntity>>> wallets,
+  ) {
+    final qash = context.qash;
+    final dateFormat = DateFormat('MMM d, yyyy · h:mm a');
+    final amountCurrency = wallets.maybeWhen(
+      data: (result) {
+        final list = result.data ?? const [];
+        for (final wallet in list) {
+          if (wallet.walletId == item.walletId) {
+            return wallet.currency;
+          }
+        }
+        return displayCurrency;
+      },
+      orElse: () => displayCurrency,
+    );
 
-  Widget _detailRow(String label, String value, {Color? valueColor}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final rows = <MapEntry<String, String>>[
+      MapEntry('Type', _typeLabel(item)),
+      MapEntry(
+        'Amount',
+        CurrencyFormatter.format(item.amount, amountCurrency),
+      ),
+      MapEntry('Description', item.description),
+      if (item.categoryName.isNotEmpty)
+        MapEntry('Category', item.categoryName),
+      MapEntry('From wallet', item.walletName),
+      if (item.isTransfer && item.toWalletName.isNotEmpty)
+        MapEntry('To wallet', item.toWalletName),
+      MapEntry('Date', dateFormat.format(item.transactionDate)),
+    ];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 14),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
+          for (final row in rows) ...[
+            Text(
+              row.key,
               style: TextStyle(
-                color: valueColor ?? const Color(0xFF111111),
-                fontSize: 14,
+                color: qash.textSecondary,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
-          ),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: qash.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: qash.cardShadow,
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Text(
+                row.value,
+                style: TextStyle(
+                  color: qash.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
         ],
       ),
     );
   }
 
-  String _walletLabel(TransactionEntity transaction) {
-    if (transaction.isTransfer &&
-        transaction.toWalletName != null &&
-        transaction.toWalletName!.isNotEmpty) {
-      return '${transaction.walletName} → ${transaction.toWalletName}';
+  String _typeLabel(TransactionEntity item) {
+    if (item.isTransfer) {
+      return 'Transfer';
     }
-    return transaction.walletName;
-  }
-
-  String _currencyLabel(String currency) {
-    final code = currency.toUpperCase();
-    if (code == 'USD') {
-      return 'USD (\$)';
+    if (item.isIncome) {
+      return 'Income';
     }
-    if (code == 'EUR') {
-      return 'EUR (€)';
-    }
-    if (code == 'EGP') {
-      return 'EGP (E£)';
-    }
-    return code;
-  }
-
-  String _summaryAmountText() {
-    if (transaction.isCrossCurrencyTransfer) {
-      return formatMoney(
-        transaction.creditAmount,
-        transaction.toWalletCurrency!,
-      );
-    }
-    final code = transaction.sourceCurrency.isNotEmpty
-        ? transaction.sourceCurrency
-        : (transaction.walletCurrency.isNotEmpty ? transaction.walletCurrency : currency);
-    return '${_style.amountPrefix}${formatMoney(transaction.amount, code)}';
-  }
-
-  String _formatLongDate(DateTime value) {
-    return DateFormat('EEEE, MMMM d, yyyy').format(value);
-  }
-}
-
-class TransactionStyle {
-  final Color summaryBackground;
-  final Color accent;
-  final String typeLabel;
-  final String amountPrefix;
-
-  const TransactionStyle({
-    required this.summaryBackground,
-    required this.accent,
-    required this.typeLabel,
-    required this.amountPrefix,
-  });
-
-  factory TransactionStyle.from(TransactionEntity transaction) {
-    if (transaction.isIncome) {
-      return const TransactionStyle(
-        summaryBackground: Color(0xFFE8F7ED),
-        accent: Color(0xFF00A63E),
-        typeLabel: 'Income',
-        amountPrefix: '+',
-      );
-    }
-    if (transaction.isTransfer) {
-      return const TransactionStyle(
-        summaryBackground: Color(0xFFE1EBFF),
-        accent: Color(0xFF2B7FFF),
-        typeLabel: 'Transfer',
-        amountPrefix: '',
-      );
-    }
-    return const TransactionStyle(
-      summaryBackground: Color(0xFFFFE8E8),
-      accent: Color(0xFFFF0000),
-      typeLabel: 'Expense',
-      amountPrefix: '-',
-    );
+    return 'Expense';
   }
 }

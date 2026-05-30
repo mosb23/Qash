@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../domain/entities/saving_goal.dart';
 import '../providers/saving_goals_providers.dart';
@@ -45,19 +46,19 @@ class _DeleteGoalScreenState extends ConsumerState<DeleteGoalScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     final color = _goalColor(widget.goal);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
+      backgroundColor: qash.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
-        title: const Text(
+        title: Text(
           'Delete Goal',
           style: TextStyle(
-            color: Colors.black,
+            color: qash.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
@@ -70,8 +71,9 @@ class _DeleteGoalScreenState extends ConsumerState<DeleteGoalScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: const Color(0xFFF7F6F3),
+              color: qash.surface,
               borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: qash.border),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -92,21 +94,21 @@ class _DeleteGoalScreenState extends ConsumerState<DeleteGoalScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Delete Goal?',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: qash.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'Are you sure you want to delete "${widget.goal.name}"?',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
-                    color: Color(0xFF8B8B8B),
+                    color: qash.textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -115,9 +117,9 @@ class _DeleteGoalScreenState extends ConsumerState<DeleteGoalScreen> {
                   Text(
                     _errorMessage!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFFFB2C36),
+                      color: qash.danger,
                     ),
                   ),
                 ],
@@ -128,8 +130,9 @@ class _DeleteGoalScreenState extends ConsumerState<DeleteGoalScreen> {
                   child: ElevatedButton(
                     onPressed: _deleting ? null : _deleteGoal,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFB2C36),
-                      disabledBackgroundColor: const Color(0xFFFB2C36),
+                      backgroundColor: qash.danger,
+                      disabledBackgroundColor: qash.danger.withValues(alpha: 0.45),
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -161,19 +164,20 @@ class _DeleteGoalScreenState extends ConsumerState<DeleteGoalScreen> {
                   child: OutlinedButton(
                     onPressed: _deleting ? null : () => context.pop(false),
                     style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      side: BorderSide.none,
+                      backgroundColor: qash.surfaceElevated,
+                      foregroundColor: qash.textPrimary,
+                      side: BorderSide(color: qash.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                       elevation: 2,
                     ),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                        color: qash.textPrimary,
                       ),
                     ),
                   ),

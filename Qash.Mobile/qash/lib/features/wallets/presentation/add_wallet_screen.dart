@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/input/text_input_formatters.dart';
-import '../../../core/widgets/currency_flag.dart';
+import '../../../core/assets/qash_icons.dart';
+import '../../../core/theme/qash_theme_extension.dart';
+import '../../../core/widgets/qash_icon.dart';
 import '../domain/entities/wallet.dart';
 import '../domain/entities/wallet_create.dart';
 import '../domain/entities/wallet_update.dart';
@@ -12,8 +12,9 @@ import '../providers/wallets_providers.dart';
 
 class AddWalletScreen extends ConsumerStatefulWidget {
   final WalletEntity? wallet;
+  final String? walletId;
 
-  const AddWalletScreen({super.key, this.wallet});
+  const AddWalletScreen({super.key, this.wallet, this.walletId});
 
   @override
   ConsumerState<AddWalletScreen> createState() => _AddWalletScreenState();
@@ -29,23 +30,26 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
   bool _submitting = false;
   String? _errorMessage;
 
-  bool get _isEdit => widget.wallet != null;
+  WalletEntity? _resolvedWallet;
+  bool _initializedFromWallet = false;
+
+  bool get _isEdit => widget.wallet != null || widget.walletId != null;
 
   final List<_WalletTypeModel> _walletTypes = [
     _WalletTypeModel(
       title: 'Bank Account',
       subtitle: 'Debit or credit card',
-      emoji: '🏦',
+      iconAsset: QashIcons.walletBank,
     ),
     _WalletTypeModel(
       title: 'Cash',
       subtitle: 'Physical money on hand',
-      emoji: '💵',
+      iconAsset: QashIcons.walletCash,
     ),
     _WalletTypeModel(
       title: 'Savings',
       subtitle: 'Savings & deposits',
-      emoji: '🐖',
+      iconAsset: QashIcons.iconWallet,
     ),
   ];
 
@@ -54,12 +58,8 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
   @override
   void initState() {
     super.initState();
-    final wallet = widget.wallet;
-    if (wallet != null) {
-      _walletNameController.text = wallet.name;
-      _balanceController.text = wallet.balance.toStringAsFixed(2);
-      _selectedCurrency = wallet.currency;
-    }
+    _resolvedWallet = widget.wallet;
+    _hydrateFromWallet(_resolvedWallet);
   }
 
   @override
@@ -90,7 +90,7 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
     final result = _isEdit
         ? await ref.read(updateWalletUseCaseProvider)(
             WalletUpdateData(
-              walletId: widget.wallet!.walletId,
+              walletId: _resolvedWallet!.walletId,
               name: name,
               currency: _selectedCurrency,
               balance: balance,
@@ -118,29 +118,71 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
+    if (!_initializedFromWallet &&
+        _resolvedWallet == null &&
+        widget.walletId != null) {
+      final walletAsync = ref.watch(walletByIdProvider(widget.walletId!));
+      if (walletAsync.value?.isSuccess == true) {
+        _resolvedWallet = walletAsync.value!.data;
+        _hydrateFromWallet(_resolvedWallet);
+      } else if (walletAsync.isLoading) {
+        return Scaffold(
+          backgroundColor: qash.scaffoldBackground,
+          body: Center(
+            child: CircularProgressIndicator(color: qash.primaryButton),
+          ),
+        );
+      } else if (walletAsync.hasValue && walletAsync.value!.isFailure) {
+        return Scaffold(
+          backgroundColor: qash.scaffoldBackground,
+          appBar: AppBar(title: const Text('Edit Wallet')),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    walletAsync.value!.message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: qash.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: () => ref.invalidate(walletByIdProvider(widget.walletId!)),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    }
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
+      backgroundColor: qash.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
         elevation: 0,
         centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => context.pop(),
             ),
           ),
         ),
         title: Text(
           _isEdit ? 'Edit Wallet' : 'New Wallet',
-          style: const TextStyle(
-            color: Colors.black,
+          style: TextStyle(
+            color: qash.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -191,44 +233,30 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                      horizontal: 18,
+                      vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: selected ? Colors.black : Colors.white,
-                      borderRadius: BorderRadius.circular(11),
+                      color: selected ? qash.primaryButton : qash.surface,
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: selected
-                            ? Colors.black
-                            : const Color(0xFFE5E7EB),
+                        color: selected ? qash.primaryButton : qash.border,
                       ),
                       boxShadow: selected
                           ? null
                           : [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
+                                color: qash.cardShadow,
                                 blurRadius: 6,
                               ),
                             ],
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CurrencyFlag(
-                          currencyCode: currency,
-                          width: 22,
-                          height: 14,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          currency,
-                          style: TextStyle(
-                            color: selected ? Colors.white : Colors.black,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      currency,
+                      style: TextStyle(
+                        color: selected ? qash.onPrimaryButton : qash.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 );
@@ -246,7 +274,6 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              inputFormatters: amountInputFormatters,
             ),
             const SizedBox(height: 24),
             if (_errorMessage != null)
@@ -254,7 +281,7 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
                   _errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                  style: TextStyle(color: qash.danger, fontSize: 12),
                 ),
               ),
             SizedBox(
@@ -263,25 +290,27 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
               child: ElevatedButton(
                 onPressed: _submitting ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  disabledBackgroundColor: const Color(0xFF111111),
+                  backgroundColor: qash.primaryButton,
+                  disabledBackgroundColor:
+                      qash.primaryButton.withValues(alpha: 0.45),
+                  foregroundColor: qash.onPrimaryButton,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: _submitting
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                          color: Colors.white,
+                          color: qash.onPrimaryButton,
                           strokeWidth: 2,
                         ),
                       )
                     : Text(
                         _isEdit ? 'Save Changes' : 'Create Wallet',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: qash.onPrimaryButton,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -292,6 +321,14 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
         ),
       ),
     );
+  }
+
+  void _hydrateFromWallet(WalletEntity? wallet) {
+    if (wallet == null || _initializedFromWallet) return;
+    _walletNameController.text = wallet.name;
+    _balanceController.text = wallet.balance.toStringAsFixed(2);
+    _selectedCurrency = wallet.currency;
+    _initializedFromWallet = true;
   }
 }
 
@@ -308,27 +345,34 @@ class _WalletTypeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: qash.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? Colors.black : Colors.transparent,
+            color: selected ? qash.primaryButton : qash.border,
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: qash.cardShadow,
               blurRadius: 8,
             ),
           ],
         ),
         child: Row(
           children: [
-            Text(walletType.emoji, style: const TextStyle(fontSize: 28)),
+            QashIcon(
+              assetPath: walletType.iconAsset,
+              fallback: Icons.account_balance_wallet_outlined,
+              size: 32,
+              color: qash.textPrimary,
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -336,16 +380,16 @@ class _WalletTypeTile extends StatelessWidget {
                 children: [
                   Text(
                     walletType.title,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     walletType.subtitle,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
+                    style: TextStyle(
+                      color: qash.textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -353,10 +397,10 @@ class _WalletTypeTile extends StatelessWidget {
               ),
             ),
             if (selected)
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 12,
-                backgroundColor: Colors.black,
-                child: Icon(Icons.check, size: 14, color: Colors.white),
+                backgroundColor: qash.primaryButton,
+                child: Icon(Icons.check, size: 14, color: qash.onPrimaryButton),
               ),
           ],
         ),
@@ -369,27 +413,26 @@ class _CustomInputField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
   final TextInputType? keyboardType;
-  final List<TextInputFormatter>? inputFormatters;
 
   const _CustomInputField({
     required this.controller,
     required this.hint,
     this.keyboardType,
-    this.inputFormatters,
   });
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-      style: const TextStyle(color: Color(0xFF111111)),
+      style: TextStyle(color: qash.textPrimary),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFB0B0B0)),
+        hintStyle: TextStyle(color: qash.textHint),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: qash.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 18,
@@ -410,10 +453,12 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return Text(
       title,
-      style: const TextStyle(
-        color: Color(0xFF111111),
+      style: TextStyle(
+        color: qash.textPrimary,
         fontSize: 14,
         fontWeight: FontWeight.w600,
       ),
@@ -424,11 +469,11 @@ class _SectionTitle extends StatelessWidget {
 class _WalletTypeModel {
   final String title;
   final String subtitle;
-  final String emoji;
+  final String iconAsset;
 
   const _WalletTypeModel({
     required this.title,
     required this.subtitle,
-    required this.emoji,
+    required this.iconAsset,
   });
 }

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
-import '../../../core/input/text_input_formatters.dart';
-
-import '../providers/profile_providers.dart';
+import '../../../core/utils/profile_form_validators.dart';
+import '../../auth/presentation/widgets/auth_screen_helpers.dart';
 import '../domain/entities/profile_update.dart';
+import '../providers/profile_providers.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -23,6 +22,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   bool _loading = false;
   bool _initialized = false;
+  String? _firstNameError;
+  String? _lastNameError;
+  String? _emailError;
 
   @override
   void dispose() {
@@ -33,7 +35,31 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.dispose();
   }
 
+  bool _validateFields() {
+    final firstName = _firstNameController.text;
+    final lastName = _lastNameController.text;
+    final email = _emailController.text;
+
+    final firstNameError = ProfileFormValidators.validateFirstName(firstName);
+    final lastNameError = ProfileFormValidators.validateLastName(lastName);
+    final emailError = ProfileFormValidators.validateEmail(email);
+
+    setState(() {
+      _firstNameError = firstNameError;
+      _lastNameError = lastNameError;
+      _emailError = emailError;
+    });
+
+    return firstNameError == null &&
+        lastNameError == null &&
+        emailError == null;
+  }
+
   Future<void> _handleSave() async {
+    if (!_validateFields()) {
+      return;
+    }
+
     setState(() => _loading = true);
 
     final result = await ref.read(updateProfileUseCaseProvider)(
@@ -64,31 +90,30 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     final profileAsync = ref.watch(profileProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
         elevation: 0,
         centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: qash.surface,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
               onPressed: () => Navigator.pop(context),
             ),
           ),
         ),
-        title: const Text(
+        title: Text(
           'Edit Profile',
           style: TextStyle(
-            color: Colors.black,
+            color: qash.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -114,12 +139,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   height: 96,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Color(0xFFF4D93A),
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF4ADE80), Color(0xFF10B981)],
+                    ),
                   ),
                   child: Center(
                     child: Text(
                       profile?.alias ?? 'UN',
-                      style: const TextStyle(fontSize: 28, color: Colors.black),
+                      style: const TextStyle(fontSize: 28, color: Colors.white),
                     ),
                   ),
                 ),
@@ -130,7 +157,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 controller: _firstNameController,
                 keyboardType: TextInputType.name,
                 hintText: 'First name',
-                inputFormatters: nameInputFormatters,
+                errorText: _firstNameError,
+                onChanged: (_) {
+                  if (_firstNameError != null) {
+                    setState(
+                      () => _firstNameError = ProfileFormValidators.validateFirstName(
+                        _firstNameController.text,
+                      ),
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 16),
               _InputField(
@@ -138,7 +174,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 controller: _lastNameController,
                 keyboardType: TextInputType.name,
                 hintText: 'Last name',
-                inputFormatters: nameInputFormatters,
+                errorText: _lastNameError,
+                onChanged: (_) {
+                  if (_lastNameError != null) {
+                    setState(
+                      () => _lastNameError = ProfileFormValidators.validateLastName(
+                        _lastNameController.text,
+                      ),
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 16),
               _InputField(
@@ -146,6 +191,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 hintText: 'your@email.com',
+                errorText: _emailError,
+                onChanged: (_) {
+                  if (_emailError != null) {
+                    setState(
+                      () => _emailError = ProfileFormValidators.validateEmail(
+                        _emailController.text,
+                      ),
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 16),
               _InputField(
@@ -161,8 +216,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 height: 56,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF111111),
-                    foregroundColor: Colors.white,
+                    backgroundColor: qash.primaryButton,
+                    foregroundColor: qash.onPrimaryButton,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -175,10 +230,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => const Center(
+        error: (error, stack) => Center(
           child: Text(
             'Failed to load profile.',
-            style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
         ),
       ),
@@ -193,7 +248,8 @@ class _InputField extends StatelessWidget {
     required this.keyboardType,
     required this.hintText,
     this.enabled = true,
-    this.inputFormatters,
+    this.errorText,
+    this.onChanged,
   });
 
   final String label;
@@ -201,32 +257,33 @@ class _InputField extends StatelessWidget {
   final TextInputType keyboardType;
   final String hintText;
   final bool enabled;
-  final List<TextInputFormatter>? inputFormatters;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF111111)),
-        ),
+        Text(label, style: authLabelStyle(context)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
           enabled: enabled,
+          onChanged: onChanged,
           style: TextStyle(
             fontSize: 14,
-            color: enabled ? const Color(0xFF111111) : const Color(0xFF6B7280),
+            color: enabled ? qash.textPrimary : qash.textSecondary,
           ),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
+            hintStyle: TextStyle(fontSize: 14, color: qash.textHint),
+            errorText: errorText,
             filled: true,
-            fillColor: enabled ? Colors.white : const Color(0xFFF3F4F6),
+            fillColor: enabled ? qash.surface : qash.surfaceElevated,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,
@@ -234,6 +291,18 @@ class _InputField extends StatelessWidget {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20),
               borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: BorderSide.none,
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: BorderSide(color: qash.danger),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: BorderSide(color: qash.danger),
             ),
           ),
         ),

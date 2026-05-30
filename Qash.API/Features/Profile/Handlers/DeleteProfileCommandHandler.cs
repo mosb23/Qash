@@ -42,11 +42,15 @@ public class DeleteProfileCommandHandler : IRequestHandler<DeleteProfileCommand,
                 ["User profile was not found."]);
         }
 
-        if (!_passwordHasherService.VerifyPassword(request.Password, user.PasswordHash))
+        var validPassword = _passwordHasherService.VerifyPassword(
+            request.Password,
+            user.PasswordHash);
+
+        if (!validPassword)
         {
             return ApiResponse<string>.FailResponse(
                 "Delete profile failed.",
-                ["Password is incorrect."]);
+                ["Incorrect password."]);
         }
 
         var idCompact = user.Id.ToString("N");

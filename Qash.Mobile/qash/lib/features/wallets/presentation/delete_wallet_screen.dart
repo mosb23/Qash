@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 
 class DeleteWalletScreen extends StatelessWidget {
@@ -15,8 +16,10 @@ class DeleteWalletScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
+      backgroundColor: qash.scaffoldBackground,
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -24,12 +27,12 @@ class DeleteWalletScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
+                Text(
                   'Delete Wallet',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                    color: qash.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 48),
@@ -47,21 +50,21 @@ class DeleteWalletScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Delete Wallet?',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: qash.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'Are you sure you want to delete "$walletName"? All transactions linked to this wallet will be permanently lost.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF8B8B8B),
+                    color: qash.textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -72,7 +75,8 @@ class DeleteWalletScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: onDelete ?? () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFB2C36),
+                      backgroundColor: qash.danger,
+                      foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -95,16 +99,17 @@ class DeleteWalletScreen extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: onCancel ?? () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      side: BorderSide.none,
+                      backgroundColor: qash.surface,
+                      foregroundColor: qash.textPrimary,
+                      side: BorderSide(color: qash.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: qash.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),

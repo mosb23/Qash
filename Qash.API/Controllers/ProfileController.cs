@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Qash.API.Features.Auth.Commands;
 using Qash.API.Features.Profile.Commands;
 using Qash.API.Features.Profile.DTOs;
 using Qash.API.Features.Profile.Queries;
@@ -36,6 +37,20 @@ public class ProfileController : ControllerBase
 
     [HttpPut]
     public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileCommand command)
+    {
+        var userId = GetCurrentUserId();
+
+        if (userId is null)
+            return Unauthorized();
+
+        command.UserId = userId.Value;
+
+        var response = await _mediator.Send(command);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand command)
     {
         var userId = GetCurrentUserId();
 

@@ -56,14 +56,12 @@ class ResetForgotPasswordData {
 class ChangePasswordData {
   final String userId;
   final String oldPassword;
-  final String verificationCode;
   final String newPassword;
   final String confirmPassword;
 
   const ChangePasswordData({
     required this.userId,
     required this.oldPassword,
-    required this.verificationCode,
     required this.newPassword,
     required this.confirmPassword,
   });

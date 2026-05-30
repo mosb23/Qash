@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/utils/currency_formatter.dart';
 
-import '../../../core/currency/currency_format.dart';
-import '../../../core/currency/currency_providers.dart';
-import '../../goals/utils/saving_goal_currency.dart';
-import '../../transactions/providers/transactions_providers.dart';
-import '../../wallets/providers/wallets_providers.dart';
+import '../../dashboard/providers/home_preferences_provider.dart';
 import '../domain/entities/budget_status.dart';
 import '../providers/budgets_providers.dart';
 
@@ -16,48 +13,38 @@ class BudgetScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final budgets = ref.watch(filteredBudgetStatusesProvider);
-    final filteredBudgets = ref.watch(filteredBudgetStatusesProvider);
-    final filter = ref.watch(budgetsFilterProvider);
-    final hasExpiredBudgets = ref.watch(hasExpiredBudgetsProvider);
+    final budgets = ref.watch(budgetStatusesProvider);
     final period = ref.watch(budgetPeriodProvider);
-    final conversion = ref.watch(currencyConversionServiceProvider);
+    final displayCurrency = ref.watch(displayCurrencyProvider);
+    final qash = context.qash;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
         elevation: 0,
         centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: qash.surface,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: qash.cardShadow,
                   blurRadius: 6,
                 ),
               ],
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/home');
-                }
-              },
+              icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
+              onPressed: () => Navigator.pop(context),
             ),
           ),
         ),
-        title: const Text(
+        title: Text(
           'Budget',
           style: TextStyle(
-            color: Colors.black,
+            color: qash.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -66,260 +53,162 @@ class BudgetScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: CircleAvatar(
-              backgroundColor: const Color(0xFFF4D93A),
+              backgroundColor: qash.accent,
               child: IconButton(
                 onPressed: () => context.push('/budgets/create'),
-                icon: const Icon(Icons.add, color: Colors.black),
+                icon: Icon(Icons.add, color: qash.onAccent),
               ),
             ),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(budgetStatusesProvider);
-                ref.invalidate(transactionsProvider);
-                ref.invalidate(walletsProvider);
-                await ref.read(budgetStatusesProvider.future);
-              },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                child: budgets.when(
-                  data: (allItems) {
-                    final totalBudget = allItems.fold<double>(
-                      0,
-                      (sum, item) =>
-                          sum +
-                          conversion.convertToBase(
-                            item.budgetAmount,
-                            item.currency,
-                          ),
-                    );
-                    final totalSpent = allItems.fold<double>(
-                      0,
-                      (sum, item) =>
-                          sum +
-                          conversion.convertToBase(
-                            item.spentAmount,
-                            item.currency,
-                          ),
-                    );
-                    final overBudgetCount = allItems
-                        .where((item) => item.isAtOrOverLimit)
-                        .length;
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: budgets.when(
+          data: (result) {
+            if (result.isFailure) {
+              return Text(
+                result.message,
+                style: TextStyle(color: qash.textSecondary, fontSize: 12),
+              );
+            }
+            final items = result.data ?? const <BudgetStatusEntity>[];
+            final totalBudget = items.fold<double>(
+              0,
+              (sum, item) => sum + item.budgetAmount,
+            );
+            final totalSpent = items.fold<double>(
+              0,
+              (sum, item) => sum + item.spentAmount,
+            );
+            final overBudgetCount = items
+                .where((item) => item.isOverBudget)
+                .length;
 
-                    return Column(
-                      children: [
-                        BudgetSummaryCard(
-                          period: period,
-                          totalBudget: totalBudget,
-                          totalSpent: totalSpent,
-                          currency: goalBaseCurrency,
-                        ),
-                        const SizedBox(height: 20),
-                        if (overBudgetCount > 0) ...[
-                          _OverBudgetAlert(count: overBudgetCount),
-                          const SizedBox(height: 20),
-                        ],
-                        if (hasExpiredBudgets) ...[
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _filterTab(
-                                    label: 'All',
-                                    isActive: filter == BudgetFilter.all,
-                                    onTap: () =>
-                                        _updateFilter(ref, BudgetFilter.all),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _filterTab(
-                                    label: 'Current',
-                                    isActive: filter == BudgetFilter.current,
-                                    onTap: () => _updateFilter(
-                                      ref,
-                                      BudgetFilter.current,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _filterTab(
-                                    label: 'Limit reached',
-                                    isActive: filter == BudgetFilter.expired,
-                                    onTap: () => _updateFilter(
-                                      ref,
-                                      BudgetFilter.expired,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                        filteredBudgets.when(
-                          data: (items) {
-                            if (items.isEmpty) {
-                              return Text(
-                                _emptyMessage(filter, hasExpiredBudgets),
-                                style: const TextStyle(
-                                  color: Color(0xFF8B8B8B),
-                                  fontSize: 12,
-                                ),
-                              );
-                            }
-
-                            return Column(
-                              children: [
-                                for (final budget in items)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: GestureDetector(
-                                      onTap: () => context.push(
-                                        '/budgets/${budget.budgetId}',
-                                        extra: budget,
-                                      ),
-                                      child: BudgetCard(budget: budget),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
-                          loading: () => const SizedBox(
-                            height: 120,
-                            child: Center(child: CircularProgressIndicator()),
-                          ),
-                          error: (error, stack) => const Text(
-                            'Failed to load budgets.',
-                            style: TextStyle(
-                              color: Color(0xFF8B8B8B),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                  loading: () => const SizedBox(
-                    height: 240,
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (error, stack) => const Text(
-                    'Failed to load budgets.',
-                    style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+            return Column(
+              children: [
+                BudgetSummaryCard(
+                  period: period,
+                  totalBudget: totalBudget,
+                  totalSpent: totalSpent,
+                  displayCurrency: displayCurrency,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Amounts in $displayCurrency (no conversion between wallets).',
+                  style: TextStyle(
+                    color: qash.textSecondary,
+                    fontSize: 11,
                   ),
                 ),
-              ),
-            ),
+                const SizedBox(height: 20),
+                if (overBudgetCount > 0) ...[
+                  _OverBudgetAlert(count: overBudgetCount),
+                  const SizedBox(height: 20),
+                ],
+                if (items.isEmpty)
+                  Text(
+                    'No budgets for this month.',
+                    style: TextStyle(color: qash.textSecondary, fontSize: 12),
+                  )
+                else
+                  ...items.map(
+                    (budget) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: BudgetCard(
+                        budget: budget,
+                        displayCurrency: displayCurrency,
+                        onEdit: () => context.push(
+                          '/budgets/${budget.budgetId}/edit',
+                          extra: budget,
+                        ),
+                        onDelete: () => _confirmDelete(context, ref, budget),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/budgets/create'),
+                    icon: Icon(Icons.add, color: qash.iconMuted),
+                    label: Text(
+                      'Add Budget Category',
+                      style: TextStyle(
+                        color: qash.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: qash.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Text(
+            'Failed to load budgets.',
+            style: TextStyle(color: qash.textSecondary, fontSize: 12),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-            child: _addBudgetButton(context),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  void _updateFilter(WidgetRef ref, BudgetFilter filter) {
-    ref.read(budgetsFilterProvider.notifier).state = filter;
-  }
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    BudgetStatusEntity budget,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete budget?'),
+        content: Text(
+          'Remove the ${budget.categoryName} budget for this month?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Color(0xFFFB2C36)),
+            ),
+          ),
+        ],
+      ),
+    );
 
-  String _emptyMessage(BudgetFilter filter, bool hasExpiredBudgets) {
-    if (!hasExpiredBudgets) {
-      return 'No budgets for this month.';
+    if (confirmed != true || !context.mounted) {
+      return;
     }
 
-    return switch (filter) {
-      BudgetFilter.current => 'No current budgets.',
-      BudgetFilter.expired => 'No limit reached budgets.',
-      BudgetFilter.all => 'No budgets for this month.',
-    };
-  }
+    final result = await ref.read(deleteBudgetUseCaseProvider)(budget.budgetId);
+    if (!context.mounted) {
+      return;
+    }
 
-  Widget _filterTab({
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF111111) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: isActive
-              ? null
-              : const [
-                  BoxShadow(
-                    color: Color(0x19000000),
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
-                    spreadRadius: -1,
-                  ),
-                  BoxShadow(
-                    color: Color(0x19000000),
-                    blurRadius: 3,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : const Color(0xFF8B8B8B),
-            fontSize: 14,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
+    if (result.isSuccess) {
+      ref.invalidate(budgetStatusesProvider);
+      return;
+    }
 
-  Widget _addBudgetButton(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => context.push('/budgets/create'),
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          width: double.infinity,
-          height: 56,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF4D93A),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x26000000),
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.add_rounded, color: Color(0xFF111111), size: 22),
-              SizedBox(width: 8),
-              Text(
-                'Add Budget Category',
-                style: TextStyle(
-                  color: Color(0xFF111111),
-                  fontSize: 16,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.message.isNotEmpty
+              ? result.message
+              : 'Failed to delete budget.',
         ),
       ),
     );
@@ -330,35 +219,29 @@ class BudgetSummaryCard extends StatelessWidget {
   final BudgetPeriod period;
   final double totalBudget;
   final double totalSpent;
-  final String currency;
+  final String displayCurrency;
 
   const BudgetSummaryCard({
     super.key,
     required this.period,
     required this.totalBudget,
     required this.totalSpent,
-    required this.currency,
+    required this.displayCurrency,
   });
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     final progress = totalBudget > 0
         ? (totalSpent / totalBudget).clamp(0, 1).toDouble()
         : 0.0;
     final percentage = (progress * 100).toInt();
-    final isAtOrOverLimit = totalBudget > 0 && totalSpent >= totalBudget;
-    final progressColor = isAtOrOverLimit
-        ? const Color(0xFFEF4444)
-        : const Color(0xFFF4D93A);
-    final ringColor = isAtOrOverLimit
-        ? const Color(0xFFEF4444)
-        : const Color(0xFFF4D93A);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.black,
+        color: qash.primaryButton,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -371,21 +254,27 @@ class BudgetSummaryCard extends StatelessWidget {
                 children: [
                   Text(
                     _periodLabel(period),
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    style: TextStyle(
+                      color: qash.onPrimaryButton.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    formatMoney(totalSpent, currency),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    _formatCurrency(totalSpent, displayCurrency),
+                    style: TextStyle(
+                      color: qash.onPrimaryButton,
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'of ${formatMoney(totalBudget, currency)} budgeted',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    'of ${_formatCurrency(totalBudget, displayCurrency)} budgeted',
+                    style: TextStyle(
+                      color: qash.onPrimaryButton.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -394,15 +283,13 @@ class BudgetSummaryCard extends StatelessWidget {
                 height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: ringColor, width: 3),
+                  border: Border.all(color: qash.accent, width: 3),
                 ),
                 child: Center(
                   child: Text(
                     '$percentage%',
                     style: TextStyle(
-                      color: isAtOrOverLimit
-                          ? const Color(0xFFEF4444)
-                          : Colors.white,
+                      color: qash.onPrimaryButton,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -416,8 +303,8 @@ class BudgetSummaryCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 8,
-              backgroundColor: Colors.white24,
-              valueColor: AlwaysStoppedAnimation(progressColor),
+              backgroundColor: qash.onPrimaryButton.withValues(alpha: 0.2),
+              valueColor: AlwaysStoppedAnimation(qash.accent),
             ),
           ),
         ],
@@ -428,36 +315,40 @@ class BudgetSummaryCard extends StatelessWidget {
 
 class BudgetCard extends StatelessWidget {
   final BudgetStatusEntity budget;
+  final String displayCurrency;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
-  const BudgetCard({super.key, required this.budget});
+  const BudgetCard({
+    super.key,
+    required this.budget,
+    required this.displayCurrency,
+    this.onEdit,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     final progress = budget.progress;
-    final isAtOrOverLimit = budget.isAtOrOverLimit;
-    final indicatorColor = isAtOrOverLimit
-        ? const Color(0xFFEF4444)
-        : const Color(0xFF10B981);
-    final iconBg = isAtOrOverLimit
-        ? const Color(0xFFFEE2E2)
-        : const Color(0xFFEFF6FF);
+    final isOverBudget = budget.isOverBudget;
+    final indicatorColor = isOverBudget ? qash.danger : const Color(0xFF10B981);
+    final iconBg = isOverBudget
+        ? qash.danger.withValues(alpha: 0.12)
+        : qash.accent.withValues(alpha: 0.2);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: qash.surface,
         borderRadius: BorderRadius.circular(16),
-        border: isAtOrOverLimit
-            ? Border.all(color: const Color(0xFFFECACA), width: 1.4)
-            : null,
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
+          BoxShadow(color: qash.cardShadow, blurRadius: 8),
         ],
       ),
       child: Column(
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 44,
@@ -471,12 +362,7 @@ class BudgetCard extends StatelessWidget {
                     budget.categoryName.isNotEmpty
                         ? budget.categoryName.substring(0, 1).toUpperCase()
                         : '?',
-                    style: TextStyle(
-                      color: isAtOrOverLimit
-                          ? const Color(0xFFEF4444)
-                          : Colors.black,
-                      fontSize: 20,
-                    ),
+                    style: TextStyle(color: qash.textPrimary, fontSize: 20),
                   ),
                 ),
               ),
@@ -485,52 +371,20 @@ class BudgetCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            budget.categoryName,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (isAtOrOverLimit) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEE2E2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Limit reached',
-                              style: TextStyle(
-                                color: Color(0xFFEF4444),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      budget.categoryName,
+                      style: TextStyle(
+                        color: qash.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      isAtOrOverLimit
-                          ? budget.isOverBudget
-                                ? 'Over by ${formatMoney(budget.spentAmount - budget.budgetAmount, budget.currency)}'
-                                : 'Budget limit reached'
-                          : '${formatMoney(budget.remainingAmount, budget.currency)} left',
+                      isOverBudget
+                          ? 'Over by ${_formatCurrency(budget.spentAmount - budget.budgetAmount, displayCurrency)}'
+                          : '${_formatCurrency(budget.remainingAmount, displayCurrency)} left',
                       style: TextStyle(
-                        color: isAtOrOverLimit
-                            ? const Color(0xFFEF4444)
-                            : Colors.grey,
+                        color: isOverBudget ? qash.danger : qash.textSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -542,21 +396,45 @@ class BudgetCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    formatMoney(budget.spentAmount, budget.currency),
+                    _formatCurrency(budget.spentAmount, displayCurrency),
                     style: TextStyle(
-                      color: isAtOrOverLimit
-                          ? const Color(0xFFEF4444)
-                          : Colors.black,
+                      color: qash.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'of ${formatMoney(budget.budgetAmount, budget.currency)}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    'of ${_formatCurrency(budget.budgetAmount, displayCurrency)}',
+                    style: TextStyle(color: qash.textSecondary, fontSize: 12),
                   ),
                 ],
               ),
+              if (onEdit != null || onDelete != null) ...[
+                const SizedBox(width: 4),
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, color: qash.iconMuted),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      onEdit?.call();
+                    } else if (value == 'delete') {
+                      onDelete?.call();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Edit'),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(
+                        'Delete',
+                        style: TextStyle(color: qash.danger),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 14),
@@ -565,7 +443,7 @@ class BudgetCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 8,
-              backgroundColor: const Color(0xFFF3F4F6),
+              backgroundColor: qash.border,
               valueColor: AlwaysStoppedAnimation(indicatorColor),
             ),
           ),
@@ -573,20 +451,15 @@ class BudgetCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 '0%',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
+                style: TextStyle(color: qash.textSecondary, fontSize: 12),
               ),
               Text(
                 '${(progress * 100).toInt()}%',
                 style: TextStyle(
-                  color: isAtOrOverLimit
-                      ? const Color(0xFFEF4444)
-                      : Colors.grey,
+                  color: isOverBudget ? qash.danger : qash.textSecondary,
                   fontSize: 12,
-                  fontWeight: isAtOrOverLimit
-                      ? FontWeight.w600
-                      : FontWeight.normal,
                 ),
               ),
             ],
@@ -604,49 +477,36 @@ class _OverBudgetAlert extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     final message = count == 1
-        ? 'One category reached its budget limit'
-        : '$count categories reached their budget limit';
+        ? 'One category exceeded this month'
+        : '$count categories exceeded this month';
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFE4E6),
+        color: qash.danger.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEF4444), width: 1.5),
       ),
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: const BoxDecoration(
-              color: Color(0xFFEF4444),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.warning_amber_rounded, color: Colors.white),
-          ),
-          const SizedBox(width: 14),
+          Icon(Icons.warning_amber_rounded, color: qash.danger),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Budget limit reached',
+                Text(
+                  'Over budget alert',
                   style: TextStyle(
-                    color: Color(0xFFB91C1C),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
+                    color: qash.textPrimary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   message,
-                  style: const TextStyle(
-                    color: Color(0xFF7F1D1D),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(color: qash.textSecondary, fontSize: 12),
                 ),
               ],
             ),
@@ -679,3 +539,6 @@ String _periodLabel(BudgetPeriod period) {
   return '$monthName ${period.year} Budget';
 }
 
+String _formatCurrency(double value, String currencyCode) {
+  return CurrencyFormatter.format(value, currencyCode);
+}

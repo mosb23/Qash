@@ -6,6 +6,8 @@ import '../models/wallet_update_request_model.dart';
 abstract class WalletsRemoteDataSource {
   Future<ApiResponse<List<WalletModel>>> getWallets();
 
+  Future<ApiResponse<WalletModel>> getWalletById(String walletId);
+
   Future<ApiResponse<WalletModel>> createWallet(
     WalletCreateRequestModel request,
   );

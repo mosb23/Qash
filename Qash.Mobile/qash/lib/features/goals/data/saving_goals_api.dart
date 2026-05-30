@@ -5,6 +5,7 @@ import 'datasources/saving_goals_remote_data_source.dart';
 import 'models/saving_goal_contribution_request_model.dart';
 import 'models/saving_goal_create_request_model.dart';
 import 'models/saving_goal_model.dart';
+import 'models/saving_goal_update_request_model.dart';
 
 class SavingGoalsApi implements SavingGoalsRemoteDataSource {
   final Dio _dio;
@@ -26,6 +27,20 @@ class SavingGoalsApi implements SavingGoalsRemoteDataSource {
       });
     } on DioException catch (error) {
       return _handleError<List<SavingGoalModel>>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<SavingGoalModel>> getSavingGoalById(String goalId) async {
+    try {
+      final response = await _dio.get('/api/saving-goals/$goalId');
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<SavingGoalModel>.fromJson(
+        data,
+        (json) => SavingGoalModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (error) {
+      return _handleError<SavingGoalModel>(error);
     }
   }
 
@@ -56,6 +71,26 @@ class SavingGoalsApi implements SavingGoalsRemoteDataSource {
     try {
       final response = await _dio.post(
         '/api/saving-goals/$savingGoalId/contribute',
+        data: request.toJson(),
+      );
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<SavingGoalModel>.fromJson(
+        data,
+        (json) => SavingGoalModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (error) {
+      return _handleError<SavingGoalModel>(error);
+    }
+  }
+
+  @override
+  Future<ApiResponse<SavingGoalModel>> updateSavingGoal(
+    String savingGoalId,
+    SavingGoalUpdateRequestModel request,
+  ) async {
+    try {
+      final response = await _dio.put(
+        '/api/saving-goals/$savingGoalId',
         data: request.toJson(),
       );
       final data = response.data as Map<String, dynamic>;

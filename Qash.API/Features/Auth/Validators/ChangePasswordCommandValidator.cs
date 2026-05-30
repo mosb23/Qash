@@ -10,11 +10,6 @@ public class ChangePasswordCommandValidator : AbstractValidator<ChangePasswordCo
         RuleFor(x => x.OldPassword)
             .NotEmpty();
 
-        RuleFor(x => x.VerificationCode)
-            .NotEmpty()
-            .Equal("00000")
-            .WithMessage("Invalid verification code.");
-
         RuleFor(x => x.NewPassword)
             .NotEmpty()
             .MinimumLength(8)

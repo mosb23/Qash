@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
-import '../../../core/input/text_input_formatters.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
-import '../../auth/providers/auth_providers.dart';
 import '../../auth/domain/entities/auth_requests.dart';
+import '../../auth/presentation/widgets/auth_password_field.dart';
+import '../../../core/assets/qash_icons.dart';
+import '../../../core/widgets/qash_icon.dart';
+import '../../auth/presentation/widgets/auth_screen_helpers.dart';
+import '../../auth/providers/auth_providers.dart';
 
 class ProfileChangePasswordScreen extends ConsumerStatefulWidget {
   const ProfileChangePasswordScreen({super.key});
@@ -16,34 +17,38 @@ class ProfileChangePasswordScreen extends ConsumerStatefulWidget {
       _ChangePasswordScreenState();
 }
 
-class _ChangePasswordScreenState
-    extends ConsumerState<ProfileChangePasswordScreen> {
+class _ChangePasswordScreenState extends ConsumerState<ProfileChangePasswordScreen> {
   final TextEditingController _currentController = TextEditingController();
-  final TextEditingController _codeController = TextEditingController();
   final TextEditingController _nextController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
 
-  bool _showPassword = false;
   bool _loading = false;
   bool _done = false;
 
   @override
   void dispose() {
     _currentController.dispose();
-    _codeController.dispose();
     _nextController.dispose();
     _confirmController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSave() async {
-    if (_currentController.text.isEmpty ||
-        _nextController.text.isEmpty ||
-        _confirmController.text.isEmpty ||
-        _codeController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please fill all fields.')));
+    final oldPassword = _currentController.text.trim();
+    final newPassword = _nextController.text.trim();
+    final confirmPassword = _confirmController.text.trim();
+
+    if (oldPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields.')),
+      );
+      return;
+    }
+
+    if (newPassword != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match.')),
+      );
       return;
     }
 
@@ -54,10 +59,9 @@ class _ChangePasswordScreenState
     final result = await ref.read(changePasswordUseCaseProvider)(
       ChangePasswordData(
         userId: '',
-        oldPassword: _currentController.text,
-        verificationCode: _codeController.text,
-        newPassword: _nextController.text,
-        confirmPassword: _confirmController.text,
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
       ),
     );
 
@@ -72,43 +76,48 @@ class _ChangePasswordScreenState
       final message = result.message.isNotEmpty
           ? result.message
           : 'Failed to change password.';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     }
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context, String title) {
+    final qash = context.qash;
+    return AppBar(
+      elevation: 0,
+      centerTitle: true,
+      leading: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: qash.surface,
+            shape: BoxShape.circle,
+          ),
+          child: IconButton(
+            icon: Icon(Icons.arrow_back_ios_new, color: qash.textPrimary),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: qash.textPrimary,
+          fontWeight: FontWeight.w600,
+          fontSize: 20,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
+
     if (_done) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF7F6F3),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFF7F6F3),
-          elevation: 0,
-          centerTitle: true,
-          leading: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ),
-          title: const Text(
-            'Password Changed',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.w600,
-              fontSize: 20,
-            ),
-          ),
-        ),
+        appBar: _buildAppBar(context, 'Password Changed'),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
@@ -118,29 +127,28 @@ class _ChangePasswordScreenState
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD9F0C8),
+                  color: qash.accent.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Icon(
-                  Icons.check,
+                child: const QashIcon(
+                  assetPath: QashIcons.actionSuccess,
+                  fallback: Icons.check,
                   size: 40,
-                  color: Color(0xFF111111),
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Password Updated!',
-                style: TextStyle(
+                style: authTitleStyle(context).copyWith(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF111111),
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Your password has been changed successfully.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Color(0xFF8B8B8B)),
+                style: authMutedBodyStyle(context),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -148,8 +156,8 @@ class _ChangePasswordScreenState
                 height: 56,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF111111),
-                    foregroundColor: Colors.white,
+                    backgroundColor: qash.primaryButton,
+                    foregroundColor: qash.onPrimaryButton,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -165,74 +173,43 @@ class _ChangePasswordScreenState
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F6F3),
-        elevation: 0,
-        centerTitle: true,
-        leading: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-        ),
-        title: const Text(
-          'Change Password',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-          ),
-        ),
-      ),
+      appBar: _buildAppBar(context, 'Change Password'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
         children: [
-          _PasswordField(
-            label: 'Current Password',
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: qash.surfaceElevated,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: qash.border),
+            ),
+            child: Text(
+              'You are signed in. Enter your current password to update — no SMS code required.',
+              style: TextStyle(color: qash.textSecondary, fontSize: 12, height: 1.35),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('Current Password', style: authLabelStyle(context)),
+          const SizedBox(height: 8),
+          AuthPasswordField(
             controller: _currentController,
-            showPassword: _showPassword,
-            toggleVisibility: () => setState(() {
-              _showPassword = !_showPassword;
-            }),
-            showToggle: true,
+            hintText: '********',
           ),
           const SizedBox(height: 16),
-          _PasswordField(
-            label: 'Verification Code',
-            controller: _codeController,
-            showPassword: false,
-            obscure: false,
-            hintText: '00000',
-            keyboardType: TextInputType.number,
-            inputFormatters: digitsOnlyInputFormatters,
-          ),
-          const SizedBox(height: 16),
-          _PasswordField(
-            label: 'New Password',
+          Text('New Password', style: authLabelStyle(context)),
+          const SizedBox(height: 8),
+          AuthPasswordField(
             controller: _nextController,
-            showPassword: _showPassword,
-            toggleVisibility: () => setState(() {
-              _showPassword = !_showPassword;
-            }),
-            showToggle: true,
+            hintText: '********',
           ),
           const SizedBox(height: 16),
-          _PasswordField(
-            label: 'Confirm New Password',
+          Text('Confirm New Password', style: authLabelStyle(context)),
+          const SizedBox(height: 8),
+          AuthPasswordField(
             controller: _confirmController,
-            showPassword: _showPassword,
-            toggleVisibility: () => setState(() {
-              _showPassword = !_showPassword;
-            }),
-            showToggle: true,
+            hintText: '********',
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -240,88 +217,18 @@ class _ChangePasswordScreenState
             height: 56,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF111111),
-                disabledBackgroundColor: const Color(0xFF111111),
-                foregroundColor: Colors.white,
-                disabledForegroundColor: Colors.white,
+                backgroundColor: qash.primaryButton,
+                foregroundColor: qash.onPrimaryButton,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
-              onPressed: _loading ? () {} : _handleSave,
+              onPressed: _loading ? null : _handleSave,
               child: Text(_loading ? 'Updating...' : 'Update Password'),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PasswordField extends StatelessWidget {
-  const _PasswordField({
-    required this.label,
-    required this.controller,
-    required this.showPassword,
-    this.toggleVisibility,
-    this.showToggle = false,
-    this.hintText = '********',
-    this.obscure = true,
-    this.keyboardType = TextInputType.text,
-    this.inputFormatters,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final bool showPassword;
-  final VoidCallback? toggleVisibility;
-  final bool showToggle;
-  final String hintText;
-  final bool obscure;
-  final TextInputType keyboardType;
-  final List<TextInputFormatter>? inputFormatters;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF111111)),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          obscureText: obscure ? (showToggle ? !showPassword : true) : false,
-          keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
-          decoration: InputDecoration(
-            hintText: hintText,
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(20),
-              borderSide: BorderSide.none,
-            ),
-            suffixIcon: showToggle
-                ? IconButton(
-                    onPressed: toggleVisibility,
-                    icon: Icon(
-                      showPassword
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      color: const Color(0xFF8B8B8B),
-                    ),
-                  )
-                : null,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
-import '../../../core/input/text_input_formatters.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
 
 import '../domain/entities/auth_requests.dart';
 import '../providers/auth_providers.dart';
+import 'forgot_password_flow.dart';
+import 'widgets/auth_screen_helpers.dart';
+import 'widgets/auth_text_field.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -62,12 +62,17 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
     if (response.isSuccess) {
       final code = response.data?.verificationCode ?? '';
-      final phoneParam = Uri.encodeComponent(phone);
-      final codeParam = Uri.encodeComponent(code);
-      final route = code.isEmpty
-          ? '/forgot-verify?phone=$phoneParam'
-          : '/forgot-verify?phone=$phoneParam&code=$codeParam';
-      context.go(route);
+      _showMessage(
+        'If an account exists, a code was sent. '
+        '${code.isNotEmpty ? 'Demo code is on the next screen.' : ''}',
+      );
+      context.go(
+        '/forgot-verify',
+        extra: ForgotPasswordFlowPayload(
+          phoneNumber: phone,
+          demoVerificationCode: code.isEmpty ? null : code,
+        ),
+      );
     } else {
       _showMessage(
         response.errors.isNotEmpty
@@ -79,115 +84,38 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qash = context.qash;
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 24),
+            color: qash.scaffoldBackground,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 56),
-                const Text(
-                  'Forgot password',
-                  style: TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 24,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text('Forgot password', style: authTitleStyle(context)),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Enter your phone number to receive a reset code.',
-                  style: TextStyle(
-                    color: Color(0xFF8B8B8B),
-                    fontSize: 16,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
-                  ),
+                  style: authSubtitleStyle(context),
                 ),
                 const SizedBox(height: 40),
-                const Text(
-                  'Phone number',
-                  style: TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text('Phone number', style: authLabelStyle(context)),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                        spreadRadius: -1,
-                      ),
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    inputFormatters: phoneInputFormatters,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: kPhoneHint,
-                      hintStyle: TextStyle(
-                        color: Color(0xFFC4C4C4),
-                        fontSize: 16,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 16,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
+                AuthTextField(
+                  controller: _phoneController,
+                  hintText: '+20 1xx xxx xxxx',
+                  keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? () {} : _sendCode,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF111111),
-                      disabledBackgroundColor: const Color(0xFF111111),
-                      foregroundColor: Colors.white,
-                      disabledForegroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      _isLoading ? 'Sending...' : 'Send code',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                authPrimaryButton(
+                  context: context,
+                  label: _isLoading ? 'Sending...' : 'Send code',
+                  onTap: _isLoading ? null : _sendCode,
+                  enabled: !_isLoading,
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -196,16 +124,13 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   child: OutlinedButton(
                     onPressed: () => context.go('/login'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF111111),
-                      side: const BorderSide(color: Color(0xFF9CA3AF)),
+                      foregroundColor: qash.textPrimary,
+                      side: BorderSide(color: qash.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: const Text(
-                      'Back to login',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    child: const Text('Back to login', style: TextStyle(fontSize: 16)),
                   ),
                 ),
                 const SizedBox(height: 20),

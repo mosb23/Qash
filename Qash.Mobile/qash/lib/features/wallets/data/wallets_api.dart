@@ -28,6 +28,20 @@ class WalletsApi implements WalletsRemoteDataSource {
   }
 
   @override
+  Future<ApiResponse<WalletModel>> getWalletById(String walletId) async {
+    try {
+      final response = await _dio.get('/api/wallets/$walletId');
+      final data = response.data as Map<String, dynamic>;
+      return ApiResponse<WalletModel>.fromJson(
+        data,
+        (json) => WalletModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (error) {
+      return _handleError<WalletModel>(error);
+    }
+  }
+
+  @override
   Future<ApiResponse<WalletModel>> createWallet(
     WalletCreateRequestModel request,
   ) async {

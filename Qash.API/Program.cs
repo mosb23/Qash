@@ -126,12 +126,18 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+// Swagger: Development + optional Demo:EnableSwagger (see appsettings / docs/DEMO_OTP.md).
+var enableSwagger = app.Environment.IsDevelopment()
+    || builder.Configuration.GetValue("Demo:EnableSwagger", false);
+if (enableSwagger)
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Qash API V1");
-    options.RoutePrefix = string.Empty;
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Qash API V1");
+        options.RoutePrefix = string.Empty;
+    });
+}
 
 app.UseHttpsRedirection();
 

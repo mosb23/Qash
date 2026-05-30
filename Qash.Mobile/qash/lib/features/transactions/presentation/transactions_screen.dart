@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-
-import '../../../core/currency/currency_conversion_service.dart';
-import '../../../core/currency/currency_format.dart';
-import '../../../core/currency/currency_providers.dart';
-import '../utils/transaction_wallet_display.dart';
+import 'package:qash/core/theme/qash_theme_extension.dart';
+import 'package:qash/core/utils/currency_formatter.dart';
 
 import '../../../core/widgets/bottom_nav_bar.dart';
+import '../../dashboard/providers/home_preferences_provider.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
-import '../../../core/widgets/transaction_category_icon.dart';
+import '../../../core/assets/qash_icons.dart';
+import '../../../core/widgets/qash_icon.dart';
 import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
 import '../../wallets/domain/entities/wallet.dart';
 import '../../wallets/providers/wallets_providers.dart';
-import '../../wallets/utils/wallet_balance_utils.dart';
 import '../domain/entities/transaction.dart';
 import '../providers/transactions_providers.dart';
 
@@ -26,25 +23,15 @@ class TransactionsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final qash = context.qash;
     final summary = ref.watch(transactionsSummaryProvider);
     final filter = ref.watch(transactionsFilterProvider);
-    final listOptions = ref.watch(transactionListOptionsProvider);
+    final searchQuery = ref.watch(transactionsSearchQueryProvider);
     final transactions = ref.watch(filteredTransactionsProvider);
     final categories = ref.watch(categoriesProvider);
-    final walletsAsync = ref.watch(walletsProvider);
-    final conversion = ref.watch(currencyConversionServiceProvider);
-    final displayCurrency = ref.watch(effectiveDisplayCurrencyProvider);
-
-    final walletsById = walletsAsync.maybeWhen(
-      data: (result) => walletsByIdMap(
-        result.isFailure ? const <WalletEntity>[] : (result.data ?? const []),
-      ),
-      orElse: () => const <String, WalletEntity>{},
-    );
-    final exchangeRates = conversion.rates;
+    final displayCurrency = ref.watch(displayCurrencyProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
         child: Column(
           children: [
@@ -65,30 +52,78 @@ class TransactionsScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Transactions',
                               style: TextStyle(
-                                color: Color(0xFF111111),
+                                color: qash.textPrimary,
                                 fontSize: 24,
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            _filterButton(
-                              context,
-                              ref,
-                              listOptions.hasActiveFilters,
+                            Row(
+                              children: [
+                                _iconButton(
+                                  context,
+                                  Icons.search,
+                                  onTap: () => _openSearch(context, ref, searchQuery),
+                                ),
+                                const SizedBox(width: 8),
+                                _iconButton(
+                                  context,
+                                  Icons.tune,
+                                  onTap: () => _openFilters(context, ref),
+                                ),
+                              ],
                             ),
                           ],
                         ),
+                        if (searchQuery.trim().isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Search: "${searchQuery.trim()}"',
+                                  style: TextStyle(
+                                    color: qash.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => ref
+                                    .read(transactionsSearchQueryProvider.notifier)
+                                    .state = '',
+                                child: Text(
+                                  'Clear',
+                                  style: TextStyle(
+                                    color: qash.textPrimary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 16),
-                        _summaryRow(summary, displayCurrency),
+                        _summaryRow(context, summary, displayCurrency),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Totals in $displayCurrency (no currency conversion).',
+                          style: TextStyle(
+                            color: qash.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
                               _filterTab(
+                                context,
                                 label: 'All',
                                 isActive: filter == TransactionFilter.all,
                                 onTap: () =>
@@ -96,6 +131,7 @@ class TransactionsScreen extends ConsumerWidget {
                               ),
                               const SizedBox(width: 8),
                               _filterTab(
+                                context,
                                 label: 'Income',
                                 isActive: filter == TransactionFilter.income,
                                 onTap: () => _updateFilter(
@@ -105,6 +141,7 @@ class TransactionsScreen extends ConsumerWidget {
                               ),
                               const SizedBox(width: 8),
                               _filterTab(
+                                context,
                                 label: 'Expense',
                                 isActive: filter == TransactionFilter.expense,
                                 onTap: () => _updateFilter(
@@ -114,6 +151,7 @@ class TransactionsScreen extends ConsumerWidget {
                               ),
                               const SizedBox(width: 8),
                               _filterTab(
+                                context,
                                 label: 'Transfer',
                                 isActive: filter == TransactionFilter.transfer,
                                 onTap: () => _updateFilter(
@@ -134,14 +172,14 @@ class TransactionsScreen extends ConsumerWidget {
                             width: double.infinity,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF4D93A),
+                              color: qash.accent,
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Center(
+                            child: Center(
                               child: Text(
                                 '+ Add Transaction',
                                 style: TextStyle(
-                                  color: Color(0xFF111111),
+                                  color: qash.onAccent,
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w500,
@@ -152,17 +190,13 @@ class TransactionsScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 24),
                         transactions.when(
-                          data: (items) => _transactionsList(
-                            context,
-                            items,
-                            categories,
-                            listOptions.sort,
-                            listOptions.walletId,
-                            walletsById,
-                            exchangeRates,
-                            conversion,
-                            displayCurrency,
-                          ),
+                          data: (items) =>
+                              _transactionsList(
+                                context,
+                                items,
+                                categories,
+                                displayCurrency,
+                              ),
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
                             child: Center(child: CircularProgressIndicator()),
@@ -173,8 +207,8 @@ class TransactionsScreen extends ConsumerWidget {
                               error is AppFailure
                                   ? error.message
                                   : 'Failed to load transactions.',
-                              style: const TextStyle(
-                                color: Color(0xFF8B8B8B),
+                              style: TextStyle(
+                                color: qash.textSecondary,
                                 fontSize: 12,
                                 fontFamily: 'Inter',
                               ),
@@ -200,6 +234,100 @@ class TransactionsScreen extends ConsumerWidget {
 
   void _updateFilter(WidgetRef ref, TransactionFilter filter) {
     ref.read(transactionsFilterProvider.notifier).state = filter;
+  }
+
+  Future<void> _openSearch(
+    BuildContext context,
+    WidgetRef ref,
+    String currentQuery,
+  ) async {
+    final controller = TextEditingController(text: currentQuery);
+    final query = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Search transactions'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Description, category, wallet, amount...',
+            ),
+            onSubmitted: (value) => Navigator.pop(context, value),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, ''),
+              child: const Text('Clear'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('Search'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (query != null) {
+      ref.read(transactionsSearchQueryProvider.notifier).state = query;
+    }
+    controller.dispose();
+  }
+
+  Future<void> _openFilters(BuildContext context, WidgetRef ref) async {
+    final walletsResult = await ref.read(walletsProvider.future);
+    final wallets = walletsResult.data ?? const <WalletEntity>[];
+    final selectedWalletId = ref.read(transactionsWalletFilterProvider);
+
+    if (!context.mounted) {
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Filter by wallet',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  title: const Text('All wallets'),
+                  trailing: selectedWalletId == null
+                      ? const Icon(Icons.check)
+                      : null,
+                  onTap: () {
+                    ref.read(transactionsWalletFilterProvider.notifier).state =
+                        null;
+                    Navigator.pop(context);
+                  },
+                ),
+                for (final wallet in wallets)
+                  ListTile(
+                    title: Text(wallet.name),
+                    trailing: selectedWalletId == wallet.walletId
+                        ? const Icon(Icons.check)
+                        : null,
+                    onTap: () {
+                      ref.read(transactionsWalletFilterProvider.notifier).state =
+                          wallet.walletId;
+                      Navigator.pop(context);
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   int _initialTypeFromFilter(TransactionFilter filter) {
@@ -234,6 +362,7 @@ class TransactionsScreen extends ConsumerWidget {
   }
 
   Widget _summaryRow(
+    BuildContext context,
     AsyncValue<TransactionsSummary> summary,
     String displayCurrency,
   ) {
@@ -241,21 +370,23 @@ class TransactionsScreen extends ConsumerWidget {
       children: [
         Expanded(
           child: _summaryCard(
+            context: context,
             label: 'Income',
             color: const Color(0xFFD9F0C8),
             summary: summary,
-            selector: (value) => value.incomeTotal,
             displayCurrency: displayCurrency,
+            selector: (value) => value.incomeTotal,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _summaryCard(
+            context: context,
             label: 'Expenses',
             color: const Color(0xFFFFE3E3),
             summary: summary,
-            selector: (value) => value.expenseTotal,
             displayCurrency: displayCurrency,
+            selector: (value) => value.expenseTotal,
           ),
         ),
       ],
@@ -263,12 +394,16 @@ class TransactionsScreen extends ConsumerWidget {
   }
 
   Widget _summaryCard({
+    required BuildContext context,
     required String label,
     required Color color,
     required AsyncValue<TransactionsSummary> summary,
-    required double Function(TransactionsSummary summary) selector,
     required String displayCurrency,
+    required double Function(TransactionsSummary summary) selector,
   }) {
+    final textColor = ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+        ? Colors.white
+        : const Color(0xFF111111);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -280,21 +415,24 @@ class TransactionsScreen extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(color: Color(0x99111111), fontSize: 12),
+            style: TextStyle(
+              color: textColor.withValues(alpha: 0.62),
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 4),
           summary.when(
             data: (value) => Text(
-              formatMoney(selector(value), displayCurrency),
-              style: const TextStyle(color: Color(0xFF111111), fontSize: 14),
+              _formatCurrency(selector(value), displayCurrency),
+              style: TextStyle(color: textColor, fontSize: 14),
             ),
-            loading: () => const Text(
+            loading: () => Text(
               '--',
-              style: TextStyle(color: Color(0xFF111111), fontSize: 14),
+              style: TextStyle(color: textColor, fontSize: 14),
             ),
-            error: (_, __) => const Text(
+            error: (_, _) => Text(
               '--',
-              style: TextStyle(color: Color(0xFF111111), fontSize: 14),
+              style: TextStyle(color: textColor, fontSize: 14),
             ),
           ),
         ],
@@ -306,23 +444,16 @@ class TransactionsScreen extends ConsumerWidget {
     BuildContext context,
     List<TransactionEntity> items,
     AsyncValue<Result<List<CategoryEntity>>> categories,
-    TransactionListSort sort,
-    String? walletId,
-    Map<String, WalletEntity> walletsById,
-    Map<String, double> exchangeRates,
-    CurrencyConversionService conversion,
     String displayCurrency,
   ) {
+    final qash = context.qash;
     if (items.isEmpty) {
-      final message = walletId != null && walletId.isNotEmpty
-          ? 'No transactions for this wallet.'
-          : 'No transactions yet.';
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
         child: Text(
-          message,
-          style: const TextStyle(
-            color: Color(0xFF8B8B8B),
+          'No transactions yet.',
+          style: TextStyle(
+            color: qash.textSecondary,
             fontSize: 12,
             fontFamily: 'Inter',
           ),
@@ -331,365 +462,28 @@ class TransactionsScreen extends ConsumerWidget {
     }
 
     final categoryMap = _buildCategoryMap(categories);
-    final groupByDate =
-        sort == TransactionListSort.dateNewest ||
-        sort == TransactionListSort.dateOldest;
-
-    if (!groupByDate) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final item in items) ...[
-            _transactionItem(
-              context,
-              item,
-              categoryMap,
-              walletId: walletId,
-              walletsById: walletsById,
-              exchangeRates: exchangeRates,
-              conversion: conversion,
-              displayCurrency: displayCurrency,
-            ),
-            const SizedBox(height: 8),
-          ],
-        ],
-      );
+    final sorted = [...items]
+      ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+    final grouped = <String, List<TransactionEntity>>{};
+    for (final item in sorted) {
+      final label = _formatSectionLabel(item.transactionDate);
+      grouped.putIfAbsent(label, () => []).add(item);
     }
 
-    final grouped = <DateTime, List<TransactionEntity>>{};
-    for (final item in items) {
-      final day = transactionLocalDate(item.transactionDate);
-      grouped.putIfAbsent(day, () => []).add(item);
-    }
-
-    final sectionDays = grouped.keys.toList()
-      ..sort(
-        (a, b) => sort == TransactionListSort.dateOldest
-            ? a.compareTo(b)
-            : b.compareTo(a),
-      );
-
+    final sections = grouped.entries.toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final day in sectionDays) ...[
-          _sectionLabel(_formatSectionLabel(day)),
+        for (final entry in sections) ...[
+          _sectionLabel(context, entry.key),
           const SizedBox(height: 8),
-          for (final item in grouped[day]!) ...[
-            _transactionItem(
-              context,
-              item,
-              categoryMap,
-              walletId: walletId,
-              walletsById: walletsById,
-              exchangeRates: exchangeRates,
-              conversion: conversion,
-              displayCurrency: displayCurrency,
-            ),
+          for (final item in entry.value) ...[
+            _transactionItem(context, item, categoryMap, displayCurrency),
             const SizedBox(height: 8),
           ],
           const SizedBox(height: 16),
         ],
       ],
-    );
-  }
-
-  void _showFilterSheet(BuildContext context, WidgetRef ref) {
-    final current = ref.read(transactionListOptionsProvider);
-
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) {
-        var selectedSort = current.sort;
-        String? selectedWalletId = current.walletId;
-
-        return Consumer(
-          builder: (context, ref, _) {
-            final walletsAsync = ref.watch(walletsProvider);
-
-            return StatefulBuilder(
-              builder: (context, setSheetState) {
-                final wallets = walletsAsync.maybeWhen(
-                  data: (result) => result.data ?? const <WalletEntity>[],
-                  orElse: () => const <WalletEntity>[],
-                );
-
-                return SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE5E5E5),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Filter & Sort',
-                            style: TextStyle(
-                              color: Color(0xFF111111),
-                              fontSize: 18,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Sort by',
-                            style: TextStyle(
-                              color: Color(0xFF8B8B8B),
-                              fontSize: 12,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          _sortOption(
-                            label: 'Date (newest first)',
-                            selected:
-                                selectedSort == TransactionListSort.dateNewest,
-                            onTap: () => setSheetState(
-                              () =>
-                                  selectedSort = TransactionListSort.dateNewest,
-                            ),
-                          ),
-                          _sortOption(
-                            label: 'Date (oldest first)',
-                            selected:
-                                selectedSort == TransactionListSort.dateOldest,
-                            onTap: () => setSheetState(
-                              () =>
-                                  selectedSort = TransactionListSort.dateOldest,
-                            ),
-                          ),
-                          _sortOption(
-                            label: 'Amount (low to high)',
-                            selected:
-                                selectedSort ==
-                                TransactionListSort.amountLowToHigh,
-                            onTap: () => setSheetState(
-                              () => selectedSort =
-                                  TransactionListSort.amountLowToHigh,
-                            ),
-                          ),
-                          _sortOption(
-                            label: 'Amount (high to low)',
-                            selected:
-                                selectedSort ==
-                                TransactionListSort.amountHighToLow,
-                            onTap: () => setSheetState(
-                              () => selectedSort =
-                                  TransactionListSort.amountHighToLow,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Wallet',
-                            style: TextStyle(
-                              color: Color(0xFF8B8B8B),
-                              fontSize: 12,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          _walletOption(
-                            label: 'All wallets',
-                            selected: selectedWalletId == null,
-                            onTap: () =>
-                                setSheetState(() => selectedWalletId = null),
-                          ),
-                          if (walletsAsync.isLoading)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 12),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
-                            )
-                          else if (wallets.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: Text(
-                                'No wallets yet.',
-                                style: TextStyle(
-                                  color: Color(0xFF8B8B8B),
-                                  fontSize: 12,
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
-                            )
-                          else
-                            ...wallets.map(
-                              (wallet) => _walletOption(
-                                label: wallet.name,
-                                selected:
-                                    normalizeTransactionId(selectedWalletId) ==
-                                    normalizeTransactionId(wallet.walletId),
-                                onTap: () => setSheetState(
-                                  () => selectedWalletId = wallet.walletId,
-                                ),
-                              ),
-                            ),
-                          const SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () {
-                                    ref
-                                            .read(
-                                              transactionListOptionsProvider
-                                                  .notifier,
-                                            )
-                                            .state =
-                                        const TransactionListOptions();
-                                    Navigator.pop(sheetContext);
-                                  },
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF111111),
-                                    side: const BorderSide(
-                                      color: Color(0xFFE5E5E5),
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Reset',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    ref
-                                        .read(
-                                          transactionListOptionsProvider
-                                              .notifier,
-                                        )
-                                        .state = TransactionListOptions(
-                                      sort: selectedSort,
-                                      walletId:
-                                          selectedWalletId != null &&
-                                              selectedWalletId!.isNotEmpty
-                                          ? selectedWalletId
-                                          : null,
-                                    );
-                                    Navigator.pop(sheetContext);
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFF4D93A),
-                                    foregroundColor: const Color(0xFF111111),
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Apply',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _sortOption({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return _filterSheetOption(label: label, selected: selected, onTap: onTap);
-  }
-
-  Widget _walletOption({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return _filterSheetOption(label: label, selected: selected, onTap: onTap);
-  }
-
-  Widget _filterSheetOption({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              size: 20,
-              color: selected
-                  ? const Color(0xFF111111)
-                  : const Color(0xFF8B8B8B),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: selected
-                      ? const Color(0xFF111111)
-                      : const Color(0xFF8B8B8B),
-                  fontSize: 14,
-                  fontFamily: 'Inter',
-                  fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -705,9 +499,11 @@ class TransactionsScreen extends ConsumerWidget {
     );
   }
 
-  String _formatSectionLabel(DateTime day) {
-    final today = transactionLocalDate(DateTime.now());
-    final difference = today.difference(day).inDays;
+  String _formatSectionLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(date.year, date.month, date.day);
+    final difference = today.difference(target).inDays;
 
     if (difference == 0) {
       return 'Today';
@@ -716,73 +512,80 @@ class TransactionsScreen extends ConsumerWidget {
       return 'Yesterday';
     }
 
-    return DateFormat('MMM d, yyyy').format(day);
+    return DateFormat('MMM d').format(date);
   }
 
-  Widget _filterButton(
+  String _formatCurrency(double value, String currencyCode) {
+    return CurrencyFormatter.format(value, currencyCode);
+  }
+
+  Widget _iconButton(
     BuildContext context,
-    WidgetRef ref,
-    bool hasActiveFilters,
-  ) {
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
+    final qash = context.qash;
     return GestureDetector(
-      onTap: () => _showFilterSheet(context, ref),
+      onTap: onTap,
       child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: hasActiveFilters ? const Color(0xFFF4D93A) : Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x19000000),
-              blurRadius: 2,
-              offset: Offset(0, 1),
-              spreadRadius: -1,
-            ),
-            BoxShadow(
-              color: Color(0x19000000),
-              blurRadius: 3,
-              offset: Offset(0, 1),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.tune, size: 20, color: Color(0xFF111111)),
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: qash.surface,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: qash.cardShadow,
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+            spreadRadius: -1,
+          ),
+          BoxShadow(
+            color: qash.cardShadow,
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Icon(icon, size: 20, color: qash.textPrimary),
       ),
     );
   }
 
-  Widget _filterTab({
+  Widget _filterTab(
+    BuildContext context, {
     required String label,
     required bool isActive,
     required VoidCallback onTap,
   }) {
+    final qash = context.qash;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF111111) : Colors.white,
+          color: isActive ? qash.primaryButton : qash.surface,
           borderRadius: BorderRadius.circular(14),
           boxShadow: isActive
               ? null
               : [
-                  const BoxShadow(
-                    color: Color(0x19000000),
+                  BoxShadow(
+                    color: qash.cardShadow,
                     blurRadius: 2,
-                    offset: Offset(0, 1),
+                    offset: const Offset(0, 1),
                     spreadRadius: -1,
                   ),
-                  const BoxShadow(
-                    color: Color(0x19000000),
+                  BoxShadow(
+                    color: qash.cardShadow,
                     blurRadius: 3,
-                    offset: Offset(0, 1),
+                    offset: const Offset(0, 1),
                   ),
                 ],
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isActive ? Colors.white : const Color(0xFF8B8B8B),
+            color: isActive ? qash.onPrimaryButton : qash.textSecondary,
             fontSize: 14,
             fontFamily: 'Inter',
             fontWeight: FontWeight.w500,
@@ -792,11 +595,12 @@ class TransactionsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _sectionLabel(String label) {
+  Widget _sectionLabel(BuildContext context, String label) {
+    final qash = context.qash;
     return Text(
       label,
-      style: const TextStyle(
-        color: Color(0xFF8B8B8B),
+      style: TextStyle(
+        color: qash.textSecondary,
         fontSize: 12,
         fontFamily: 'Inter',
         fontWeight: FontWeight.w400,
@@ -807,31 +611,21 @@ class TransactionsScreen extends ConsumerWidget {
   Widget _transactionItem(
     BuildContext context,
     TransactionEntity item,
-    Map<String, CategoryEntity> categoryMap, {
-    String? walletId,
-    Map<String, WalletEntity>? walletsById,
-    Map<String, double>? exchangeRates,
-    required CurrencyConversionService conversion,
-    required String displayCurrency,
-  }) {
-    final display = walletTransactionDisplay(
-      item,
-      walletId: walletId,
-      fallbackCurrency: item.walletCurrency.isNotEmpty
-          ? item.walletCurrency
-          : 'USD',
-      walletsById: walletsById,
-      exchangeRates: exchangeRates,
-    );
+    Map<String, CategoryEntity> categoryMap,
+    String displayCurrency,
+  ) {
+    final qash = context.qash;
     final isTransfer = item.isTransfer;
-    final amountColor = display.isIncomingTransfer
-        ? const Color(0xFF00A63E)
-        : isTransfer
+    final amountColor = isTransfer
         ? const Color(0xFF2B7FFF)
         : item.isIncome
         ? const Color(0xFF00A63E)
         : const Color(0xFFFF0000);
-    final amountSign = display.sign;
+    final amountSign = isTransfer
+        ? ''
+        : item.isIncome
+        ? '+'
+        : '-';
     final iconBg = isTransfer
         ? const Color(0xFFE1EBFF)
         : item.isIncome
@@ -840,92 +634,110 @@ class TransactionsScreen extends ConsumerWidget {
     final resolvedCategoryName = item.categoryName.isNotEmpty
         ? item.categoryName
         : (categoryMap[item.categoryId]?.name ?? '');
-    final title = (item.description?.isNotEmpty == true)
-        ? item.description!
+    final categoryIcon = resolvedCategoryName.isNotEmpty
+        ? QashIcons.categoryFor(resolvedCategoryName)
+        : (isTransfer ? QashIcons.categoryTransfer : null);
+    final title = item.description.isNotEmpty
+        ? item.description
         : resolvedCategoryName;
     final subtitleParts = <String>[];
     if (resolvedCategoryName.isNotEmpty && resolvedCategoryName != title) {
       subtitleParts.add(resolvedCategoryName);
     }
-    if (item.walletName.isNotEmpty) {
+    if (isTransfer && item.toWalletName.isNotEmpty) {
+      subtitleParts.add('${item.walletName} → ${item.toWalletName}');
+    } else if (item.walletName.isNotEmpty) {
       subtitleParts.add(item.walletName);
     }
-    if (item.isCrossCurrencyTransfer && !display.isIncomingTransfer) {
-      subtitleParts.add(
-        '→ ${formatMoney(item.creditAmount, item.toWalletCurrency!)}',
-      );
-    }
     final subtitle = subtitleParts.join(' · ');
-    final amountText =
-        '$amountSign${formatMoney(display.amount, display.currencyCode)}';
 
     return GestureDetector(
       onTap: () => context.push('/transactions/${item.id}'),
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x19000000),
-              blurRadius: 2,
-              offset: Offset(0, 1),
-              spreadRadius: -1,
-            ),
-            BoxShadow(
-              color: Color(0x19000000),
-              blurRadius: 3,
-              offset: Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                TransactionCategoryIcon(
-                  categoryName: resolvedCategoryName,
-                  categoryIcon: categoryMap[item.categoryId]?.icon,
-                  isTransfer: item.isTransfer,
-                  backgroundColor: iconBg,
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: qash.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: qash.cardShadow,
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+            spreadRadius: -1,
+          ),
+          BoxShadow(
+            color: qash.cardShadow,
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                child: Center(
+                  child: categoryIcon != null
+                      ? QashIcon(
+                          assetPath: categoryIcon,
+                          fallback: isTransfer
+                              ? Icons.swap_horiz
+                              : Icons.category_outlined,
+                          size: 24,
+                        )
+                      : Text(
+                          resolvedCategoryName.isNotEmpty
+                              ? resolvedCategoryName
+                                    .substring(0, 1)
+                                    .toUpperCase()
+                              : '?',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: qash.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (subtitle.isNotEmpty)
                     Text(
-                      title,
-                      style: const TextStyle(
-                        color: Color(0xFF111111),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                      subtitle,
+                      style: TextStyle(
+                        color: qash.textSecondary,
+                        fontSize: 12,
                       ),
                     ),
-                    if (subtitle.isNotEmpty)
-                      Text(
-                        subtitle,
-                        style: const TextStyle(
-                          color: Color(0xFF8B8B8B),
-                          fontSize: 12,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-            Text(
-              amountText,
-              style: TextStyle(
-                color: amountColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+                ],
               ),
+            ],
+          ),
+          Text(
+            '$amountSign${_formatCurrency(item.amount, displayCurrency)}',
+            style: TextStyle(
+              color: amountColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
       ),
     );
   }
