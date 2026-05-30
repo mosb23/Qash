@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../config/providers.dart';
@@ -42,6 +42,18 @@ class PeriodComparisonPoint {
 
   const PeriodComparisonPoint({
     required this.label,
+    required this.income,
+    required this.expenses,
+  });
+}
+
+class YearlyComparison {
+  final int year;
+  final double income;
+  final double expenses;
+
+  const YearlyComparison({
+    required this.year,
     required this.income,
     required this.expenses,
   });
@@ -400,4 +412,29 @@ final analyticsSummaryProvider = Provider<AsyncValue<AnalyticsSummary>>((ref) {
       netBalance: data.net,
     );
   });
+});
+
+final yearlyComparisonProvider =
+    FutureProvider<Result<List<YearlyComparison>>>((ref) async {
+  final result = await ref.watch(periodComparisonProvider.future);
+  if (result.isFailure) {
+    return Result.failure(result.failure!);
+  }
+
+  final comparisons = (result.data ?? const <PeriodComparisonPoint>[])
+      .asMap()
+      .entries
+      .map((entry) {
+        final point = entry.value;
+        final parsedYear = int.tryParse(point.label);
+        final year = parsedYear ?? (DateTime.now().year - 2 + entry.key);
+        return YearlyComparison(
+          year: year,
+          income: point.income,
+          expenses: point.expenses,
+        );
+      })
+      .toList();
+
+  return Result.success(comparisons);
 });

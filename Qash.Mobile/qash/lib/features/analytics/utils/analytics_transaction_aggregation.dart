@@ -1,4 +1,4 @@
-import 'package:intl/intl.dart';
+﻿import 'package:intl/intl.dart';
 
 import '../../../core/currency/currency_aggregation.dart';
 import '../../../core/currency/currency_conversion_service.dart';

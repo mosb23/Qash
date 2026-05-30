@@ -1,6 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/providers.dart';
+import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../data/datasources/saving_goals_remote_data_source.dart';
 import '../data/repositories/saving_goals_repository_impl.dart';
@@ -71,3 +72,19 @@ final savingGoalByIdProvider = FutureProvider.family<Result<SavingGoalEntity>, S
     return useCase(goalId);
   },
 );
+
+enum GoalFilter { all, current, expired }
+
+DateTime goalLocalDate(DateTime date) {
+  final local = date.isUtc ? date.toLocal() : date;
+  return DateTime(local.year, local.month, local.day);
+}
+
+bool isGoalExpired(SavingGoalEntity goal) {
+  final today = goalLocalDate(DateTime.now());
+  return goalLocalDate(goal.deadline).isBefore(today);
+}
+
+final goalsFilterProvider = StateProvider<GoalFilter>((ref) {
+  return GoalFilter.all;
+});

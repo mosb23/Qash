@@ -1,9 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/providers.dart';
+import '../../../core/currency/currency_aggregation.dart';
+import '../../../core/currency/currency_providers.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
+import '../../wallets/domain/entities/wallet.dart';
+import '../../wallets/providers/wallets_providers.dart';
+import '../../wallets/utils/wallet_balance_utils.dart';
 import '../data/datasources/transactions_remote_data_source.dart';
+import '../data/exchange_rates_api.dart';
 import '../data/transactions_api.dart';
 import '../data/repositories/transactions_repository_impl.dart';
 import '../domain/entities/transaction.dart';
@@ -15,6 +21,92 @@ import '../domain/usecases/get_transactions_use_case.dart';
 import '../domain/usecases/update_transaction_use_case.dart';
 
 enum TransactionFilter { all, income, expense, transfer }
+
+enum TransactionListSort {
+  dateNewest,
+  dateOldest,
+  amountLowToHigh,
+  amountHighToLow,
+}
+
+class TransactionListOptions {
+  final TransactionListSort sort;
+  final String? walletId;
+
+  const TransactionListOptions({
+    this.sort = TransactionListSort.dateNewest,
+    this.walletId,
+  });
+
+  bool get hasActiveFilters =>
+      sort != TransactionListSort.dateNewest || walletId != null;
+
+  TransactionListOptions copyWith({
+    TransactionListSort? sort,
+    String? walletId,
+    bool clearWallet = false,
+  }) {
+    return TransactionListOptions(
+      sort: sort ?? this.sort,
+      walletId: clearWallet ? null : (walletId ?? this.walletId),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is TransactionListOptions &&
+            other.sort == sort &&
+            other.walletId == walletId;
+  }
+
+  @override
+  int get hashCode => Object.hash(sort, walletId);
+}
+
+String normalizeTransactionId(String? id) {
+  if (id == null || id.isEmpty) {
+    return '';
+  }
+  return id.replaceAll('{', '').replaceAll('}', '').trim().toLowerCase();
+}
+
+DateTime transactionLocalDate(DateTime date) {
+  final local = date.isUtc ? date.toLocal() : date;
+  return DateTime(local.year, local.month, local.day);
+}
+
+int compareTransactionDatesDesc(TransactionEntity a, TransactionEntity b) {
+  final dateCompare = b.transactionDate.compareTo(a.transactionDate);
+  if (dateCompare != 0) {
+    return dateCompare;
+  }
+  return b.id.compareTo(a.id);
+}
+
+int compareTransactionDatesAsc(TransactionEntity a, TransactionEntity b) {
+  final dateCompare = a.transactionDate.compareTo(b.transactionDate);
+  if (dateCompare != 0) {
+    return dateCompare;
+  }
+  return a.id.compareTo(b.id);
+}
+
+int compareTransactionAmountsAsc(TransactionEntity a, TransactionEntity b) {
+  final amountCompare = a.amount.compareTo(b.amount);
+  if (amountCompare != 0) {
+    return amountCompare;
+  }
+  return compareTransactionDatesDesc(a, b);
+}
+
+int compareTransactionAmountsDesc(TransactionEntity a, TransactionEntity b) {
+  final amountCompare = b.amount.compareTo(a.amount);
+  if (amountCompare != 0) {
+    return amountCompare;
+  }
+  return compareTransactionDatesDesc(a, b);
+}
 
 class TransactionsSummary {
   final double incomeTotal;
@@ -28,8 +120,16 @@ class TransactionsSummary {
 
 final transactionsRemoteDataSourceProvider =
     Provider<TransactionsRemoteDataSource>((ref) {
-      return TransactionsApi(ref.read(dioProvider));
-    });
+  return TransactionsApi(ref.read(dioProvider));
+});
+
+final exchangeRatesApiProvider = Provider<ExchangeRatesApi>((ref) {
+  return ExchangeRatesApi(ref.read(dioProvider));
+});
+
+final exchangeRatesProvider = FutureProvider<Map<String, double>>((ref) async {
+  return ref.read(exchangeRatesApiProvider).fetchRates();
+});
 
 final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {
   return TransactionsRepositoryImpl(
@@ -42,9 +142,8 @@ final getTransactionsUseCaseProvider = Provider<GetTransactionsUseCase>((ref) {
   return GetTransactionsUseCase(ref.read(transactionsRepositoryProvider));
 });
 
-final getTransactionByIdUseCaseProvider = Provider<GetTransactionByIdUseCase>((
-  ref,
-) {
+final getTransactionByIdUseCaseProvider =
+    Provider<GetTransactionByIdUseCase>((ref) {
   return GetTransactionByIdUseCase(ref.read(transactionsRepositoryProvider));
 });
 
@@ -66,8 +165,19 @@ final deleteTransactionUseCaseProvider = Provider<DeleteTransactionUseCase>((
   return DeleteTransactionUseCase(ref.read(transactionsRepositoryProvider));
 });
 
+final transactionDetailProvider = FutureProvider.autoDispose
+    .family<Result<TransactionEntity>, String>((ref, transactionId) async {
+  final useCase = ref.read(getTransactionByIdUseCaseProvider);
+  return useCase(transactionId);
+});
+
 final transactionsFilterProvider = StateProvider<TransactionFilter>((ref) {
   return TransactionFilter.all;
+});
+
+final transactionListOptionsProvider =
+    StateProvider<TransactionListOptions>((ref) {
+  return const TransactionListOptions();
 });
 
 final transactionsSearchQueryProvider = StateProvider<String>((ref) => '');
@@ -81,88 +191,117 @@ final transactionsProvider = FutureProvider<Result<List<TransactionEntity>>>((
   return useCase();
 });
 
-final transactionDetailProvider = FutureProvider.family<
-    Result<TransactionEntity>,
-    String
->((ref, transactionId) async {
-  final useCase = ref.read(getTransactionByIdUseCaseProvider);
-  return useCase(transactionId);
-});
+bool matchesWalletFilter(TransactionEntity item, String walletId) {
+  final target = normalizeTransactionId(walletId);
+  if (target.isEmpty) {
+    return false;
+  }
+
+  if (normalizeTransactionId(item.walletId) == target) {
+    return true;
+  }
+
+  final destinationId = item.toWalletId;
+  if (destinationId != null && destinationId.isNotEmpty) {
+    return normalizeTransactionId(destinationId) == target;
+  }
+
+  return false;
+}
+
+List<TransactionEntity> sortTransactions(
+  List<TransactionEntity> items,
+  TransactionListSort sort,
+) {
+  final sorted = List<TransactionEntity>.from(items);
+  switch (sort) {
+    case TransactionListSort.dateNewest:
+      sorted.sort(compareTransactionDatesDesc);
+    case TransactionListSort.dateOldest:
+      sorted.sort(compareTransactionDatesAsc);
+    case TransactionListSort.amountLowToHigh:
+      sorted.sort(compareTransactionAmountsAsc);
+    case TransactionListSort.amountHighToLow:
+      sorted.sort(compareTransactionAmountsDesc);
+  }
+  return sorted;
+}
 
 List<TransactionEntity> _applyFilters({
   required List<TransactionEntity> items,
   required TransactionFilter filter,
   required String searchQuery,
   required String? walletFilterId,
+  required TransactionListSort sort,
 }) {
   Iterable<TransactionEntity> filtered = items;
 
   switch (filter) {
     case TransactionFilter.income:
       filtered = filtered.where((item) => item.isIncome);
-      break;
     case TransactionFilter.expense:
       filtered = filtered.where((item) => item.isExpense);
-      break;
     case TransactionFilter.transfer:
       filtered = filtered.where((item) => item.isTransfer);
-      break;
     case TransactionFilter.all:
       break;
   }
 
-  if (walletFilterId != null && walletFilterId.isNotEmpty) {
-    filtered = filtered.where(
-      (item) =>
-          item.walletId == walletFilterId ||
-          item.toWalletId == walletFilterId,
-    );
+  final walletId = walletFilterId;
+  if (walletId != null && walletId.isNotEmpty) {
+    filtered = filtered.where((item) => matchesWalletFilter(item, walletId));
   }
 
   final query = searchQuery.trim().toLowerCase();
   if (query.isNotEmpty) {
     filtered = filtered.where((item) {
       final haystack = [
-        item.description,
+        item.description ?? '',
         item.categoryName,
         item.walletName,
-        item.toWalletName,
+        item.toWalletName ?? '',
         item.amount.toString(),
       ].join(' ').toLowerCase();
       return haystack.contains(query);
     });
   }
 
-  return filtered.toList();
+  return sortTransactions(filtered.toList(), sort);
 }
 
 final filteredTransactionsProvider =
     Provider<AsyncValue<List<TransactionEntity>>>((ref) {
-      final transactionsAsync = ref.watch(transactionsProvider);
-      final filter = ref.watch(transactionsFilterProvider);
-      final searchQuery = ref.watch(transactionsSearchQueryProvider);
-      final walletFilterId = ref.watch(transactionsWalletFilterProvider);
+  final transactionsAsync = ref.watch(transactionsProvider);
+  final filter = ref.watch(transactionsFilterProvider);
+  final listOptions = ref.watch(transactionListOptionsProvider);
+  final searchQuery = ref.watch(transactionsSearchQueryProvider);
+  final walletFilterId = ref.watch(transactionsWalletFilterProvider);
 
-      return transactionsAsync.whenData((result) {
-        if (result.isFailure) {
-          throw result.failure ??
-              const AppFailure(message: 'Failed to load transactions.');
-        }
+  return transactionsAsync.whenData((result) {
+    if (result.isFailure) {
+      throw result.failure ??
+          const AppFailure(message: 'Failed to load transactions.');
+    }
 
-        final items = result.data ?? const [];
-        return _applyFilters(
-          items: items,
-          filter: filter,
-          searchQuery: searchQuery,
-          walletFilterId: walletFilterId,
-        );
-      });
-    });
+    final walletId = walletFilterId ?? listOptions.walletId;
+
+    return _applyFilters(
+      items: result.data ?? const [],
+      filter: filter,
+      searchQuery: searchQuery,
+      walletFilterId: walletId,
+      sort: listOptions.sort,
+    );
+  });
+});
 
 final transactionsSummaryProvider = Provider<AsyncValue<TransactionsSummary>>((
   ref,
 ) {
   final transactionsAsync = ref.watch(transactionsProvider);
+  final walletsAsync = ref.watch(walletsProvider);
+  final conversion = ref.watch(currencyConversionServiceProvider);
+  final displayCurrency = ref.watch(effectiveDisplayCurrencyProvider);
 
   return transactionsAsync.whenData((result) {
     if (result.isFailure) {
@@ -170,15 +309,36 @@ final transactionsSummaryProvider = Provider<AsyncValue<TransactionsSummary>>((
           const AppFailure(message: 'Failed to load summary.');
     }
 
+    final walletsById = walletsAsync.maybeWhen(
+      data: (walletResult) {
+        if (walletResult.isFailure) {
+          return const <String, WalletEntity>{};
+        }
+        return walletsByIdMap(walletResult.data ?? const []);
+      },
+      orElse: () => const <String, WalletEntity>{},
+    );
+
     final items = result.data ?? const [];
     var incomeTotal = 0.0;
     var expenseTotal = 0.0;
 
     for (final item in items) {
+      if (item.excludeFromGlobalTotals) {
+        continue;
+      }
+
+      final converted = convertTransactionAmount(
+        transaction: item,
+        targetCurrency: displayCurrency,
+        conversion: conversion,
+        walletsById: walletsById,
+      );
+
       if (item.isIncome) {
-        incomeTotal += item.amount;
+        incomeTotal += converted;
       } else if (item.isExpense) {
-        expenseTotal += item.amount;
+        expenseTotal += converted;
       }
     }
 

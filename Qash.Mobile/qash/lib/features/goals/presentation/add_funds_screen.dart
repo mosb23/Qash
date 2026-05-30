@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qash/core/currency/currency_conversion_service.dart';
 import 'package:qash/core/theme/qash_theme_extension.dart';
 import 'package:qash/core/utils/currency_formatter.dart';
 
@@ -54,10 +55,18 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
       _errorMessage = null;
     });
 
+    final displayCurrency = ref.read(displayCurrencyProvider);
+    final amountUsd = CurrencyConversionService().convertToBase(
+      amount,
+      displayCurrency,
+    );
+
     final result = await ref.read(contributeToSavingGoalUseCaseProvider)(
       SavingGoalContributionData(
         savingGoalId: widget.goal.savingGoalId,
-        amount: amount,
+        amountUsd: amountUsd,
+        inputAmount: amount,
+        inputCurrency: displayCurrency,
       ),
     );
 

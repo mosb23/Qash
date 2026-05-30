@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/analytics/providers/analytics_providers.dart';
 import '../../features/budgets/providers/budgets_providers.dart';

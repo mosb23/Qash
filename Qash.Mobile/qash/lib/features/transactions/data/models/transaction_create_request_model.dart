@@ -29,7 +29,7 @@ class TransactionCreateRequestModel {
       amount: data.amount,
       transactionType: data.transactionType,
       categoryId: data.categoryId,
-      description: data.description,
+      description: data.description ?? '',
       transactionDate: data.transactionDate,
     );
   }
