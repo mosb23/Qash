@@ -88,9 +88,13 @@ public class ApplicationDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(20);
 
-            entity.HasIndex(x => x.Email).IsUnique();
+            entity.HasIndex(x => x.Email)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
 
-            entity.HasIndex(x => x.PhoneNumber).IsUnique();
+            entity.HasIndex(x => x.PhoneNumber)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
 
             entity.Property(x => x.PasswordHash)
                 .IsRequired();

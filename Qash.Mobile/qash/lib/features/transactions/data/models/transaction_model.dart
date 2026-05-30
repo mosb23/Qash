@@ -15,7 +15,7 @@ class TransactionModel extends TransactionEntity {
     required super.type,
     required super.categoryId,
     required super.categoryName,
-    required super.description,
+    super.description,
     required super.transactionDate,
   });
 
@@ -34,7 +34,7 @@ class TransactionModel extends TransactionEntity {
       type: _parseTransactionType(json['transactionType']),
       categoryId: _readString(json, 'categoryId') ?? '',
       categoryName: _readString(json, 'categoryName') ?? '',
-      description: _readString(json, 'description') ?? '',
+      description: _readString(json, 'description'),
       transactionDate: _parseDate(json['transactionDate']),
     );
   }

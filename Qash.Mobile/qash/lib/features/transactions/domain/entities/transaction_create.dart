@@ -5,7 +5,7 @@ class TransactionCreateData {
   final double amount;
   final int transactionType;
   final String categoryId;
-  final String description;
+  final String? description;
   final DateTime transactionDate;
 
   const TransactionCreateData({
@@ -15,7 +15,7 @@ class TransactionCreateData {
     required this.amount,
     required this.transactionType,
     required this.categoryId,
-    required this.description,
+    this.description,
     required this.transactionDate,
   });
 }

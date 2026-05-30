@@ -63,6 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           _SectionCard(
             title: 'Security',
+            disabled: true,
             children: [
               _ToggleRow(
                 icon: Icons.shield_outlined,
@@ -123,14 +124,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.children});
+  const _SectionCard({
+    required this.title,
+    required this.children,
+    this.disabled = false,
+  });
 
   final String title;
   final List<Widget> children;
+  final bool disabled;
 
   @override
   Widget build(BuildContext context) {
@@ -150,16 +155,52 @@ class _SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF8B8B8B),
-              letterSpacing: 1.2,
-            ),
+          Row(
+            children: [
+              Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: disabled
+                      ? const Color(0xFF9CA3AF)
+                      : const Color(0xFF8B8B8B),
+                  letterSpacing: 1.2,
+                ),
+              ),
+              if (disabled) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'COMING SOON',
+                    style: TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 6),
-          ...children,
+          AbsorbPointer(
+            absorbing: disabled,
+            child: Opacity(
+              opacity: disabled ? 0.6 : 1.0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -195,7 +236,7 @@ class _ToggleRow extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: iconBg,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor),
@@ -254,7 +295,9 @@ class _LinkRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labelColor = danger ? const Color(0xFFEF4444) : const Color(0xFF111111);
+    final labelColor = danger
+        ? const Color(0xFFEF4444)
+        : const Color(0xFF111111);
 
     return InkWell(
       onTap: onTap,
@@ -266,7 +309,7 @@ class _LinkRow extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: iconBg,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: iconColor),

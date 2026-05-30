@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/currency/currency_format.dart';
 import '../../../core/currency/exchange_rates.dart';
+import '../../../core/widgets/transaction_category_icon.dart';
 import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
@@ -260,10 +261,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       setState(() => _errorMessage = 'Enter a valid amount.');
       return;
     }
-    if (_descriptionController.text.trim().isEmpty) {
-      setState(() => _errorMessage = 'Enter a description.');
-      return;
-    }
+    // Description is optional now.
     if (_walletId == null) {
       setState(
         () => _errorMessage = 'Create a wallet first to add transactions.',
@@ -302,7 +300,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         amount: amount,
         transactionType: _transactionType,
         categoryId: resolvedCategoryId,
-        description: _descriptionController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
         transactionDate: _date,
       ),
     );
@@ -577,12 +577,32 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 items: _currentCategories().map((category) {
                                   return DropdownMenuItem<String>(
                                     value: category.id,
-                                    child: Text(
-                                      category.name,
-                                      style: const TextStyle(
-                                        color: Color(0xFF111111),
-                                        fontSize: 14,
-                                      ),
+                                    child: Row(
+                                      children: [
+                                        TransactionCategoryIcon(
+                                          categoryName: category.name,
+                                          categoryIcon: category.name,
+                                          isTransfer:
+                                              category.type ==
+                                              CategoryType.transfer,
+                                          size: 28,
+                                          iconSize: 14,
+                                          backgroundColor: const Color(
+                                            0xFFF3F4F6,
+                                          ),
+                                          borderRadius: 8,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            category.name,
+                                            style: const TextStyle(
+                                              color: Color(0xFF111111),
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   );
                                 }).toList(),
@@ -792,6 +812,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   Widget _typeChip(int type, String label) {
     final selected = _transactionType == type;
+    final selectedColor = type == 1
+        ? const Color(0xFF00A63E)
+        : type == 2
+        ? const Color(0xFFEF4444)
+        : const Color(0xFF2B7FFF);
+
     return Expanded(
       child: GestureDetector(
         onTap: _submitting
@@ -803,7 +829,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF111111) : Colors.white,
+            color: selected ? selectedColor : Colors.white,
             borderRadius: BorderRadius.circular(14),
             boxShadow: selected
                 ? null

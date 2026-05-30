@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/currency/currency_format.dart';
 import '../../../core/errors/app_failure.dart';
+import '../../../core/widgets/transaction_category_icon.dart';
 import '../../transactions/domain/entities/transaction.dart';
 import '../../transactions/providers/transactions_providers.dart';
 import '../../transactions/utils/transaction_wallet_display.dart';
@@ -94,7 +95,7 @@ class WalletDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: _summaryTile(
                     label: 'Income',
-                    value:                     _formatCurrencyWithSymbol(
+                    value: _formatCurrencyWithSymbol(
                       summary.income,
                       currentWallet.currency,
                     ),
@@ -107,7 +108,7 @@ class WalletDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: _summaryTile(
                     label: 'Expenses',
-                    value:                     _formatCurrencyWithSymbol(
+                    value: _formatCurrencyWithSymbol(
                       summary.expenses,
                       currentWallet.currency,
                     ),
@@ -298,17 +299,13 @@ class WalletDetailScreen extends ConsumerWidget {
         ? const Color(0xFF2B7FFF)
         : item.isIncome
         ? const Color(0xFF00A63E)
-        : const Color(0xFFFF0004);
+        : const Color(0xFFFF0000);
     final amountSign = display.sign;
     final iconBg = isTransfer
         ? const Color(0xFFE1EBFF)
         : item.isIncome
         ? const Color(0xFFD9F0C8)
         : const Color(0xFFFFD3D4);
-    final iconText = item.categoryName.isNotEmpty
-        ? item.categoryName.substring(0, 1).toUpperCase()
-        : '?';
-
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -333,24 +330,19 @@ class WalletDetailScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(iconText, style: const TextStyle(fontSize: 18)),
-                ),
+              TransactionCategoryIcon(
+                categoryName: item.categoryName,
+                categoryIcon: item.categoryName,
+                isTransfer: item.isTransfer,
+                backgroundColor: iconBg,
               ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.description.isNotEmpty
-                        ? item.description
+                    (item.description?.isNotEmpty == true)
+                        ? item.description!
                         : item.categoryName,
                     style: const TextStyle(
                       color: Color(0xFF111111),
@@ -374,7 +366,7 @@ class WalletDetailScreen extends ConsumerWidget {
             style: TextStyle(
               color: amountColor,
               fontSize: 14,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -427,10 +419,11 @@ class WalletDetailScreen extends ConsumerWidget {
   ) {
     return transactions.maybeWhen(
       data: (items) {
-        final filtered = items
-            .where((item) => transactionInvolvesWallet(item, walletId))
-            .toList()
-          ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+        final filtered =
+            items
+                .where((item) => transactionInvolvesWallet(item, walletId))
+                .toList()
+              ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
         return filtered;
       },
       orElse: () => const [],

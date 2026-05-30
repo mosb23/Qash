@@ -10,6 +10,7 @@ import '../utils/transaction_wallet_display.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
+import '../../../core/widgets/transaction_category_icon.dart';
 import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
 import '../../wallets/domain/entities/wallet.dart';
@@ -320,7 +321,8 @@ class TransactionsScreen extends ConsumerWidget {
     }
 
     final categoryMap = _buildCategoryMap(categories);
-    final groupByDate = sort == TransactionListSort.dateNewest ||
+    final groupByDate =
+        sort == TransactionListSort.dateNewest ||
         sort == TransactionListSort.dateOldest;
 
     if (!groupByDate) {
@@ -402,196 +404,219 @@ class TransactionsScreen extends ConsumerWidget {
                   orElse: () => const <WalletEntity>[],
                 );
 
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE5E5E5),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Filter & Sort',
-                      style: TextStyle(
-                        color: Color(0xFF111111),
-                        fontSize: 18,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Sort by',
-                      style: TextStyle(
-                        color: Color(0xFF8B8B8B),
-                        fontSize: 12,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _sortOption(
-                      label: 'Date (newest first)',
-                      selected: selectedSort == TransactionListSort.dateNewest,
-                      onTap: () => setSheetState(
-                        () => selectedSort = TransactionListSort.dateNewest,
-                      ),
-                    ),
-                    _sortOption(
-                      label: 'Date (oldest first)',
-                      selected: selectedSort == TransactionListSort.dateOldest,
-                      onTap: () => setSheetState(
-                        () => selectedSort = TransactionListSort.dateOldest,
-                      ),
-                    ),
-                    _sortOption(
-                      label: 'Amount (low to high)',
-                      selected:
-                          selectedSort == TransactionListSort.amountLowToHigh,
-                      onTap: () => setSheetState(
-                        () => selectedSort = TransactionListSort.amountLowToHigh,
-                      ),
-                    ),
-                    _sortOption(
-                      label: 'Amount (high to low)',
-                      selected:
-                          selectedSort == TransactionListSort.amountHighToLow,
-                      onTap: () => setSheetState(
-                        () => selectedSort = TransactionListSort.amountHighToLow,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Wallet',
-                      style: TextStyle(
-                        color: Color(0xFF8B8B8B),
-                        fontSize: 12,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _walletOption(
-                      label: 'All wallets',
-                      selected: selectedWalletId == null,
-                      onTap: () =>
-                          setSheetState(() => selectedWalletId = null),
-                    ),
-                    if (walletsAsync.isLoading)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      )
-                    else if (wallets.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          'No wallets yet.',
-                          style: TextStyle(
-                            color: Color(0xFF8B8B8B),
-                            fontSize: 12,
-                            fontFamily: 'Inter',
-                          ),
-                        ),
-                      )
-                    else
-                      ...wallets.map(
-                        (wallet) => _walletOption(
-                          label: wallet.name,
-                          selected:
-                              normalizeTransactionId(selectedWalletId) ==
-                              normalizeTransactionId(wallet.walletId),
-                          onTap: () => setSheetState(
-                            () => selectedWalletId = wallet.walletId,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              ref
-                                  .read(transactionListOptionsProvider.notifier)
-                                  .state = const TransactionListOptions();
-                              Navigator.pop(sheetContext);
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF111111),
-                              side: const BorderSide(color: Color(0xFFE5E5E5)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: const Text(
-                              'Reset',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
+                return SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE5E5E5),
+                                borderRadius: BorderRadius.circular(2),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              ref
-                                  .read(transactionListOptionsProvider.notifier)
-                                  .state = TransactionListOptions(
-                                sort: selectedSort,
-                                walletId:
-                                    selectedWalletId != null &&
-                                        selectedWalletId!.isNotEmpty
-                                    ? selectedWalletId
-                                    : null,
-                              );
-                              Navigator.pop(sheetContext);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF4D93A),
-                              foregroundColor: const Color(0xFF111111),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: const Text(
-                              'Apply',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Filter & Sort',
+                            style: TextStyle(
+                              color: Color(0xFF111111),
+                              fontSize: 18,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Sort by',
+                            style: TextStyle(
+                              color: Color(0xFF8B8B8B),
+                              fontSize: 12,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _sortOption(
+                            label: 'Date (newest first)',
+                            selected:
+                                selectedSort == TransactionListSort.dateNewest,
+                            onTap: () => setSheetState(
+                              () =>
+                                  selectedSort = TransactionListSort.dateNewest,
+                            ),
+                          ),
+                          _sortOption(
+                            label: 'Date (oldest first)',
+                            selected:
+                                selectedSort == TransactionListSort.dateOldest,
+                            onTap: () => setSheetState(
+                              () =>
+                                  selectedSort = TransactionListSort.dateOldest,
+                            ),
+                          ),
+                          _sortOption(
+                            label: 'Amount (low to high)',
+                            selected:
+                                selectedSort ==
+                                TransactionListSort.amountLowToHigh,
+                            onTap: () => setSheetState(
+                              () => selectedSort =
+                                  TransactionListSort.amountLowToHigh,
+                            ),
+                          ),
+                          _sortOption(
+                            label: 'Amount (high to low)',
+                            selected:
+                                selectedSort ==
+                                TransactionListSort.amountHighToLow,
+                            onTap: () => setSheetState(
+                              () => selectedSort =
+                                  TransactionListSort.amountHighToLow,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Wallet',
+                            style: TextStyle(
+                              color: Color(0xFF8B8B8B),
+                              fontSize: 12,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _walletOption(
+                            label: 'All wallets',
+                            selected: selectedWalletId == null,
+                            onTap: () =>
+                                setSheetState(() => selectedWalletId = null),
+                          ),
+                          if (walletsAsync.isLoading)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            )
+                          else if (wallets.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                'No wallets yet.',
+                                style: TextStyle(
+                                  color: Color(0xFF8B8B8B),
+                                  fontSize: 12,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            )
+                          else
+                            ...wallets.map(
+                              (wallet) => _walletOption(
+                                label: wallet.name,
+                                selected:
+                                    normalizeTransactionId(selectedWalletId) ==
+                                    normalizeTransactionId(wallet.walletId),
+                                onTap: () => setSheetState(
+                                  () => selectedWalletId = wallet.walletId,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () {
+                                    ref
+                                            .read(
+                                              transactionListOptionsProvider
+                                                  .notifier,
+                                            )
+                                            .state =
+                                        const TransactionListOptions();
+                                    Navigator.pop(sheetContext);
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF111111),
+                                    side: const BorderSide(
+                                      color: Color(0xFFE5E5E5),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Reset',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    ref
+                                        .read(
+                                          transactionListOptionsProvider
+                                              .notifier,
+                                        )
+                                        .state = TransactionListOptions(
+                                      sort: selectedSort,
+                                      walletId:
+                                          selectedWalletId != null &&
+                                              selectedWalletId!.isNotEmpty
+                                          ? selectedWalletId
+                                          : null,
+                                    );
+                                    Navigator.pop(sheetContext);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF4D93A),
+                                    foregroundColor: const Color(0xFF111111),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Apply',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    ],
                   ),
-                ),
-              ),
-            );
+                );
               },
             );
           },
@@ -695,9 +720,7 @@ class TransactionsScreen extends ConsumerWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: hasActiveFilters
-              ? const Color(0xFFF4D93A)
-              : Colors.white,
+          color: hasActiveFilters ? const Color(0xFFF4D93A) : Colors.white,
           borderRadius: BorderRadius.circular(999),
           boxShadow: const [
             BoxShadow(
@@ -713,11 +736,7 @@ class TransactionsScreen extends ConsumerWidget {
             ),
           ],
         ),
-        child: const Icon(
-          Icons.tune,
-          size: 20,
-          color: Color(0xFF111111),
-        ),
+        child: const Icon(Icons.tune, size: 20, color: Color(0xFF111111)),
       ),
     );
   }
@@ -809,11 +828,8 @@ class TransactionsScreen extends ConsumerWidget {
     final resolvedCategoryName = item.categoryName.isNotEmpty
         ? item.categoryName
         : (categoryMap[item.categoryId]?.name ?? '');
-    final iconText = resolvedCategoryName.isNotEmpty
-        ? resolvedCategoryName.substring(0, 1).toUpperCase()
-        : '?';
-    final title = item.description.isNotEmpty
-        ? item.description
+    final title = (item.description?.isNotEmpty == true)
+        ? item.description!
         : resolvedCategoryName;
     final subtitleParts = <String>[];
     if (resolvedCategoryName.isNotEmpty && resolvedCategoryName != title) {
@@ -856,16 +872,11 @@ class TransactionsScreen extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Center(
-                    child: Text(iconText, style: const TextStyle(fontSize: 16)),
-                  ),
+                TransactionCategoryIcon(
+                  categoryName: resolvedCategoryName,
+                  categoryIcon: categoryMap[item.categoryId]?.icon,
+                  isTransfer: item.isTransfer,
+                  backgroundColor: iconBg,
                 ),
                 const SizedBox(width: 12),
                 Column(
@@ -896,7 +907,7 @@ class TransactionsScreen extends ConsumerWidget {
               style: TextStyle(
                 color: amountColor,
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],

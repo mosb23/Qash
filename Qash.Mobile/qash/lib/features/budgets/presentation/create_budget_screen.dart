@@ -7,13 +7,13 @@ import '../../categories/providers/categories_providers.dart';
 import '../domain/entities/budget_create.dart';
 import '../domain/entities/budget_status.dart';
 import '../providers/budgets_providers.dart';
+import '../../../core/widgets/transaction_category_icon.dart';
 
 class CreateBudgetScreen extends ConsumerStatefulWidget {
   const CreateBudgetScreen({super.key});
 
   @override
-  ConsumerState<CreateBudgetScreen> createState() =>
-      _CreateBudgetScreenState();
+  ConsumerState<CreateBudgetScreen> createState() => _CreateBudgetScreenState();
 }
 
 class _CreateBudgetScreenState extends ConsumerState<CreateBudgetScreen> {
@@ -33,9 +33,9 @@ class _CreateBudgetScreenState extends ConsumerState<CreateBudgetScreen> {
     final categoryId = selectedCategoryId;
 
     if (categoryId == null || amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid amount.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter a valid amount.')));
       return;
     }
 
@@ -69,9 +69,9 @@ class _CreateBudgetScreenState extends ConsumerState<CreateBudgetScreen> {
     final message = result.message.isNotEmpty
         ? result.message
         : 'Failed to create budget.';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -209,7 +209,9 @@ class _CreateBudgetScreenState extends ConsumerState<CreateBudgetScreen> {
             const SizedBox(height: 10),
             TextField(
               controller: limitController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               style: const TextStyle(color: Colors.black),
               decoration: InputDecoration(
                 prefixText: '\$ ',
@@ -294,21 +296,14 @@ class CategorySelectionTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Center(
-                child: Text(
-                  category.name.isNotEmpty
-                      ? category.name.substring(0, 1).toUpperCase()
-                      : '?',
-                  style: const TextStyle(color: Colors.black, fontSize: 18),
-                ),
-              ),
+            TransactionCategoryIcon(
+              categoryName: category.name,
+              categoryIcon: category.icon,
+              isTransfer: false,
+              backgroundColor: const Color(0xFFF3F4F6),
+              size: 44,
+              iconSize: 20,
+              borderRadius: 14,
             ),
             const SizedBox(width: 12),
             Expanded(

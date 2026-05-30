@@ -77,3 +77,6 @@ flutter:
   assets:
     - .env
     - assets/icons/flags/
+    - assets/icons/QuickActions/
+    - assets/icons/Categories/
+    - assets/icons/Goals/

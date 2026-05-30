@@ -165,9 +165,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _sendCode,
+                    onPressed: _isLoading ? () {} : _sendCode,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF111111),
+                      disabledBackgroundColor: const Color(0xFF111111),
+                      foregroundColor: Colors.white,
+                      disabledForegroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -190,7 +193,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     onPressed: () => context.go('/login'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF111111),
-                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      side: const BorderSide(color: Color(0xFF9CA3AF)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),

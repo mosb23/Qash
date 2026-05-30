@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
+import '../../../core/widgets/goal_logo.dart';
 import '../domain/entities/saving_goal.dart';
 import '../providers/saving_goals_providers.dart';
 
@@ -81,28 +82,21 @@ class GoalsScreen extends ConsumerWidget {
                               _filterTab(
                                 label: 'All',
                                 isActive: filter == GoalFilter.all,
-                                onTap: () => _updateFilter(
-                                  ref,
-                                  GoalFilter.all,
-                                ),
+                                onTap: () => _updateFilter(ref, GoalFilter.all),
                               ),
                               const SizedBox(width: 8),
                               _filterTab(
                                 label: 'Current',
                                 isActive: filter == GoalFilter.current,
-                                onTap: () => _updateFilter(
-                                  ref,
-                                  GoalFilter.current,
-                                ),
+                                onTap: () =>
+                                    _updateFilter(ref, GoalFilter.current),
                               ),
                               const SizedBox(width: 8),
                               _filterTab(
                                 label: 'Expired',
                                 isActive: filter == GoalFilter.expired,
-                                onTap: () => _updateFilter(
-                                  ref,
-                                  GoalFilter.expired,
-                                ),
+                                onTap: () =>
+                                    _updateFilter(ref, GoalFilter.expired),
                               ),
                             ],
                           ),
@@ -376,20 +370,7 @@ class GoalsScreen extends ConsumerWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 40,
-                        height: 36,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.flag_rounded,
-                          color: Color(0xFF111111),
-                          size: 20,
-                        ),
-                      ),
+                      const GoalLogo(size: 40, padding: 6),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(

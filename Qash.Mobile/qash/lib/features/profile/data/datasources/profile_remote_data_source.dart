@@ -9,5 +9,5 @@ abstract class ProfileRemoteDataSource {
     ProfileUpdateRequestModel request,
   );
 
-  Future<ApiResponse<String>> deleteProfile();
+  Future<ApiResponse<String>> deleteProfile(String password);
 }

@@ -40,8 +40,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
-  Future<Result<String>> deleteProfile() async {
-    final response = await _remoteDataSource.deleteProfile();
+  Future<Result<String>> deleteProfile(String password) async {
+    final response = await _remoteDataSource.deleteProfile(password);
 
     if (response.success) {
       return Result.success(response.data ?? response.message);

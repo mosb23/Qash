@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
+import '../../../core/widgets/transaction_category_icon.dart';
 import '../../transactions/domain/entities/transaction.dart';
 import '../../transactions/providers/transactions_providers.dart';
 import '../domain/entities/budget_status.dart';
@@ -319,8 +320,8 @@ class BudgetDetailScreen extends ConsumerWidget {
   Widget _transactionCard(TransactionEntity item) {
     final amountSign = item.isIncome ? '+' : '-';
     final amountColor = item.isIncome
-        ? const Color(0xFF10B981)
-        : const Color(0xFFFB2C36);
+        ? const Color(0xFF00A63E)
+        : const Color(0xFFFF0000);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -336,29 +337,22 @@ class BudgetDetailScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF1E6),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Center(
-                  child: Text(
-                    item.categoryName.isNotEmpty
-                        ? item.categoryName.substring(0, 1).toUpperCase()
-                        : '?',
-                    style: const TextStyle(fontSize: 20),
-                  ),
-                ),
+              TransactionCategoryIcon(
+                categoryName: item.categoryName,
+                categoryIcon: item.categoryName,
+                isTransfer: item.isTransfer,
+                backgroundColor: const Color(0xFFFFF1E6),
+                size: 46,
+                iconSize: 24,
+                borderRadius: 16,
               ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.description.isNotEmpty
-                        ? item.description
+                    (item.description?.isNotEmpty == true)
+                        ? item.description!
                         : item.categoryName,
                     style: const TextStyle(
                       color: Color(0xFF111111),
@@ -383,7 +377,7 @@ class BudgetDetailScreen extends ConsumerWidget {
             style: TextStyle(
               color: amountColor,
               fontSize: 14,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

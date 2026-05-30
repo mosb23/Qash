@@ -164,9 +164,12 @@ class _ForgotVerifyScreenState extends State<ForgotVerifyScreen> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _verifyCode,
+                    onPressed: _isLoading ? () {} : _verifyCode,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF111111),
+                      disabledBackgroundColor: const Color(0xFF111111),
+                      foregroundColor: Colors.white,
+                      disabledForegroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -189,7 +192,7 @@ class _ForgotVerifyScreenState extends State<ForgotVerifyScreen> {
                     onPressed: () => context.go('/forgot-password'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF111111),
-                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      side: const BorderSide(color: Color(0xFF9CA3AF)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),

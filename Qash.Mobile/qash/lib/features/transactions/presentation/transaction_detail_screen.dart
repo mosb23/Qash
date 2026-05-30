@@ -7,6 +7,7 @@ import '../../../core/currency/currency_format.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
+import '../../../core/widgets/transaction_category_icon.dart';
 import '../../wallets/domain/entities/wallet.dart';
 import '../../wallets/providers/wallets_providers.dart';
 import '../domain/entities/transaction.dart';
@@ -69,10 +70,7 @@ class TransactionDetailScreen extends ConsumerWidget {
             return _messageState('Transaction not found.');
           }
 
-          final currency = _resolveCurrency(
-            transaction.walletId,
-            walletsAsync,
-          );
+          final currency = _resolveCurrency(transaction.walletId, walletsAsync);
 
           return _TransactionDetailBody(
             transaction: transaction,
@@ -154,8 +152,8 @@ class _TransactionDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = transaction.description.isNotEmpty
-        ? transaction.description
+    final title = (transaction.description?.isNotEmpty == true)
+        ? transaction.description!
         : transaction.categoryName;
 
     return SingleChildScrollView(
@@ -171,18 +169,14 @@ class _TransactionDetailBody extends StatelessWidget {
             ),
             child: Column(
               children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(
-                    _style.icon,
-                    color: _style.accent,
-                    size: 32,
-                  ),
+                TransactionCategoryIcon(
+                  categoryName: transaction.categoryName,
+                  categoryIcon: transaction.categoryName,
+                  isTransfer: transaction.isTransfer,
+                  backgroundColor: Colors.white,
+                  size: 72,
+                  iconSize: 32,
+                  borderRadius: 20,
                 ),
                 const SizedBox(height: 20),
                 Text(
@@ -247,7 +241,10 @@ class _TransactionDetailBody extends StatelessWidget {
                 _divider(),
                 _detailRow('Wallet', _walletLabel(transaction)),
                 _divider(),
-                _detailRow('Date', _formatLongDate(transaction.transactionDate)),
+                _detailRow(
+                  'Date',
+                  _formatLongDate(transaction.transactionDate),
+                ),
                 _divider(),
                 _detailRow(
                   'Currency',
@@ -306,11 +303,7 @@ class _TransactionDetailBody extends StatelessWidget {
     return const Divider(height: 1, color: Color(0xFFF3F4F6));
   }
 
-  Widget _detailRow(
-    String label,
-    String value, {
-    Color? valueColor,
-  }) {
+  Widget _detailRow(String label, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 14),
       child: Row(
@@ -318,10 +311,7 @@ class _TransactionDetailBody extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: Color(0xFF8B8B8B),
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 14),
           ),
           Flexible(
             child: Text(
@@ -385,14 +375,12 @@ class TransactionStyle {
   final Color accent;
   final String typeLabel;
   final String amountPrefix;
-  final IconData icon;
 
   const TransactionStyle({
     required this.summaryBackground,
     required this.accent,
     required this.typeLabel,
     required this.amountPrefix,
-    required this.icon,
   });
 
   factory TransactionStyle.from(TransactionEntity transaction) {
@@ -402,7 +390,6 @@ class TransactionStyle {
         accent: Color(0xFF00A63E),
         typeLabel: 'Income',
         amountPrefix: '+',
-        icon: Icons.arrow_downward_rounded,
       );
     }
     if (transaction.isTransfer) {
@@ -411,7 +398,6 @@ class TransactionStyle {
         accent: Color(0xFF2B7FFF),
         typeLabel: 'Transfer',
         amountPrefix: '',
-        icon: Icons.swap_horiz_rounded,
       );
     }
     return const TransactionStyle(
@@ -419,7 +405,6 @@ class TransactionStyle {
       accent: Color(0xFFFF0000),
       typeLabel: 'Expense',
       amountPrefix: '-',
-      icon: Icons.arrow_upward_rounded,
     );
   }
 }

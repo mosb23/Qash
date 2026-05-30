@@ -86,7 +86,8 @@ class BudgetScreen extends ConsumerWidget {
                       );
                     }
 
-                    final allItems = result.data ?? const <BudgetStatusEntity>[];
+                    final allItems =
+                        result.data ?? const <BudgetStatusEntity>[];
                     final totalBudget = allItems.fold<double>(
                       0,
                       (sum, item) => sum + item.budgetAmount,
@@ -112,43 +113,41 @@ class BudgetScreen extends ConsumerWidget {
                           const SizedBox(height: 20),
                         ],
                         if (hasExpiredBudgets) ...[
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                                _filterTab(
-                                  label: 'All',
-                                  isActive: filter == BudgetFilter.all,
-                                  onTap: () => _updateFilter(
-                                    ref,
-                                    BudgetFilter.all,
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _filterTab(
+                                    label: 'All',
+                                    isActive: filter == BudgetFilter.all,
+                                    onTap: () =>
+                                        _updateFilter(ref, BudgetFilter.all),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                _filterTab(
-                                  label: 'Current',
-                                  isActive: filter == BudgetFilter.current,
-                                  onTap: () => _updateFilter(
-                                    ref,
-                                    BudgetFilter.current,
+                                  const SizedBox(width: 8),
+                                  _filterTab(
+                                    label: 'Current',
+                                    isActive: filter == BudgetFilter.current,
+                                    onTap: () => _updateFilter(
+                                      ref,
+                                      BudgetFilter.current,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                _filterTab(
-                                  label: 'Limit reached',
-                                  isActive: filter == BudgetFilter.expired,
-                                  onTap: () => _updateFilter(
-                                    ref,
-                                    BudgetFilter.expired,
+                                  const SizedBox(width: 8),
+                                  _filterTab(
+                                    label: 'Limit reached',
+                                    isActive: filter == BudgetFilter.expired,
+                                    onTap: () => _updateFilter(
+                                      ref,
+                                      BudgetFilter.expired,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
                           const SizedBox(height: 16),
                         ],
                         filteredBudgets.when(
@@ -181,9 +180,7 @@ class BudgetScreen extends ConsumerWidget {
                           },
                           loading: () => const SizedBox(
                             height: 120,
-                            child: Center(
-                              child: CircularProgressIndicator(),
-                            ),
+                            child: Center(child: CircularProgressIndicator()),
                           ),
                           error: (error, stack) => const Text(
                             'Failed to load budgets.',
@@ -388,7 +385,9 @@ class BudgetSummaryCard extends StatelessWidget {
                   child: Text(
                     '$percentage%',
                     style: TextStyle(
-                      color: isAtOrOverLimit ? const Color(0xFFEF4444) : Colors.white,
+                      color: isAtOrOverLimit
+                          ? const Color(0xFFEF4444)
+                          : Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -510,8 +509,8 @@ class BudgetCard extends StatelessWidget {
                     Text(
                       isAtOrOverLimit
                           ? budget.isOverBudget
-                              ? 'Over by ${_formatCurrency(budget.spentAmount - budget.budgetAmount)}'
-                              : 'Budget limit reached'
+                                ? 'Over by ${_formatCurrency(budget.spentAmount - budget.budgetAmount)}'
+                                : 'Budget limit reached'
                           : '${_formatCurrency(budget.remainingAmount)} left',
                       style: TextStyle(
                         color: isAtOrOverLimit
@@ -570,8 +569,9 @@ class BudgetCard extends StatelessWidget {
                       ? const Color(0xFFEF4444)
                       : Colors.grey,
                   fontSize: 12,
-                  fontWeight:
-                      isAtOrOverLimit ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: isAtOrOverLimit
+                      ? FontWeight.w600
+                      : FontWeight.normal,
                 ),
               ),
             ],
@@ -598,10 +598,7 @@ class _OverBudgetAlert extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFFE4E6),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFEF4444),
-          width: 1.5,
-        ),
+        border: Border.all(color: const Color(0xFFEF4444), width: 1.5),
       ),
       child: Row(
         children: [
@@ -612,10 +609,7 @@ class _OverBudgetAlert extends StatelessWidget {
               color: Color(0xFFEF4444),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.white,
-            ),
+            child: const Icon(Icons.warning_amber_rounded, color: Colors.white),
           ),
           const SizedBox(width: 14),
           Expanded(

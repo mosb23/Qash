@@ -8,6 +8,8 @@ import '../../../core/currency/currency_format.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/widgets/currency_flag.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
+import '../../../core/widgets/goal_logo.dart';
+import '../../../core/widgets/transaction_category_icon.dart';
 import '../../budgets/domain/entities/budget_status.dart';
 import '../../budgets/providers/budgets_providers.dart';
 import '../../goals/domain/entities/saving_goal.dart';
@@ -360,29 +362,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               children: [
                                 _quickAction(
                                   'Income',
-                                  '\u2199',
+                                  'assets/icons/QuickActions/income.png',
                                   const Color(0xFFD9F0C8),
                                   onTap: () =>
                                       context.push('/transactions/add?type=1'),
                                 ),
                                 _quickAction(
                                   'Expense',
-                                  '\u2197',
+                                  'assets/icons/QuickActions/expense.png',
                                   const Color(0xFFFEE2E2),
                                   onTap: () =>
                                       context.push('/transactions/add?type=2'),
                                 ),
                                 _quickAction(
                                   'Transfer',
-                                  '\u21c4',
-                                  const Color(0xFFEFF6FF),
+                                  'assets/icons/QuickActions/exchange.png',
+                                  const Color.fromARGB(255, 214, 231, 252),
                                   onTap: () =>
                                       context.push('/transactions/add?type=3'),
                                 ),
                                 _quickAction(
                                   'Wallets',
-                                  '\u25a4',
-                                  const Color(0xFFF3F4F6),
+                                  'assets/icons/QuickActions/wallet.png',
+                                  const Color.fromARGB(255, 203, 205, 209),
                                   onTap: () => context.push('/wallets'),
                                 ),
                               ],
@@ -1091,13 +1093,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            budget.categoryName,
-            style: const TextStyle(
-              color: Color(0xFF111111),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+          Row(
+            children: [
+              TransactionCategoryIcon(
+                categoryName: budget.categoryName,
+                categoryIcon: budget.categoryName,
+                isTransfer: false,
+                size: 36,
+                iconSize: 18,
+                backgroundColor: const Color(0xFFF3F4F6),
+                borderRadius: 8,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  budget.categoryName,
+                  style: const TextStyle(
+                    color: Color(0xFF111111),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
@@ -1152,13 +1170,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                category.categoryName,
-                style: const TextStyle(
-                  color: Color(0xFF111111),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
+              Row(
+                children: [
+                  TransactionCategoryIcon(
+                    categoryName: category.categoryName,
+                    categoryIcon: category.categoryName,
+                    isTransfer: false,
+                    size: 36,
+                    iconSize: 16,
+                    backgroundColor: const Color(0xFFF3F4F6),
+                    borderRadius: 8,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    category.categoryName,
+                    style: const TextStyle(
+                      color: Color(0xFF111111),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
               Text(
                 _formatCurrency(category.totalAmount),
@@ -1210,7 +1242,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               Row(
                 children: [
-                  const Text('G', style: TextStyle(fontSize: 20)),
+                  const GoalLogo(size: 40, padding: 6),
                   const SizedBox(width: 8),
                   Text(
                     goal.name,
@@ -1261,7 +1293,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ? const Color(0xFF2B7FFF)
         : item.isIncome
         ? const Color(0xFF00A63E)
-        : const Color(0xFFFF0004);
+        : const Color(0xFFFF0000);
     final amountSign = isTransfer
         ? ''
         : item.isIncome
@@ -1272,10 +1304,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         : item.isIncome
         ? const Color(0xFFD9F0C8)
         : const Color(0xFFFFD3D4);
-    final iconText = item.categoryName.isNotEmpty
-        ? item.categoryName.substring(0, 1).toUpperCase()
-        : '?';
-
     return GestureDetector(
       onTap: () => context.push('/transactions/${item.id}'),
       child: Container(
@@ -1302,24 +1330,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Center(
-                    child: Text(iconText, style: const TextStyle(fontSize: 18)),
-                  ),
+                TransactionCategoryIcon(
+                  categoryName: item.categoryName,
+                  categoryIcon: item.categoryName,
+                  isTransfer: item.isTransfer,
+                  backgroundColor: iconBg,
                 ),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.description.isNotEmpty
-                          ? item.description
+                      (item.description?.isNotEmpty == true)
+                          ? item.description!
                           : item.categoryName,
                       style: const TextStyle(
                         color: Color(0xFF111111),
@@ -1343,7 +1366,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               style: TextStyle(
                 color: amountColor,
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -1489,7 +1512,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Center(
-              child: Text(icon, style: const TextStyle(fontSize: 20)),
+              child: Image.asset(
+                icon,
+                width: 20,
+                height: 20,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           const SizedBox(height: 8),

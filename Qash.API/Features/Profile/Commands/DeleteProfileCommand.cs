@@ -8,8 +8,11 @@ public class DeleteProfileCommand : IRequest<ApiResponse<string>>
 {
     public Guid UserId { get; set; }
 
-    public DeleteProfileCommand(Guid userId)
+    public string Password { get; set; } = string.Empty;
+
+    public DeleteProfileCommand(Guid userId, string password)
     {
         UserId = userId;
+        Password = password;
     }
 }

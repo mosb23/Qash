@@ -15,34 +15,64 @@ class DeleteAccountScreen extends ConsumerStatefulWidget {
 }
 
 class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
+  final TextEditingController _passwordController = TextEditingController();
   bool _loading = false;
+  bool _passwordObscured = true;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleDelete() async {
+    final password = _passwordController.text.trim();
+    if (password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter your password to confirm deletion.'),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _loading = true;
     });
 
-    final result = await ref.read(deleteProfileUseCaseProvider)();
+    try {
+      final result = await ref.read(deleteProfileUseCaseProvider)(password);
 
-    if (!mounted) return;
-
-    setState(() {
-      _loading = false;
-    });
-
-    if (result.isSuccess) {
-      await ref.read(secureStorageProvider).clearTokens();
       if (!mounted) return;
-      context.go('/login');
-      return;
-    }
 
-    final message = result.message.isNotEmpty
-        ? result.message
-        : 'Failed to delete account.';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+      if (result.isSuccess) {
+        await ref.read(secureStorageProvider).clearTokens();
+        if (!mounted) return;
+        context.go('/login');
+        return;
+      }
+
+      final errors = result.errors.where((e) => e.isNotEmpty).join('\n');
+      final message = errors.isNotEmpty
+          ? errors
+          : result.message.isNotEmpty
+              ? result.message
+              : 'Failed to delete account.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete account.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -123,7 +153,87 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                     fontFamily: 'Inter',
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Password',
+                    style: TextStyle(
+                      color: Color(0xFF111111),
+                      fontSize: 14,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 2,
+                        offset: Offset(0, 1),
+                        spreadRadius: -1,
+                      ),
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 3,
+                        offset: Offset(0, 1),
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _passwordController,
+                          obscureText: _passwordObscured,
+                          enabled: !_loading,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            hintText: 'Enter your password to confirm',
+                            hintStyle: TextStyle(
+                              color: Color(0xFFC4C4C4),
+                              fontSize: 16,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          style: const TextStyle(
+                            color: Color(0xFF111111),
+                            fontSize: 16,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _loading
+                            ? null
+                            : () {
+                                setState(() {
+                                  _passwordObscured = !_passwordObscured;
+                                });
+                              },
+                        icon: Icon(
+                          _passwordObscured
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: const Color(0xFFC4C4C4),
+                          size: 20,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   height: 56,

@@ -6,7 +6,7 @@ class DeleteProfileUseCase {
 
   const DeleteProfileUseCase(this._repository);
 
-  Future<Result<String>> call() {
-    return _repository.deleteProfile();
+  Future<Result<String>> call(String password) {
+    return _repository.deleteProfile(password);
   }
 }

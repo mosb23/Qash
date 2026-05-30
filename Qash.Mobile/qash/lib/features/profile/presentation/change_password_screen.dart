@@ -38,9 +38,9 @@ class _ChangePasswordScreenState
         _nextController.text.isEmpty ||
         _confirmController.text.isEmpty ||
         _codeController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields.')));
       return;
     }
 
@@ -69,9 +69,9 @@ class _ChangePasswordScreenState
       final message = result.message.isNotEmpty
           ? result.message
           : 'Failed to change password.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -236,12 +236,14 @@ class _ChangePasswordScreenState
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF111111),
+                disabledBackgroundColor: const Color(0xFF111111),
                 foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
-              onPressed: _loading ? null : _handleSave,
+              onPressed: _loading ? () {} : _handleSave,
               child: Text(_loading ? 'Updating...' : 'Update Password'),
             ),
           ),

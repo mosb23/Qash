@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/widgets/goal_logo.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../domain/entities/saving_goal.dart';
 
@@ -277,24 +278,7 @@ class GoalSummaryCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.7),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                title.isNotEmpty ? title[0].toUpperCase() : '?',
-                style: const TextStyle(
-                  color: Color(0xFF111111),
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
+          const GoalLogo(),
           const SizedBox(height: 12),
           Text(
             title,
