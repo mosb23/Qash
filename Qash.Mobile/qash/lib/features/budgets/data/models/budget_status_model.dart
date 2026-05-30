@@ -10,6 +10,7 @@ class BudgetStatusModel extends BudgetStatusEntity {
     required super.budgetAmount,
     required super.spentAmount,
     required super.remainingAmount,
+    super.currency,
   });
 
   factory BudgetStatusModel.fromJson(Map<String, dynamic> json) {
@@ -22,6 +23,7 @@ class BudgetStatusModel extends BudgetStatusEntity {
       budgetAmount: (json['budgetAmount'] as num?)?.toDouble() ?? 0,
       spentAmount: (json['spentAmount'] as num?)?.toDouble() ?? 0,
       remainingAmount: (json['remainingAmount'] as num?)?.toDouble() ?? 0,
+      currency: json['currency']?.toString() ?? 'USD',
     );
   }
 }

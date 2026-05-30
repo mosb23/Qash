@@ -99,6 +99,11 @@ public class ApplicationDbContext : DbContext
             entity.Property(x => x.PasswordHash)
                 .IsRequired();
 
+            entity.Property(x => x.PreferredCurrency)
+                .IsRequired()
+                .HasMaxLength(10)
+                .HasDefaultValue("USD");
+
             entity.HasQueryFilter(x => !x.IsDeleted);
         });
 
@@ -165,6 +170,21 @@ public class ApplicationDbContext : DbContext
 
             entity.Property(x => x.ToAmount)
                 .HasColumnType("decimal(18,2)");
+
+            entity.Property(x => x.SourceCurrency)
+                .IsRequired()
+                .HasMaxLength(10)
+                .HasDefaultValue("USD");
+
+            entity.Property(x => x.DestinationCurrency)
+                .HasMaxLength(10);
+
+            entity.Property(x => x.AmountInBaseCurrency)
+                .HasColumnType("decimal(18,2)")
+                .HasDefaultValue(0m);
+
+            entity.Property(x => x.ExchangeRateUsed)
+                .HasColumnType("decimal(18,6)");
 
             entity.Property(x => x.Description)
                 .HasMaxLength(500);
@@ -235,6 +255,11 @@ public class ApplicationDbContext : DbContext
                 .HasPrecision(18, 2)
                 .IsRequired();
 
+            entity.Property(x => x.Currency)
+                .IsRequired()
+                .HasMaxLength(10)
+                .HasDefaultValue("USD");
+
             entity.HasOne(x => x.ApplicationUser)
                 .WithMany()
                 .HasForeignKey(x => x.ApplicationUserId)
@@ -269,6 +294,11 @@ public class ApplicationDbContext : DbContext
             entity.Property(x => x.CurrentAmount)
                 .HasPrecision(18, 2)
                 .IsRequired();
+
+            entity.Property(x => x.Currency)
+                .IsRequired()
+                .HasMaxLength(10)
+                .HasDefaultValue("USD");
 
             entity.Property(x => x.Deadline)
                 .IsRequired();

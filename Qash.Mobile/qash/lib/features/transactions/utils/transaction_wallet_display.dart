@@ -1,3 +1,4 @@
+import '../../../core/currency/currency_conversion_service.dart';
 import '../../wallets/domain/entities/wallet.dart';
 import '../domain/entities/transaction.dart';
 import '../providers/transactions_providers.dart';
@@ -48,6 +49,42 @@ WalletTransactionDisplay walletTransactionDisplay(
   Map<String, double>? exchangeRates,
 }) {
   final wallets = walletsById ?? const <String, WalletEntity>{};
+  final conversion = CurrencyConversionService(exchangeRates);
+
+  if (item.isTransferLinked && walletId != null) {
+    if (item.isExpense &&
+        normalizeTransactionId(item.walletId) ==
+            normalizeTransactionId(walletId)) {
+      return WalletTransactionDisplay(
+        amount: item.amount,
+        sign: '-',
+        currencyCode: resolveWalletCurrency(
+          walletId: item.walletId,
+          transactionCurrency:
+              item.walletCurrency.isNotEmpty ? item.walletCurrency : null,
+          walletsById: wallets,
+          fallback: fallbackCurrency,
+        ),
+        isIncomingTransfer: false,
+      );
+    }
+    if (item.isIncome &&
+        normalizeTransactionId(item.walletId) ==
+            normalizeTransactionId(walletId)) {
+      return WalletTransactionDisplay(
+        amount: item.amount,
+        sign: '+',
+        currencyCode: resolveWalletCurrency(
+          walletId: item.walletId,
+          transactionCurrency:
+              item.walletCurrency.isNotEmpty ? item.walletCurrency : null,
+          walletsById: wallets,
+          fallback: fallbackCurrency,
+        ),
+        isIncomingTransfer: true,
+      );
+    }
+  }
 
   if (item.isTransfer &&
       walletId != null &&
@@ -63,7 +100,7 @@ WalletTransactionDisplay walletTransactionDisplay(
       amount: resolveTransferCreditAmount(
         item,
         walletsById: wallets,
-        exchangeRates: exchangeRates,
+        conversion: conversion,
       ),
       sign: '+',
       currencyCode: currencyCode,
@@ -112,7 +149,7 @@ WalletTransactionDisplay walletTransactionDisplay(
         amount: resolveTransferCreditAmount(
           item,
           walletsById: wallets,
-          exchangeRates: exchangeRates,
+          conversion: conversion,
         ),
         sign: '+',
         currencyCode: targetCurrency,

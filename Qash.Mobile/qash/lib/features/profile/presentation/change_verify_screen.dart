@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/input/text_input_formatters.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/profile_providers.dart';
@@ -139,6 +142,7 @@ class _ProfileChangeVerifyScreenState
                   child: TextField(
                     controller: _codeController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: digitsOnlyInputFormatters,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       hintText: '000000',

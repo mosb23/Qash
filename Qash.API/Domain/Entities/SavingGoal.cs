@@ -14,5 +14,8 @@ public class SavingGoal : BaseEntity
 
     public decimal CurrentAmount { get; set; }
 
+    /// <summary>Goal amounts currency (ISO code).</summary>
+    public string Currency { get; set; } = "USD";
+
     public DateTime Deadline { get; set; }
 }

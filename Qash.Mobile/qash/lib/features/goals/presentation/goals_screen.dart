@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import '../../../core/currency/currency_format.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../../../core/widgets/goal_logo.dart';
 import '../domain/entities/saving_goal.dart';
 import '../providers/saving_goals_providers.dart';
+import '../utils/goal_date_utils.dart';
+import '../utils/saving_goal_currency.dart';
 
 class GoalsScreen extends ConsumerWidget {
   const GoalsScreen({super.key});
@@ -22,7 +24,6 @@ class GoalsScreen extends ConsumerWidget {
     final filteredGoals = ref.watch(filteredSavingGoalsProvider);
     final filter = ref.watch(goalsFilterProvider);
     final hasExpiredGoals = ref.watch(hasExpiredGoalsProvider);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
@@ -212,7 +213,9 @@ class GoalsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryCard(AsyncValue<Result<List<SavingGoalEntity>>> goals) {
+  Widget _summaryCard(
+    AsyncValue<Result<List<SavingGoalEntity>>> goals,
+  ) {
     return goals.when(
       data: (result) {
         if (result.isFailure) {
@@ -222,17 +225,12 @@ class GoalsScreen extends ConsumerWidget {
             completed: 0,
             totalGoals: 0,
             progress: 0,
+            currency: goalBaseCurrency,
           );
         }
         final items = result.data ?? const [];
-        final totalSaved = items.fold<double>(
-          0,
-          (sum, item) => sum + item.currentAmount,
-        );
-        final totalTarget = items.fold<double>(
-          0,
-          (sum, item) => sum + item.targetAmount,
-        );
+        final totalSaved = sumGoalsSavedUsd(items);
+        final totalTarget = sumGoalsTargetUsd(items);
         final completed = items
             .where(
               (item) =>
@@ -247,6 +245,7 @@ class GoalsScreen extends ConsumerWidget {
           completed: completed,
           totalGoals: items.length,
           progress: progress.clamp(0.0, 1.0),
+          currency: goalBaseCurrency,
         );
       },
       loading: () => _summaryCardShell(
@@ -255,6 +254,7 @@ class GoalsScreen extends ConsumerWidget {
         completed: 0,
         totalGoals: 0,
         progress: 0,
+        currency: goalBaseCurrency,
       ),
       error: (_, __) => _summaryCardShell(
         totalSaved: 0,
@@ -262,6 +262,7 @@ class GoalsScreen extends ConsumerWidget {
         completed: 0,
         totalGoals: 0,
         progress: 0,
+        currency: goalBaseCurrency,
       ),
     );
   }
@@ -272,6 +273,7 @@ class GoalsScreen extends ConsumerWidget {
     required int completed,
     required int totalGoals,
     required double progress,
+    required String currency,
   }) {
     return Container(
       width: double.infinity,
@@ -289,7 +291,7 @@ class GoalsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            _formatCurrency(totalSaved),
+            formatMoney(totalSaved, currency),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -298,7 +300,7 @@ class GoalsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'of ${_formatCurrency(totalTarget)} goal',
+            'of ${formatMoney(totalTarget, currency)} goal',
             style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
           ),
           const SizedBox(height: 16),
@@ -414,7 +416,7 @@ class GoalsScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              _deadlineLabel(goal),
+                              goalDeadlineLabel(goal),
                               style: TextStyle(
                                 color: expired
                                     ? const Color(0xFFEF4444)
@@ -465,7 +467,7 @@ class GoalsScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${_formatCurrency(goal.currentAmount)} saved',
+                  '${formatMoney(goal.currentAmount, goalBaseCurrency)} saved',
                   style: const TextStyle(
                     color: Color(0xB2111111),
                     fontSize: 12,
@@ -473,7 +475,7 @@ class GoalsScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  'Target: ${_formatCurrency(goal.targetAmount)}',
+                  'Target: ${formatMoney(goal.targetAmount, goalBaseCurrency)}',
                   style: const TextStyle(
                     color: Color(0xB2111111),
                     fontSize: 12,
@@ -551,45 +553,6 @@ class GoalsScreen extends ConsumerWidget {
     }
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
-  }
-
-  String _deadlineLabel(SavingGoalEntity goal) {
-    if (isGoalExpired(goal)) {
-      final daysOverdue = _daysOverdue(goal.deadline);
-      if (daysOverdue == 0) {
-        return 'Expired today';
-      }
-      if (daysOverdue == 1) {
-        return 'Expired 1 day ago';
-      }
-      return 'Expired $daysOverdue days ago';
-    }
-
-    final daysLeft = _daysLeft(goal.deadline);
-    if (daysLeft == 0) {
-      return 'Due today';
-    }
-    if (daysLeft == 1) {
-      return '1 day left';
-    }
-    return '$daysLeft days left';
-  }
-
-  int _daysLeft(DateTime deadline) {
-    final today = goalLocalDate(DateTime.now());
-    final target = goalLocalDate(deadline);
-    final diff = target.difference(today).inDays;
-    return diff < 0 ? 0 : diff;
-  }
-
-  int _daysOverdue(DateTime deadline) {
-    final today = goalLocalDate(DateTime.now());
-    final target = goalLocalDate(deadline);
-    final diff = today.difference(target).inDays;
-    return diff < 0 ? 0 : diff;
-  }
 
   String _errorText(Object error) {
     if (error is AppFailure) {

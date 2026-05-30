@@ -7,6 +7,7 @@ using Qash.API.Domain.Enums;
 using Qash.API.Features.Budgets.Commands;
 using Qash.API.Features.Budgets.DTOs;
 using Qash.API.Infrastructure.Data;
+using Qash.API.Infrastructure.Services;
 
 namespace Qash.API.Features.Budgets.Handlers;
 
@@ -64,7 +65,8 @@ public class CreateBudgetCommandHandler : IRequestHandler<CreateBudgetCommand, A
             CategoryId = category.Id,
             Year = request.Year,
             Month = request.Month,
-            Amount = request.Amount
+            Amount = request.Amount,
+            Currency = UserCurrencyResolver.NormalizeDisplayCurrency(request.Currency)
         };
 
         await _context.Budgets.AddAsync(budget, cancellationToken);

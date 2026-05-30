@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import '../../../core/navigation/app_navigation.dart';
+import '../../../core/currency/currency_aggregation.dart';
+import '../../../core/currency/currency_conversion_service.dart';
+import '../../../core/currency/currency_format.dart';
+import '../../../core/currency/currency_providers.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/widgets/currency_flag.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
@@ -13,21 +17,15 @@ import '../../transactions/providers/transactions_providers.dart';
 import '../providers/wallets_providers.dart';
 import '../utils/wallet_balance_utils.dart';
 
-class WalletsScreen extends ConsumerStatefulWidget {
+class WalletsScreen extends ConsumerWidget {
   const WalletsScreen({super.key});
 
   @override
-  ConsumerState<WalletsScreen> createState() => _WalletsScreenState();
-}
-
-class _WalletsScreenState extends ConsumerState<WalletsScreen> {
-  String? _selectedCurrency;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final wallets = ref.watch(walletsProvider);
     final transactionsAsync = ref.watch(transactionsProvider);
-    final exchangeRatesAsync = ref.watch(exchangeRatesProvider);
+    final conversion = ref.watch(currencyConversionServiceProvider);
+    final activeCurrency = ref.watch(effectiveDisplayCurrencyProvider);
 
     final typedTransactions = transactionsAsync.maybeWhen(
       data: (result) => result.isFailure
@@ -35,10 +33,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
           : (result.data ?? const []),
       orElse: () => const <TransactionEntity>[],
     );
-    final exchangeRates = exchangeRatesAsync.maybeWhen(
-      data: (rates) => defaultRatesOr(rates),
-      orElse: () => defaultRatesOr(null),
-    );
+    final exchangeRates = conversion.rates;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -55,7 +50,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
             ),
             child: IconButton(
               icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-              onPressed: () => context.pop(),
+              onPressed: () => popOrGo(context, '/home'),
             ),
           ),
         ),
@@ -98,21 +93,21 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                 );
               }
               final items = result.data ?? const [];
-              final availableCurrencies = _walletCurrencies(items);
-              final activeCurrency = _resolveActiveCurrency(
-                availableCurrencies,
+              final availableCurrencies = _dropdownCurrencies(
+                items,
+                activeCurrency,
               );
               final walletsById = walletsByIdMap(items);
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _summaryCard(
+                    ref,
                     items,
                     availableCurrencies,
                     activeCurrency,
                     typedTransactions,
-                    walletsById,
-                    exchangeRates,
+                    conversion,
                   ),
                   const SizedBox(height: 20),
                   if (items.isEmpty)
@@ -178,19 +173,18 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
   }
 
   Widget _summaryCard(
+    WidgetRef ref,
     List<WalletEntity> wallets,
     List<String> currencies,
     String activeCurrency,
     List<TransactionEntity> transactions,
-    Map<String, WalletEntity> walletsById,
-    Map<String, double> exchangeRates,
+    CurrencyConversionService conversion,
   ) {
-    final total = _walletsTotalForCurrency(
-      wallets,
-      activeCurrency,
-      transactions,
-      walletsById,
-      exchangeRates,
+    final total = sumWalletBalancesInCurrency(
+      wallets: wallets,
+      transactions: transactions,
+      targetCurrency: activeCurrency,
+      conversion: conversion,
     );
     return Container(
       width: double.infinity,
@@ -209,12 +203,12 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                 'Total Assets',
                 style: TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
               ),
-              _currencyDropdown(currencies, activeCurrency),
+              _currencyDropdown(ref, currencies, activeCurrency),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            _formatCurrencyWithSymbol(total, activeCurrency),
+            formatMoney(total, activeCurrency),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 30,
@@ -305,7 +299,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  _formatCurrencyWithSymbol(
+                  formatMoney(
                     balance,
                     wallet.currency.trim().toUpperCase(),
                   ),
@@ -343,82 +337,22 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
     }
   }
 
-  String _formatCurrencyWithSymbol(double value, String currencyCode) {
-    final symbol = _currencySymbol(currencyCode);
-    return NumberFormat.currency(symbol: symbol).format(value);
-  }
-
-  String _currencySymbol(String currencyCode) {
-    switch (currencyCode.toUpperCase()) {
-      case 'USD':
-        return '\$';
-      case 'EUR':
-        return '\u20ac';
-      case 'GBP':
-        return '\u00a3';
-      case 'EGP':
-        return 'E£';
-      case 'JPY':
-        return '\u00a5';
-      default:
-        return currencyCode.isNotEmpty ? currencyCode.substring(0, 1) : '\$';
-    }
-  }
-
-  List<String> _walletCurrencies(List<WalletEntity> wallets) {
-    final values = <String>{};
-    for (final wallet in wallets) {
-      final currency = wallet.currency.trim();
-      if (currency.isNotEmpty) {
-        values.add(currency.toUpperCase());
-      }
-    }
-    final list = values.toList()..sort();
-    return list.isEmpty ? ['USD'] : list;
-  }
-
-  String _resolveActiveCurrency(List<String> currencies) {
-    if (_selectedCurrency == null || !currencies.contains(_selectedCurrency)) {
-      final nextCurrency = currencies.isNotEmpty ? currencies.first : 'USD';
-      if (_selectedCurrency != nextCurrency) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) {
-            return;
-          }
-          setState(() {
-            _selectedCurrency = nextCurrency;
-          });
-        });
-      }
-      return nextCurrency;
-    }
-    return _selectedCurrency!;
-  }
-
-  double _walletsTotalForCurrency(
+  List<String> _dropdownCurrencies(
     List<WalletEntity> wallets,
-    String currency,
-    List<TransactionEntity> transactions,
-    Map<String, WalletEntity> walletsById,
-    Map<String, double> exchangeRates,
+    String activeCurrency,
   ) {
-    final target = currency.toUpperCase();
-    return wallets
-        .where((wallet) => wallet.currency.toUpperCase() == target)
-        .fold<double>(
-          0,
-          (sum, wallet) =>
-              sum +
-              displayWalletBalance(
-                wallet: wallet,
-                allTransactions: transactions,
-                walletsById: walletsById,
-                exchangeRates: exchangeRates,
-              ),
-        );
+    final currencies = collectWalletCurrencies(wallets);
+    if (!currencies.contains(activeCurrency)) {
+      return [...currencies, activeCurrency]..sort();
+    }
+    return currencies;
   }
 
-  Widget _currencyDropdown(List<String> items, String value) {
+  Widget _currencyDropdown(
+    WidgetRef ref,
+    List<String> items,
+    String value,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
@@ -460,9 +394,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
             if (next == null) {
               return;
             }
-            setState(() {
-              _selectedCurrency = next;
-            });
+            ref.read(selectedDisplayCurrencyProvider.notifier).state = next;
           },
         ),
       ),

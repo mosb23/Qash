@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/currency/currency_conversion_service.dart';
 import '../../../core/currency/currency_format.dart';
+import '../../../core/currency/currency_providers.dart';
 import '../utils/transaction_wallet_display.dart';
 
 import '../../../core/widgets/bottom_nav_bar.dart';
@@ -30,7 +32,8 @@ class TransactionsScreen extends ConsumerWidget {
     final transactions = ref.watch(filteredTransactionsProvider);
     final categories = ref.watch(categoriesProvider);
     final walletsAsync = ref.watch(walletsProvider);
-    final exchangeRatesAsync = ref.watch(exchangeRatesProvider);
+    final conversion = ref.watch(currencyConversionServiceProvider);
+    final displayCurrency = ref.watch(effectiveDisplayCurrencyProvider);
 
     final walletsById = walletsAsync.maybeWhen(
       data: (result) => walletsByIdMap(
@@ -38,10 +41,7 @@ class TransactionsScreen extends ConsumerWidget {
       ),
       orElse: () => const <String, WalletEntity>{},
     );
-    final exchangeRates = exchangeRatesAsync.maybeWhen(
-      data: (rates) => defaultRatesOr(rates),
-      orElse: () => defaultRatesOr(null),
-    );
+    final exchangeRates = conversion.rates;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -82,7 +82,7 @@ class TransactionsScreen extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        _summaryRow(summary),
+                        _summaryRow(summary, displayCurrency),
                         const SizedBox(height: 12),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
@@ -160,6 +160,8 @@ class TransactionsScreen extends ConsumerWidget {
                             listOptions.walletId,
                             walletsById,
                             exchangeRates,
+                            conversion,
+                            displayCurrency,
                           ),
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
@@ -231,7 +233,10 @@ class TransactionsScreen extends ConsumerWidget {
     }
   }
 
-  Widget _summaryRow(AsyncValue<TransactionsSummary> summary) {
+  Widget _summaryRow(
+    AsyncValue<TransactionsSummary> summary,
+    String displayCurrency,
+  ) {
     return Row(
       children: [
         Expanded(
@@ -240,6 +245,7 @@ class TransactionsScreen extends ConsumerWidget {
             color: const Color(0xFFD9F0C8),
             summary: summary,
             selector: (value) => value.incomeTotal,
+            displayCurrency: displayCurrency,
           ),
         ),
         const SizedBox(width: 12),
@@ -249,6 +255,7 @@ class TransactionsScreen extends ConsumerWidget {
             color: const Color(0xFFFFE3E3),
             summary: summary,
             selector: (value) => value.expenseTotal,
+            displayCurrency: displayCurrency,
           ),
         ),
       ],
@@ -260,6 +267,7 @@ class TransactionsScreen extends ConsumerWidget {
     required Color color,
     required AsyncValue<TransactionsSummary> summary,
     required double Function(TransactionsSummary summary) selector,
+    required String displayCurrency,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -277,7 +285,7 @@ class TransactionsScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           summary.when(
             data: (value) => Text(
-              _formatCurrency(selector(value)),
+              formatMoney(selector(value), displayCurrency),
               style: const TextStyle(color: Color(0xFF111111), fontSize: 14),
             ),
             loading: () => const Text(
@@ -302,6 +310,8 @@ class TransactionsScreen extends ConsumerWidget {
     String? walletId,
     Map<String, WalletEntity> walletsById,
     Map<String, double> exchangeRates,
+    CurrencyConversionService conversion,
+    String displayCurrency,
   ) {
     if (items.isEmpty) {
       final message = walletId != null && walletId.isNotEmpty
@@ -337,6 +347,8 @@ class TransactionsScreen extends ConsumerWidget {
               walletId: walletId,
               walletsById: walletsById,
               exchangeRates: exchangeRates,
+              conversion: conversion,
+              displayCurrency: displayCurrency,
             ),
             const SizedBox(height: 8),
           ],
@@ -371,6 +383,8 @@ class TransactionsScreen extends ConsumerWidget {
               walletId: walletId,
               walletsById: walletsById,
               exchangeRates: exchangeRates,
+              conversion: conversion,
+              displayCurrency: displayCurrency,
             ),
             const SizedBox(height: 8),
           ],
@@ -705,10 +719,6 @@ class TransactionsScreen extends ConsumerWidget {
     return DateFormat('MMM d, yyyy').format(day);
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
-  }
-
   Widget _filterButton(
     BuildContext context,
     WidgetRef ref,
@@ -801,6 +811,8 @@ class TransactionsScreen extends ConsumerWidget {
     String? walletId,
     Map<String, WalletEntity>? walletsById,
     Map<String, double>? exchangeRates,
+    required CurrencyConversionService conversion,
+    required String displayCurrency,
   }) {
     final display = walletTransactionDisplay(
       item,
@@ -844,6 +856,8 @@ class TransactionsScreen extends ConsumerWidget {
       );
     }
     final subtitle = subtitleParts.join(' · ');
+    final amountText =
+        '$amountSign${formatMoney(display.amount, display.currencyCode)}';
 
     return GestureDetector(
       onTap: () => context.push('/transactions/${item.id}'),
@@ -903,7 +917,7 @@ class TransactionsScreen extends ConsumerWidget {
               ],
             ),
             Text(
-              '$amountSign${formatMoney(display.amount, display.currencyCode)}',
+              amountText,
               style: TextStyle(
                 color: amountColor,
                 fontSize: 14,

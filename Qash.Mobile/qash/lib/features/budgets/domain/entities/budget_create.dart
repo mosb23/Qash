@@ -4,6 +4,7 @@ class BudgetCreateData {
   final double amount;
   final int year;
   final int month;
+  final String currency;
 
   const BudgetCreateData({
     required this.userId,
@@ -11,5 +12,6 @@ class BudgetCreateData {
     required this.amount,
     required this.year,
     required this.month,
+    this.currency = 'USD',
   });
 }

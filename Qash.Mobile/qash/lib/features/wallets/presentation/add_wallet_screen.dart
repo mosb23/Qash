@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/input/text_input_formatters.dart';
 import '../../../core/widgets/currency_flag.dart';
 import '../domain/entities/wallet.dart';
 import '../domain/entities/wallet_create.dart';
@@ -244,6 +246,7 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: amountInputFormatters,
             ),
             const SizedBox(height: 24),
             if (_errorMessage != null)
@@ -366,11 +369,13 @@ class _CustomInputField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
   final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
 
   const _CustomInputField({
     required this.controller,
     required this.hint,
     this.keyboardType,
+    this.inputFormatters,
   });
 
   @override
@@ -378,6 +383,7 @@ class _CustomInputField extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: const TextStyle(color: Color(0xFF111111)),
       decoration: InputDecoration(
         hintText: hint,

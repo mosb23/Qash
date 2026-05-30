@@ -1,8 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/providers.dart';
+import '../../../core/currency/currency_aggregation.dart';
+import '../../../core/currency/currency_providers.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
+import '../../transactions/domain/entities/transaction.dart';
+import '../../transactions/providers/transactions_providers.dart';
+import '../../wallets/domain/entities/wallet.dart';
+import '../../wallets/providers/wallets_providers.dart';
+import '../../wallets/utils/wallet_balance_utils.dart';
 import '../data/analytics_api.dart';
 import '../data/datasources/analytics_remote_data_source.dart';
 import '../data/repositories/analytics_repository_impl.dart';
@@ -17,6 +24,8 @@ import '../domain/usecases/get_date_range_summary_use_case.dart';
 import '../domain/usecases/get_income_vs_expense_use_case.dart';
 import '../domain/usecases/get_monthly_summary_use_case.dart';
 import '../domain/usecases/get_spending_trend_use_case.dart';
+import '../utils/analytics_chart_data.dart';
+import '../utils/analytics_transaction_aggregation.dart';
 
 enum AnalyticsPeriod { week, month, year }
 
@@ -73,13 +82,12 @@ final analyticsPeriodConfigProvider = Provider<AnalyticsPeriodConfig>((ref) {
   }
 
   if (period == AnalyticsPeriod.week) {
-    final start = DateTime(now.year, now.month, 1);
     final end = startOfDay(now).add(const Duration(days: 1));
-    final days = end.difference(start).inDays.clamp(1, 31);
+    final start = end.subtract(const Duration(days: 7));
     return AnalyticsPeriodConfig(
       year: now.year,
       month: now.month,
-      days: days,
+      days: 7,
       fromUtc: start,
       toUtcExclusive: end,
     );
@@ -88,23 +96,21 @@ final analyticsPeriodConfigProvider = Provider<AnalyticsPeriodConfig>((ref) {
   if (period == AnalyticsPeriod.year) {
     final start = DateTime(now.year, 1, 1);
     final end = DateTime(now.year + 1, 1, 1);
-    final days = end.difference(start).inDays;
     return AnalyticsPeriodConfig(
       year: now.year,
       month: now.month,
-      days: days,
+      days: end.difference(start).inDays,
       fromUtc: start,
       toUtcExclusive: end,
     );
   }
 
-  final start = DateTime(now.year, 1, 1);
-  final end = startOfDay(now).add(const Duration(days: 1));
-  final days = end.difference(start).inDays.clamp(1, 365);
+  final start = DateTime(now.year, now.month, 1);
+  final end = DateTime(now.year, now.month + 1, 1);
   return AnalyticsPeriodConfig(
     year: now.year,
     month: now.month,
-    days: days,
+    days: end.difference(start).inDays,
     fromUtc: start,
     toUtcExclusive: end,
   );
@@ -219,51 +225,221 @@ final yearlyComparisonProvider =
     });
 
 final analyticsSummaryProvider = Provider<AsyncValue<AnalyticsSummary>>((ref) {
-  final period = ref.watch(analyticsPeriodProvider);
+  final config = ref.watch(analyticsPeriodConfigProvider);
+  final transactionsAsync = ref.watch(transactionsProvider);
+  final walletsAsync = ref.watch(walletsProvider);
+  final conversion = ref.watch(currencyConversionServiceProvider);
+  final displayCurrency = ref.watch(effectiveDisplayCurrencyProvider);
 
-  if (period == AnalyticsPeriod.month) {
-    final monthly = ref.watch(monthlySummaryProvider);
-    return monthly.whenData((result) {
-      if (result.isFailure) {
-        throw result.failure ??
-            const AppFailure(message: 'Failed to load summary.');
-      }
-      final data =
-          result.data ??
-          const MonthlySummaryEntity(
-            totalIncome: 0,
-            totalExpenses: 0,
-            netBalance: 0,
-            transactionCount: 0,
-          );
-      return AnalyticsSummary(
-        totalIncome: data.totalIncome,
-        totalExpenses: data.totalExpenses,
-        netBalance: data.netBalance,
-      );
-    });
-  }
-
-  final range = ref.watch(dateRangeSummaryProvider);
-  return range.whenData((result) {
+  return transactionsAsync.whenData((result) {
     if (result.isFailure) {
       throw result.failure ??
           const AppFailure(message: 'Failed to load summary.');
     }
-    final data =
-        result.data ??
-        DateRangeSummaryEntity(
-          fromUtc: DateTime.now(),
-          toUtcExclusive: DateTime.now(),
-          totalIncome: 0,
-          totalExpenses: 0,
-          net: 0,
-          transactionCount: 0,
-        );
+
+    final walletsById = walletsAsync.maybeWhen(
+      data: (walletResult) {
+        if (walletResult.isFailure) {
+          return const <String, WalletEntity>{};
+        }
+        return walletsByIdMap(walletResult.data ?? const []);
+      },
+      orElse: () => const <String, WalletEntity>{},
+    );
+
+    var income = 0.0;
+    var expenses = 0.0;
+
+    for (final item in result.data ?? const <TransactionEntity>[]) {
+      if (item.excludeFromGlobalTotals) {
+        continue;
+      }
+
+      final local = item.transactionDate.isUtc
+          ? item.transactionDate.toLocal()
+          : item.transactionDate;
+      final date = DateTime(local.year, local.month, local.day);
+      if (date.isBefore(config.fromUtc) || !date.isBefore(config.toUtcExclusive)) {
+        continue;
+      }
+
+      final converted = convertTransactionAmount(
+        transaction: item,
+        targetCurrency: displayCurrency,
+        conversion: conversion,
+        walletsById: walletsById,
+      );
+
+      if (item.isIncome) {
+        income += converted;
+      } else if (item.isExpense) {
+        expenses += converted;
+      }
+    }
+
     return AnalyticsSummary(
-      totalIncome: data.totalIncome,
-      totalExpenses: data.totalExpenses,
-      netBalance: data.net,
+      totalIncome: income,
+      totalExpenses: expenses,
+      netBalance: income - expenses,
     );
   });
 });
+
+final clientCategoryBreakdownProvider =
+    Provider<AsyncValue<Result<List<CategoryBreakdownEntity>>>>((ref) {
+      final period = ref.watch(analyticsPeriodProvider);
+      if (period != AnalyticsPeriod.month) {
+        return AsyncValue.data(Result.success(const []));
+      }
+
+      final config = ref.watch(analyticsPeriodConfigProvider);
+      final transactionsAsync = ref.watch(transactionsProvider);
+      final walletsAsync = ref.watch(walletsProvider);
+      final conversion = ref.watch(currencyConversionServiceProvider);
+      final displayCurrency = ref.watch(effectiveDisplayCurrencyProvider);
+
+      return transactionsAsync.when(
+        data: (result) {
+          if (result.isFailure) {
+            return AsyncValue.data(Result.failure(result.failure!));
+          }
+
+          final walletsById = walletsAsync.maybeWhen(
+            data: (walletResult) {
+              if (walletResult.isFailure) {
+                return const <String, WalletEntity>{};
+              }
+              return walletsByIdMap(walletResult.data ?? const []);
+            },
+            orElse: () => const <String, WalletEntity>{},
+          );
+
+          final totals = <String, double>{};
+          for (final item in result.data ?? const <TransactionEntity>[]) {
+            if (!item.isExpense) {
+              continue;
+            }
+
+            final local = item.transactionDate.isUtc
+                ? item.transactionDate.toLocal()
+                : item.transactionDate;
+            final date = DateTime(local.year, local.month, local.day);
+            if (date.isBefore(config.fromUtc) ||
+                !date.isBefore(config.toUtcExclusive)) {
+              continue;
+            }
+
+            final converted = convertTransactionAmount(
+              transaction: item,
+              targetCurrency: displayCurrency,
+              conversion: conversion,
+              walletsById: walletsById,
+            );
+            totals[item.categoryId] =
+                (totals[item.categoryId] ?? 0) + converted;
+          }
+
+          final items = totals.entries
+              .map(
+                (entry) => CategoryBreakdownEntity(
+                  categoryId: entry.key,
+                  totalAmount: entry.value,
+                ),
+              )
+              .toList()
+            ..sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
+
+          return AsyncValue.data(Result.success(items));
+        },
+        loading: () => const AsyncValue.loading(),
+        error: (error, stack) => AsyncValue.error(error, stack),
+      );
+    });
+
+/// Yearly income/expense from transactions with wallet-aware conversion.
+final clientYearlyComparisonProvider =
+    Provider<AsyncValue<List<YearlyComparison>>>((ref) {
+      final transactionsAsync = ref.watch(transactionsProvider);
+      final walletsAsync = ref.watch(walletsProvider);
+      final conversion = ref.watch(currencyConversionServiceProvider);
+      final displayCurrency = ref.watch(effectiveDisplayCurrencyProvider);
+
+      return transactionsAsync.when(
+        data: (result) {
+          if (result.isFailure) {
+            return AsyncValue.error(
+              result.failure ??
+                  const AppFailure(message: 'Failed to load transactions.'),
+              StackTrace.current,
+            );
+          }
+
+          final walletsById = walletsAsync.maybeWhen(
+            data: (walletResult) {
+              if (walletResult.isFailure) {
+                return const <String, WalletEntity>{};
+              }
+              return walletsByIdMap(walletResult.data ?? const []);
+            },
+            orElse: () => const <String, WalletEntity>{},
+          );
+
+          return AsyncValue.data(
+            computeYearlyComparisonFromTransactions(
+              transactions: result.data ?? const [],
+              displayCurrency: displayCurrency,
+              conversion: conversion,
+              walletsById: walletsById,
+            ),
+          );
+        },
+        loading: () => const AsyncValue.loading(),
+        error: (error, stack) => AsyncValue.error(error, stack),
+      );
+    });
+
+/// Spending trend bars computed client-side (week / month / year).
+final clientSpendingTrendBarsProvider =
+    Provider<AsyncValue<List<AnalyticsChartBar>>>((ref) {
+      final period = ref.watch(analyticsPeriodProvider);
+      final config = ref.watch(analyticsPeriodConfigProvider);
+      final transactionsAsync = ref.watch(transactionsProvider);
+      final walletsAsync = ref.watch(walletsProvider);
+      final conversion = ref.watch(currencyConversionServiceProvider);
+      final displayCurrency = ref.watch(effectiveDisplayCurrencyProvider);
+
+      return transactionsAsync.when(
+        data: (result) {
+          if (result.isFailure) {
+            return AsyncValue.error(
+              result.failure ??
+                  const AppFailure(message: 'Failed to load transactions.'),
+              StackTrace.current,
+            );
+          }
+
+          final walletsById = walletsAsync.maybeWhen(
+            data: (walletResult) {
+              if (walletResult.isFailure) {
+                return const <String, WalletEntity>{};
+              }
+              return walletsByIdMap(walletResult.data ?? const []);
+            },
+            orElse: () => const <String, WalletEntity>{},
+          );
+
+          return AsyncValue.data(
+            computeSpendingTrendBars(
+              transactions: result.data ?? const [],
+              period: period,
+              config: config,
+              displayCurrency: displayCurrency,
+              conversion: conversion,
+              walletsById: walletsById,
+            ),
+          );
+        },
+        loading: () => const AsyncValue.loading(),
+        error: (error, stack) => AsyncValue.error(error, stack),
+      );
+    });

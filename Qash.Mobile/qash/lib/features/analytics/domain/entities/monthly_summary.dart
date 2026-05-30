@@ -3,11 +3,15 @@ class MonthlySummaryEntity {
   final double totalExpenses;
   final double netBalance;
   final int transactionCount;
+  final String baseCurrency;
+  final String displayCurrency;
 
   const MonthlySummaryEntity({
     required this.totalIncome,
     required this.totalExpenses,
     required this.netBalance,
     required this.transactionCount,
+    this.baseCurrency = 'USD',
+    this.displayCurrency = 'USD',
   });
 }

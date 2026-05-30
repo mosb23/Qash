@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../config/providers.dart';
+import '../../../core/providers/user_session_invalidation.dart';
 
 class LogoutConfirmScreen extends ConsumerStatefulWidget {
   const LogoutConfirmScreen({super.key});
@@ -24,6 +25,7 @@ class _LogoutConfirmScreenState extends ConsumerState<LogoutConfirmScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 300));
 
     await ref.read(secureStorageProvider).clearTokens();
+    invalidateUserSessionData(ref);
 
     if (!mounted) {
       return;

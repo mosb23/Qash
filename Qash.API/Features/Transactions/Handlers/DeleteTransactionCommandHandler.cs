@@ -35,11 +35,29 @@ public class DeleteTransactionCommandHandler : IRequestHandler<DeleteTransaction
                 ["Transaction was not found."]);
         }
 
-        ReverseTransactionEffect(transaction);
+        if (transaction.TransferGroupId.HasValue)
+        {
+            var counterpart = await ResolveTransferCounterpart(transaction, cancellationToken);
+            ReverseTransactionEffect(transaction);
+            MarkDeleted(transaction);
 
-        transaction.IsDeleted = true;
-        transaction.DeletedAt = DateTime.UtcNow;
-        transaction.UpdatedAt = DateTime.UtcNow;
+            if (counterpart is not null)
+            {
+                await _context.Entry(counterpart).Reference(x => x.Wallet).LoadAsync(cancellationToken);
+                if (counterpart.ToWalletId.HasValue)
+                {
+                    await _context.Entry(counterpart).Reference(x => x.ToWallet).LoadAsync(cancellationToken);
+                }
+
+                ReverseTransactionEffect(counterpart);
+                MarkDeleted(counterpart);
+            }
+        }
+        else
+        {
+            ReverseTransactionEffect(transaction);
+            MarkDeleted(transaction);
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -48,8 +66,56 @@ public class DeleteTransactionCommandHandler : IRequestHandler<DeleteTransaction
             "Transaction deleted successfully.");
     }
 
+    private async Task<Domain.Entities.Transaction?> ResolveTransferCounterpart(
+        Domain.Entities.Transaction transaction,
+        CancellationToken cancellationToken)
+    {
+        if (transaction.LinkedTransactionId.HasValue)
+        {
+            return await _context.Transactions
+                .FirstOrDefaultAsync(
+                    x => x.Id == transaction.LinkedTransactionId.Value &&
+                         x.ApplicationUserId == transaction.ApplicationUserId &&
+                         !x.IsDeleted,
+                    cancellationToken);
+        }
+
+        if (!transaction.TransferGroupId.HasValue)
+        {
+            return null;
+        }
+
+        return await _context.Transactions
+            .FirstOrDefaultAsync(
+                x => x.TransferGroupId == transaction.TransferGroupId &&
+                     x.Id != transaction.Id &&
+                     x.ApplicationUserId == transaction.ApplicationUserId &&
+                     !x.IsDeleted,
+                cancellationToken);
+    }
+
+    private static void MarkDeleted(Domain.Entities.Transaction transaction)
+    {
+        transaction.IsDeleted = true;
+        transaction.DeletedAt = DateTime.UtcNow;
+        transaction.UpdatedAt = DateTime.UtcNow;
+    }
+
     private static void ReverseTransactionEffect(Domain.Entities.Transaction transaction)
     {
+        if (transaction.TransferGroupId.HasValue &&
+            transaction.TransactionType is CategoryType.Expense or CategoryType.Income)
+        {
+            if (transaction.TransactionType == CategoryType.Expense)
+            {
+                ReverseEffect(transaction.Wallet, CategoryType.Expense, transaction.Amount);
+                return;
+            }
+
+            ReverseEffect(transaction.Wallet, CategoryType.Income, transaction.Amount);
+            return;
+        }
+
         if (transaction.TransactionType == CategoryType.Transfer)
         {
             if (transaction.ToWallet is null)

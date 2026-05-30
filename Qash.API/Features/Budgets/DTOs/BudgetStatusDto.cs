@@ -17,4 +17,6 @@ public class BudgetStatusDto
     public decimal SpentAmount { get; set; }
 
     public decimal RemainingAmount { get; set; }
+
+    public string Currency { get; set; } = "USD";
 }

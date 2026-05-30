@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/currency/currency_format.dart';
+import '../../../core/currency/currency_providers.dart';
+import '../../goals/utils/saving_goal_currency.dart';
+import '../../transactions/providers/transactions_providers.dart';
+import '../../wallets/providers/wallets_providers.dart';
 import '../domain/entities/budget_status.dart';
 import '../providers/budgets_providers.dart';
 
@@ -11,11 +16,12 @@ class BudgetScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final budgets = ref.watch(budgetStatusesProvider);
+    final budgets = ref.watch(filteredBudgetStatusesProvider);
     final filteredBudgets = ref.watch(filteredBudgetStatusesProvider);
     final filter = ref.watch(budgetsFilterProvider);
     final hasExpiredBudgets = ref.watch(hasExpiredBudgetsProvider);
     final period = ref.watch(budgetPeriodProvider);
+    final conversion = ref.watch(currencyConversionServiceProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -38,7 +44,13 @@ class BudgetScreen extends ConsumerWidget {
             ),
             child: IconButton(
               icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/home');
+                }
+              },
             ),
           ),
         ),
@@ -69,32 +81,32 @@ class BudgetScreen extends ConsumerWidget {
             child: RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(budgetStatusesProvider);
+                ref.invalidate(transactionsProvider);
+                ref.invalidate(walletsProvider);
                 await ref.read(budgetStatusesProvider.future);
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                 child: budgets.when(
-                  data: (result) {
-                    if (result.isFailure) {
-                      return Text(
-                        result.message,
-                        style: const TextStyle(
-                          color: Color(0xFF8B8B8B),
-                          fontSize: 12,
-                        ),
-                      );
-                    }
-
-                    final allItems =
-                        result.data ?? const <BudgetStatusEntity>[];
+                  data: (allItems) {
                     final totalBudget = allItems.fold<double>(
                       0,
-                      (sum, item) => sum + item.budgetAmount,
+                      (sum, item) =>
+                          sum +
+                          conversion.convertToBase(
+                            item.budgetAmount,
+                            item.currency,
+                          ),
                     );
                     final totalSpent = allItems.fold<double>(
                       0,
-                      (sum, item) => sum + item.spentAmount,
+                      (sum, item) =>
+                          sum +
+                          conversion.convertToBase(
+                            item.spentAmount,
+                            item.currency,
+                          ),
                     );
                     final overBudgetCount = allItems
                         .where((item) => item.isAtOrOverLimit)
@@ -106,6 +118,7 @@ class BudgetScreen extends ConsumerWidget {
                           period: period,
                           totalBudget: totalBudget,
                           totalSpent: totalSpent,
+                          currency: goalBaseCurrency,
                         ),
                         const SizedBox(height: 20),
                         if (overBudgetCount > 0) ...[
@@ -317,12 +330,14 @@ class BudgetSummaryCard extends StatelessWidget {
   final BudgetPeriod period;
   final double totalBudget;
   final double totalSpent;
+  final String currency;
 
   const BudgetSummaryCard({
     super.key,
     required this.period,
     required this.totalBudget,
     required this.totalSpent,
+    required this.currency,
   });
 
   @override
@@ -360,7 +375,7 @@ class BudgetSummaryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _formatCurrency(totalSpent),
+                    formatMoney(totalSpent, currency),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,
@@ -369,7 +384,7 @@ class BudgetSummaryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'of ${_formatCurrency(totalBudget)} budgeted',
+                    'of ${formatMoney(totalBudget, currency)} budgeted',
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
@@ -509,9 +524,9 @@ class BudgetCard extends StatelessWidget {
                     Text(
                       isAtOrOverLimit
                           ? budget.isOverBudget
-                                ? 'Over by ${_formatCurrency(budget.spentAmount - budget.budgetAmount)}'
+                                ? 'Over by ${formatMoney(budget.spentAmount - budget.budgetAmount, budget.currency)}'
                                 : 'Budget limit reached'
-                          : '${_formatCurrency(budget.remainingAmount)} left',
+                          : '${formatMoney(budget.remainingAmount, budget.currency)} left',
                       style: TextStyle(
                         color: isAtOrOverLimit
                             ? const Color(0xFFEF4444)
@@ -527,7 +542,7 @@ class BudgetCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    _formatCurrency(budget.spentAmount),
+                    formatMoney(budget.spentAmount, budget.currency),
                     style: TextStyle(
                       color: isAtOrOverLimit
                           ? const Color(0xFFEF4444)
@@ -537,7 +552,7 @@ class BudgetCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'of ${_formatCurrency(budget.budgetAmount)}',
+                    'of ${formatMoney(budget.budgetAmount, budget.currency)}',
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
@@ -664,6 +679,3 @@ String _periodLabel(BudgetPeriod period) {
   return '$monthName ${period.year} Budget';
 }
 
-String _formatCurrency(double value) {
-  return '\$${value.toStringAsFixed(2)}';
-}

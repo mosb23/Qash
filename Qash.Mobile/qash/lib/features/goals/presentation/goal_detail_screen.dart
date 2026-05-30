@@ -1,23 +1,27 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/currency/currency_format.dart';
+import '../utils/goal_date_utils.dart';
+import '../utils/saving_goal_currency.dart';
 import '../../../core/widgets/goal_logo.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
 import '../domain/entities/saving_goal.dart';
 
-class GoalDetailScreen extends StatefulWidget {
+class GoalDetailScreen extends ConsumerStatefulWidget {
   final SavingGoalEntity goal;
 
   const GoalDetailScreen({super.key, required this.goal});
 
   @override
-  State<GoalDetailScreen> createState() => _GoalDetailScreenState();
+  ConsumerState<GoalDetailScreen> createState() => _GoalDetailScreenState();
 }
 
-class _GoalDetailScreenState extends State<GoalDetailScreen> {
+class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
   late SavingGoalEntity _goal;
 
   static const _goalCardColor = Color(0xFFE5E7EB);
@@ -34,7 +38,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     final savedAmount = _goal.currentAmount;
     final targetAmount = _goal.targetAmount;
     final remaining = math.max(targetAmount - savedAmount, 0).toDouble();
-    final daysLeft = _daysLeft(_goal.deadline);
+    final daysLeft = goalDaysLeft(_goal.deadline);
     final monthsLeft = math.max(1, (daysLeft / 30).ceil());
     final needPerMonth = remaining / monthsLeft;
     final cardColor = _goalColor(_goal);
@@ -79,6 +83,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 savedAmount: savedAmount,
                 targetAmount: targetAmount,
                 progress: progress,
+                currency: goalBaseCurrency,
               ),
               const SizedBox(height: 20),
               Row(
@@ -86,7 +91,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   Expanded(
                     child: StatCard(
                       title: 'Remaining',
-                      value: _formatCurrency(remaining),
+                      value: formatMoney(remaining, goalBaseCurrency),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -100,7 +105,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   Expanded(
                     child: StatCard(
                       title: 'Need/Month',
-                      value: _formatCurrency(needPerMonth),
+                      value: formatMoney(needPerMonth, goalBaseCurrency),
                     ),
                   ),
                 ],
@@ -140,7 +145,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               for (final milestone in _milestones(targetAmount, progress)) ...[
                 MilestoneTile(
                   title: milestone.title,
-                  amount: _formatCurrency(milestone.amount),
+                  amount: formatMoney(milestone.amount, goalBaseCurrency),
                   completed: milestone.completed,
                 ),
                 const SizedBox(height: 10),
@@ -194,18 +199,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     return _goalCardColor;
   }
 
-  int _daysLeft(DateTime deadline) {
-    final today = DateTime.now();
-    final dateOnly = DateTime(today.year, today.month, today.day);
-    final target = DateTime(deadline.year, deadline.month, deadline.day);
-    final diff = target.difference(dateOnly).inDays;
-    return diff < 0 ? 0 : diff;
-  }
-
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
-  }
-
   void _onTabSelected(BuildContext context, AppTab tab) {
     switch (tab) {
       case AppTab.home:
@@ -256,6 +249,7 @@ class GoalSummaryCard extends StatelessWidget {
   final double targetAmount;
   final double progress;
   final Color color;
+  final String currency;
 
   const GoalSummaryCard({
     super.key,
@@ -265,6 +259,7 @@ class GoalSummaryCard extends StatelessWidget {
     required this.targetAmount,
     required this.progress,
     required this.color,
+    required this.currency,
   });
 
   @override
@@ -298,7 +293,7 @@ class GoalSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            _formatCurrency(savedAmount),
+            formatMoney(savedAmount, currency),
             style: const TextStyle(
               color: Color(0xFF111111),
               fontSize: 36,
@@ -307,7 +302,7 @@ class GoalSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'of ${_formatCurrency(targetAmount)}',
+            'of ${formatMoney(targetAmount, currency)}',
             style: TextStyle(color: Colors.black.withValues(alpha: 0.55)),
           ),
           const SizedBox(height: 20),
@@ -330,9 +325,6 @@ class GoalSummaryCard extends StatelessWidget {
     );
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
-  }
 }
 
 class StatCard extends StatelessWidget {

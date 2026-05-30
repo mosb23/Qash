@@ -6,6 +6,10 @@ public class DateRangeSummaryDto
 
     public DateTime ToUtcExclusive { get; set; }
 
+    public string BaseCurrency { get; set; } = "USD";
+
+    public string DisplayCurrency { get; set; } = "USD";
+
     public decimal TotalIncome { get; set; }
 
     public decimal TotalExpenses { get; set; }

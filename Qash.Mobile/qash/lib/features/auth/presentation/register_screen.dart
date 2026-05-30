@@ -1,5 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../../core/input/text_input_formatters.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -161,6 +164,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 _inputField(
                   controller: _firstNameController,
                   hintText: 'Akmal',
+                  inputFormatters: nameInputFormatters,
+                  keyboardType: TextInputType.name,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -176,6 +181,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 _inputField(
                   controller: _lastNameController,
                   hintText: 'Nasruddin',
+                  inputFormatters: nameInputFormatters,
+                  keyboardType: TextInputType.name,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -206,8 +213,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 8),
                 _inputField(
                   controller: _phoneController,
-                  hintText: '+20 1xx xxx xxxx',
+                  hintText: kPhoneHint,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: phoneInputFormatters,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -367,6 +375,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     required TextEditingController controller,
     required String hintText,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Container(
       width: double.infinity,
@@ -393,6 +402,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: hintText,

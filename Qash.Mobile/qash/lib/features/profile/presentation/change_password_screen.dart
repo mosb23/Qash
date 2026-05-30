@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../../core/input/text_input_formatters.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -208,6 +211,8 @@ class _ChangePasswordScreenState
             showPassword: false,
             obscure: false,
             hintText: '00000',
+            keyboardType: TextInputType.number,
+            inputFormatters: digitsOnlyInputFormatters,
           ),
           const SizedBox(height: 16),
           _PasswordField(
@@ -262,6 +267,8 @@ class _PasswordField extends StatelessWidget {
     this.showToggle = false,
     this.hintText = '********',
     this.obscure = true,
+    this.keyboardType = TextInputType.text,
+    this.inputFormatters,
   });
 
   final String label;
@@ -271,6 +278,8 @@ class _PasswordField extends StatelessWidget {
   final bool showToggle;
   final String hintText;
   final bool obscure;
+  final TextInputType keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -285,6 +294,8 @@ class _PasswordField extends StatelessWidget {
         TextField(
           controller: controller,
           obscureText: obscure ? (showToggle ? !showPassword : true) : false,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(
             hintText: hintText,
             filled: true,

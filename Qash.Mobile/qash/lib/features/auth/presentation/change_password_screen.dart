@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../../core/input/text_input_formatters.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -140,6 +143,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   label: 'Verification code',
                   controller: _codeController,
                   hint: 'Enter code',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: digitsOnlyInputFormatters,
                 ),
                 const SizedBox(height: 16),
                 _buildField(
@@ -220,6 +225,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     bool obscure = false,
     bool showToggle = false,
     VoidCallback? onToggle,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,6 +269,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 child: TextField(
                   controller: controller,
                   obscureText: obscure,
+                  keyboardType: keyboardType,
+                  inputFormatters: inputFormatters,
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: hint,

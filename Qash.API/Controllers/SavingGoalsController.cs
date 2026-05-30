@@ -1,7 +1,10 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Qash.API.Common.Responses;
 using Qash.API.Features.SavingGoals.Commands;
+using Qash.API.Features.SavingGoals.DTOs;
 using Qash.API.Features.SavingGoals.Queries;
 using System.Security.Claims;
 
@@ -13,10 +16,14 @@ namespace Qash.API.Controllers;
 public class SavingGoalsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IValidator<CreateSavingGoalCommand> _createValidator;
 
-    public SavingGoalsController(IMediator mediator)
+    public SavingGoalsController(
+        IMediator mediator,
+        IValidator<CreateSavingGoalCommand> createValidator)
     {
         _mediator = mediator;
+        _createValidator = createValidator;
     }
 
     [HttpGet]
@@ -47,6 +54,15 @@ public class SavingGoalsController : ControllerBase
         var userId = GetCurrentUserId();
         if (userId is null)
             return Unauthorized();
+
+        var validation = await _createValidator.ValidateAsync(command);
+        if (!validation.IsValid)
+        {
+            return BadRequest(
+                ApiResponse<SavingGoalDto>.FailResponse(
+                    "Create saving goal failed.",
+                    validation.Errors.Select(e => e.ErrorMessage).ToList()));
+        }
 
         command.UserId = userId.Value;
         var response = await _mediator.Send(command);

@@ -5,6 +5,10 @@ namespace Qash.API.Features.Dashboard.DTOs;
 
 public class DashboardDto
 {
+    public string BaseCurrency { get; set; } = "USD";
+
+    public string DisplayCurrency { get; set; } = "USD";
+
     public decimal TotalBalance { get; set; }
 
     public decimal MonthlyIncome { get; set; }
@@ -25,6 +29,14 @@ public class RecentTransactionDto
     public string Title { get; set; } = string.Empty;
 
     public decimal Amount { get; set; }
+
+    public decimal? ConvertedAmount { get; set; }
+
+    public string SourceCurrency { get; set; } = string.Empty;
+
+    public string? DestinationCurrency { get; set; }
+
+    public decimal? ExchangeRateUsed { get; set; }
 
     public string Type { get; set; } = string.Empty;
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:go_router/go_router.dart';
+
+import '../../../core/input/text_input_formatters.dart';
 
 class ForgotVerifyScreen extends StatefulWidget {
   final String? phoneNumber;
@@ -129,6 +132,7 @@ class _ForgotVerifyScreenState extends State<ForgotVerifyScreen> {
                   child: TextField(
                     controller: _codeController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: digitsOnlyInputFormatters,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       hintText: '000000',

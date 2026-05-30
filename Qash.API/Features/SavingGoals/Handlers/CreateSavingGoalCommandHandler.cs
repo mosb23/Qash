@@ -6,6 +6,7 @@ using Qash.API.Domain.Entities;
 using Qash.API.Features.SavingGoals.Commands;
 using Qash.API.Features.SavingGoals.DTOs;
 using Qash.API.Infrastructure.Data;
+using Qash.API.Infrastructure.Services;
 
 namespace Qash.API.Features.SavingGoals.Handlers;
 
@@ -13,8 +14,9 @@ public class CreateSavingGoalCommandHandler : IRequestHandler<CreateSavingGoalCo
 {
     private readonly ApplicationDbContext _context;
     private readonly IMapper _mapper;
-
-    public CreateSavingGoalCommandHandler(ApplicationDbContext context, IMapper mapper)
+    public CreateSavingGoalCommandHandler(
+        ApplicationDbContext context,
+        IMapper mapper)
     {
         _context = context;
         _mapper = mapper;
@@ -24,20 +26,25 @@ public class CreateSavingGoalCommandHandler : IRequestHandler<CreateSavingGoalCo
     {
         var deadlineUtc = ToUtc(request.Deadline);
 
-        if (deadlineUtc <= DateTime.UtcNow)
+        if (deadlineUtc.Date < DateTime.UtcNow.Date)
         {
             return ApiResponse<SavingGoalDto>.FailResponse(
                 "Create saving goal failed.",
-                ["Deadline must be in the future."]);
+                ["Deadline must be today or in the future."]);
         }
+
+        // Goals are stored in USD only; amounts are entered in USD at creation.
+        const string displayCurrency = CurrencyConstants.BaseCurrency;
+        var targetUsd = request.TargetAmount;
 
         var goal = new SavingGoal
         {
             ApplicationUserId = request.UserId,
             Name = request.Name.Trim(),
-            TargetAmount = request.TargetAmount,
+            TargetAmount = targetUsd,
             CurrentAmount = 0,
-            Deadline = deadlineUtc
+            Deadline = deadlineUtc,
+            Currency = displayCurrency
         };
 
         await _context.SavingGoals.AddAsync(goal, cancellationToken);

@@ -17,6 +17,11 @@ public class ApplicationUser : BaseEntity
 
     public string PasswordHash { get; set; } = string.Empty;
 
+    /// <summary>
+    /// User's preferred display currency for aggregated totals (ISO code).
+    /// </summary>
+    public string PreferredCurrency { get; set; } = "USD";
+
     public List<RefreshToken> RefreshTokens { get; set; } = [];
 
     public List<Wallet> Wallets { get; set; } = [];

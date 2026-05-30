@@ -5,12 +5,14 @@ class BudgetCreateRequestModel {
   final int year;
   final int month;
   final double amount;
+  final String currency;
 
   const BudgetCreateRequestModel({
     required this.categoryId,
     required this.year,
     required this.month,
     required this.amount,
+    required this.currency,
   });
 
   factory BudgetCreateRequestModel.fromDomain(BudgetCreateData data) {
@@ -19,6 +21,7 @@ class BudgetCreateRequestModel {
       year: data.year,
       month: data.month,
       amount: data.amount,
+      currency: data.currency,
     );
   }
 
@@ -28,6 +31,7 @@ class BudgetCreateRequestModel {
       'year': year,
       'month': month,
       'amount': amount,
+      'currency': currency,
     };
   }
 }

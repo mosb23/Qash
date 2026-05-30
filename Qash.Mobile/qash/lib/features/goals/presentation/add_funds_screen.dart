@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import '../../../core/input/text_input_formatters.dart';
+import '../../../core/currency/currency_conversion_service.dart';
+import '../../../core/currency/currency_format.dart';
+import '../../../core/currency/currency_providers.dart';
+import '../../../core/widgets/currency_flag.dart';
 import '../domain/entities/saving_goal.dart';
 import '../domain/entities/saving_goal_contribution.dart';
 import '../providers/saving_goals_providers.dart';
+import '../utils/saving_goal_currency.dart';
 
 class AddFundsScreen extends ConsumerStatefulWidget {
   final SavingGoalEntity goal;
@@ -19,6 +24,7 @@ class AddFundsScreen extends ConsumerStatefulWidget {
 
 class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
   final TextEditingController _amountController = TextEditingController();
+  String _selectedCurrency = goalBaseCurrency;
   bool _submitting = false;
   String? _errorMessage;
 
@@ -29,10 +35,12 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
   }
 
   Future<void> _submit() async {
+    final conversion = ref.read(currencyConversionServiceProvider);
+    final remainingUsd =
+        widget.goal.targetAmount - widget.goal.currentAmount;
     final amount = double.tryParse(_amountController.text.trim());
-    final remaining = widget.goal.targetAmount - widget.goal.currentAmount;
 
-    if (remaining <= 0) {
+    if (remainingUsd <= 0) {
       setState(() => _errorMessage = 'This goal is already completed.');
       return;
     }
@@ -40,10 +48,21 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
       setState(() => _errorMessage = 'Enter a valid amount.');
       return;
     }
-    if (amount > remaining) {
+
+    final amountUsd = goalAmountToUsd(
+      amount: amount,
+      inputCurrency: _selectedCurrency,
+      conversion: conversion,
+    );
+
+    if (amountUsd > remainingUsd + 0.001) {
+      final maxInSelected = conversion.convertFromBase(
+        remainingUsd,
+        _selectedCurrency,
+      );
       setState(
         () => _errorMessage =
-            'Amount exceeds remaining balance (${_formatCurrency(remaining)}).',
+            'Amount exceeds remaining balance (${formatMoney(maxInSelected, _selectedCurrency)}).',
       );
       return;
     }
@@ -56,7 +75,9 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     final result = await ref.read(contributeToSavingGoalUseCaseProvider)(
       SavingGoalContributionData(
         savingGoalId: widget.goal.savingGoalId,
-        amount: amount,
+        amountUsd: amountUsd,
+        inputAmount: amount,
+        inputCurrency: _selectedCurrency,
       ),
     );
 
@@ -74,6 +95,15 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final conversion = ref.watch(currencyConversionServiceProvider);
+    final remainingUsd =
+        widget.goal.targetAmount - widget.goal.currentAmount;
+    final maxInSelected = conversion.convertFromBase(
+      remainingUsd,
+      _selectedCurrency,
+    );
+    final maxHint = formatMoney(maxInSelected, _selectedCurrency);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
       appBar: AppBar(
@@ -110,16 +140,23 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
             children: [
               _goalSummary(widget.goal),
               const SizedBox(height: 20),
-              _label('Amount'),
+              _sectionTitle('Deposit currency'),
+              const SizedBox(height: 8),
+              _currencySelector(),
+              const SizedBox(height: 16),
+              _label('Amount (${currencySymbol(_selectedCurrency)})'),
               const SizedBox(height: 8),
               _textField(
                 controller: _amountController,
-                hint:
-                    'Max ${_formatCurrency(widget.goal.targetAmount - widget.goal.currentAmount)}',
+                hint: 'Max $maxHint',
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
               ),
+              if (_selectedCurrency != goalBaseCurrency) ...[
+                const SizedBox(height: 8),
+                _usdPreview(conversion),
+              ],
               const SizedBox(height: 16),
               if (_errorMessage != null)
                 Padding(
@@ -165,8 +202,23 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
     );
   }
 
+  Widget _usdPreview(CurrencyConversionService conversion) {
+    final amount = double.tryParse(_amountController.text.trim());
+    if (amount == null || amount <= 0) {
+      return const SizedBox.shrink();
+    }
+    final usd = goalAmountToUsd(
+      amount: amount,
+      inputCurrency: _selectedCurrency,
+      conversion: conversion,
+    );
+    return Text(
+      '≈ ${formatMoney(usd, goalBaseCurrency)} will be added to your goal',
+      style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+    );
+  }
+
   Widget _goalSummary(SavingGoalEntity goal) {
-    final progress = goal.progress;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -200,14 +252,14 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Saved ${_formatCurrency(goal.currentAmount)} of ${_formatCurrency(goal.targetAmount)}',
+            'Saved ${formatMoney(goal.currentAmount, goalBaseCurrency)} of ${formatMoney(goal.targetAmount, goalBaseCurrency)}',
             style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
           ),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
-              value: progress,
+              value: goal.progress,
               minHeight: 8,
               backgroundColor: const Color(0xFFF3F4F6),
               valueColor: const AlwaysStoppedAnimation<Color>(
@@ -216,6 +268,58 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _currencySelector() {
+    const currencies = ['USD', 'EGP', 'EUR', 'GBP', 'JPY'];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: currencies.map((code) {
+        final selected = _selectedCurrency == code;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedCurrency = code),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: selected ? Colors.black : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: selected ? Colors.black : const Color(0xFFE5E7EB),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CurrencyFlag(currencyCode: code, width: 22, height: 14),
+                const SizedBox(width: 6),
+                Text(
+                  code,
+                  style: TextStyle(
+                    color: selected ? Colors.white : const Color(0xFF111111),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        color: Color(0xFF111111),
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
       ),
     );
   }
@@ -259,6 +363,8 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
+        onChanged: (_) => setState(() {}),
+        inputFormatters: amountInputFormatters,
         style: const TextStyle(color: Color(0xFF111111), fontSize: 16),
         decoration: InputDecoration(
           hintText: hint,
@@ -272,8 +378,5 @@ class _AddFundsScreenState extends ConsumerState<AddFundsScreen> {
       ),
     );
   }
-
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
-  }
 }
+

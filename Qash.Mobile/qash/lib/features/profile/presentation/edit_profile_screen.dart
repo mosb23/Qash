@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/input/text_input_formatters.dart';
 
 import '../providers/profile_providers.dart';
 import '../domain/entities/profile_update.dart';
@@ -127,6 +130,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 controller: _firstNameController,
                 keyboardType: TextInputType.name,
                 hintText: 'First name',
+                inputFormatters: nameInputFormatters,
               ),
               const SizedBox(height: 16),
               _InputField(
@@ -134,6 +138,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 controller: _lastNameController,
                 keyboardType: TextInputType.name,
                 hintText: 'Last name',
+                inputFormatters: nameInputFormatters,
               ),
               const SizedBox(height: 16),
               _InputField(
@@ -188,6 +193,7 @@ class _InputField extends StatelessWidget {
     required this.keyboardType,
     required this.hintText,
     this.enabled = true,
+    this.inputFormatters,
   });
 
   final String label;
@@ -195,6 +201,7 @@ class _InputField extends StatelessWidget {
   final TextInputType keyboardType;
   final String hintText;
   final bool enabled;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -209,6 +216,7 @@ class _InputField extends StatelessWidget {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           enabled: enabled,
           style: TextStyle(
             fontSize: 14,

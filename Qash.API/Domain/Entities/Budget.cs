@@ -17,4 +17,7 @@ public class Budget : BaseEntity
     public int Month { get; set; }
 
     public decimal Amount { get; set; }
+
+    /// <summary>Budget limit currency (ISO code).</summary>
+    public string Currency { get; set; } = "USD";
 }

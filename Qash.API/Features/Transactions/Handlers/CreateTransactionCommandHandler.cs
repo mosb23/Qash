@@ -18,15 +18,18 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
     private readonly ApplicationDbContext _context;
     private readonly IMapper _mapper;
     private readonly IExchangeRateService _exchangeRateService;
+    private readonly ICurrencyConversionService _currencyConversionService;
 
     public CreateTransactionCommandHandler(
         ApplicationDbContext context,
         IMapper mapper,
-        IExchangeRateService exchangeRateService)
+        IExchangeRateService exchangeRateService,
+        ICurrencyConversionService currencyConversionService)
     {
         _context = context;
         _mapper = mapper;
         _exchangeRateService = exchangeRateService;
+        _currencyConversionService = currencyConversionService;
     }
 
     public async Task<ApiResponse<TransactionDto>> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
@@ -134,18 +137,63 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
                 ["Insufficient balance in the wallet."]);
         }
 
+        if (request.TransactionType == CategoryType.Transfer)
+        {
+            var expenseCategory = await GetOrCreateTransferLegCategory(
+                request.UserId,
+                CategoryType.Expense,
+                cancellationToken);
+            var incomeCategory = await GetOrCreateTransferLegCategory(
+                request.UserId,
+                CategoryType.Income,
+                cancellationToken);
+
+            var transactionDate = request.TransactionDate == default
+                ? DateTime.UtcNow
+                : request.TransactionDate;
+
+            var (outgoing, incoming) = TransferPairHelper.CreatePair(
+                request.UserId,
+                wallet,
+                targetWallet!,
+                expenseCategory,
+                incomeCategory,
+                request.Amount,
+                transferCreditAmount!.Value,
+                request.Description,
+                transactionDate,
+                _currencyConversionService);
+
+            TransferPairHelper.ApplyPairEffects(
+                wallet,
+                targetWallet!,
+                outgoing.Amount,
+                incoming.Amount);
+
+            await _context.Transactions.AddAsync(outgoing, cancellationToken);
+            await _context.Transactions.AddAsync(incoming, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            TransferPairHelper.LinkPair(outgoing, incoming);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            await _context.Entry(outgoing).Reference(x => x.Wallet).LoadAsync(cancellationToken);
+            await _context.Entry(outgoing).Reference(x => x.Category).LoadAsync(cancellationToken);
+            await _context.Entry(outgoing).Reference(x => x.ToWallet).LoadAsync(cancellationToken);
+
+            var dto = _mapper.Map<TransactionDto>(outgoing);
+
+            return ApiResponse<TransactionDto>.SuccessResponse(
+                dto,
+                "Transfer completed successfully.");
+        }
+
         var transaction = new Transaction
         {
             ApplicationUserId = request.UserId,
             WalletId = wallet.Id,
-            ToWalletId = request.TransactionType == CategoryType.Transfer
-                ? request.ToWalletId
-                : null,
             CategoryId = category.Id,
             Amount = request.Amount,
-            ToAmount = request.TransactionType == CategoryType.Transfer
-                ? transferCreditAmount
-                : null,
             TransactionType = request.TransactionType,
             Description = request.Description.Trim(),
             TransactionDate = request.TransactionDate == default
@@ -153,33 +201,24 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
                 : request.TransactionDate
         };
 
-        if (transaction.TransactionType == CategoryType.Transfer)
-        {
-            TransferBalanceHelper.ApplyTransfer(
-                wallet,
-                targetWallet!,
-                transaction.Amount,
-                transferCreditAmount!.Value);
-        }
-        else
-        {
-            ApplyEffect(wallet, transaction.TransactionType, transaction.Amount);
-        }
+        TransactionCurrencyHelper.ApplyConversionMetadata(
+            transaction,
+            wallet,
+            null,
+            _currencyConversionService);
+
+        ApplyEffect(wallet, transaction.TransactionType, transaction.Amount);
 
         await _context.Transactions.AddAsync(transaction, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
         await _context.Entry(transaction).Reference(x => x.Wallet).LoadAsync(cancellationToken);
         await _context.Entry(transaction).Reference(x => x.Category).LoadAsync(cancellationToken);
-        if (transaction.ToWalletId != null)
-        {
-            await _context.Entry(transaction).Reference(x => x.ToWallet).LoadAsync(cancellationToken);
-        }
 
-        var dto = _mapper.Map<TransactionDto>(transaction);
+        var createdDto = _mapper.Map<TransactionDto>(transaction);
 
         return ApiResponse<TransactionDto>.SuccessResponse(
-            dto,
+            createdDto,
             "Transaction created successfully.");
     }
 
@@ -213,6 +252,38 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
             ApplicationUserId = userId,
             Name = "Transfer",
             Type = CategoryType.Transfer,
+            Icon = null,
+            Color = null
+        };
+
+        await _context.Categories.AddAsync(category, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return category;
+    }
+
+    private async Task<Category> GetOrCreateTransferLegCategory(
+        Guid userId,
+        CategoryType legType,
+        CancellationToken cancellationToken)
+    {
+        var existing = await _context.Categories
+            .FirstOrDefaultAsync(
+                x => x.ApplicationUserId == userId &&
+                     x.Type == legType &&
+                     x.Name == "Transfer",
+                cancellationToken);
+
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var category = new Category
+        {
+            ApplicationUserId = userId,
+            Name = "Transfer",
+            Type = legType,
             Icon = null,
             Color = null
         };

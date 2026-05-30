@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/providers/user_session_invalidation.dart';
 import '../providers/transactions_providers.dart';
 
 class DeleteTransactionScreen extends ConsumerStatefulWidget {
@@ -36,8 +37,7 @@ class _DeleteTransactionScreenState
     setState(() => _deleting = false);
 
     if (result.isSuccess) {
-      ref.invalidate(transactionsProvider);
-      ref.invalidate(transactionDetailProvider(widget.transactionId));
+      invalidateTransactionRelatedData(ref, transactionId: widget.transactionId);
       context.go('/transactions');
       return;
     }

@@ -8,6 +8,7 @@ class ProfileModel extends ProfileEntity {
     required super.fullName,
     required super.email,
     required super.phoneNumber,
+    super.preferredCurrency,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -18,6 +19,7 @@ class ProfileModel extends ProfileEntity {
       fullName: json['fullName']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       phoneNumber: json['phoneNumber']?.toString() ?? '',
+      preferredCurrency: json['preferredCurrency']?.toString() ?? 'USD',
     );
   }
 }

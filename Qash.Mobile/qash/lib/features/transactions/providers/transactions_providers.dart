@@ -1,8 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/providers.dart';
+import '../../../core/currency/currency_aggregation.dart';
+import '../../../core/currency/currency_providers.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
+import '../../wallets/domain/entities/wallet.dart';
+import '../../wallets/providers/wallets_providers.dart';
+import '../../wallets/utils/wallet_balance_utils.dart';
 import '../data/datasources/transactions_remote_data_source.dart';
 import '../data/exchange_rates_api.dart';
 import '../data/transactions_api.dart';
@@ -250,6 +255,9 @@ final transactionsSummaryProvider = Provider<AsyncValue<TransactionsSummary>>((
   ref,
 ) {
   final transactionsAsync = ref.watch(transactionsProvider);
+  final walletsAsync = ref.watch(walletsProvider);
+  final conversion = ref.watch(currencyConversionServiceProvider);
+  final displayCurrency = ref.watch(effectiveDisplayCurrencyProvider);
 
   return transactionsAsync.whenData((result) {
     if (result.isFailure) {
@@ -257,15 +265,36 @@ final transactionsSummaryProvider = Provider<AsyncValue<TransactionsSummary>>((
           const AppFailure(message: 'Failed to load summary.');
     }
 
+    final walletsById = walletsAsync.maybeWhen(
+      data: (walletResult) {
+        if (walletResult.isFailure) {
+          return const <String, WalletEntity>{};
+        }
+        return walletsByIdMap(walletResult.data ?? const []);
+      },
+      orElse: () => const <String, WalletEntity>{},
+    );
+
     final items = result.data ?? const [];
     var incomeTotal = 0.0;
     var expenseTotal = 0.0;
 
     for (final item in items) {
+      if (item.excludeFromGlobalTotals) {
+        continue;
+      }
+
+      final converted = convertTransactionAmount(
+        transaction: item,
+        targetCurrency: displayCurrency,
+        conversion: conversion,
+        walletsById: walletsById,
+      );
+
       if (item.isIncome) {
-        incomeTotal += item.amount;
+        incomeTotal += converted;
       } else if (item.isExpense) {
-        expenseTotal += item.amount;
+        expenseTotal += converted;
       }
     }
 

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../../core/input/text_input_formatters.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +10,7 @@ import '../../categories/providers/categories_providers.dart';
 import '../domain/entities/budget_create.dart';
 import '../domain/entities/budget_status.dart';
 import '../providers/budgets_providers.dart';
+import '../../../core/currency/currency_providers.dart';
 import '../../../core/widgets/transaction_category_icon.dart';
 
 class CreateBudgetScreen extends ConsumerStatefulWidget {
@@ -40,12 +44,14 @@ class _CreateBudgetScreenState extends ConsumerState<CreateBudgetScreen> {
     }
 
     final period = ref.read(budgetPeriodProvider);
+    final displayCurrency = ref.read(effectiveDisplayCurrencyProvider);
     final data = BudgetCreateData(
       userId: '',
       categoryId: categoryId,
       amount: amount,
       year: period.year,
       month: period.month,
+      currency: displayCurrency,
     );
 
     setState(() {
@@ -212,6 +218,7 @@ class _CreateBudgetScreenState extends ConsumerState<CreateBudgetScreen> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: amountInputFormatters,
               style: const TextStyle(color: Colors.black),
               decoration: InputDecoration(
                 prefixText: '\$ ',

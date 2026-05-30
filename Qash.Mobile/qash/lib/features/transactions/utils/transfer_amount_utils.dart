@@ -1,4 +1,4 @@
-import '../../../../core/currency/exchange_rates.dart';
+import '../../../../core/currency/currency_conversion_service.dart';
 import '../../wallets/domain/entities/wallet.dart';
 import '../domain/entities/transaction.dart';
 import '../providers/transactions_providers.dart';
@@ -9,13 +9,13 @@ String resolveWalletCurrency({
   required Map<String, WalletEntity> walletsById,
   String fallback = 'USD',
 }) {
-  if (transactionCurrency != null && transactionCurrency.trim().isNotEmpty) {
-    return transactionCurrency.trim().toUpperCase();
-  }
-
   final wallet = walletsById[normalizeTransactionId(walletId)];
   if (wallet != null && wallet.currency.trim().isNotEmpty) {
     return wallet.currency.trim().toUpperCase();
+  }
+
+  if (transactionCurrency != null && transactionCurrency.trim().isNotEmpty) {
+    return transactionCurrency.trim().toUpperCase();
   }
 
   return fallback.toUpperCase();
@@ -47,7 +47,7 @@ bool isCrossCurrencyTransferForWallets(
 double resolveTransferCreditAmount(
   TransactionEntity item, {
   required Map<String, WalletEntity> walletsById,
-  Map<String, double>? exchangeRates,
+  required CurrencyConversionService conversion,
 }) {
   final destinationId = item.toWalletId;
   if (destinationId == null || destinationId.isEmpty) {
@@ -70,11 +70,10 @@ double resolveTransferCreditAmount(
     return item.toAmount ?? item.amount;
   }
 
-  final converted = convertCurrencyAmount(
-    amount: item.amount,
-    fromCurrency: sourceCurrency,
-    toCurrency: targetCurrency,
-    rates: exchangeRates ?? defaultExchangeRates,
+  final converted = conversion.transferCreditAmount(
+    sourceAmount: item.amount,
+    sourceCurrency: sourceCurrency,
+    targetCurrency: targetCurrency,
   );
 
   if (item.toAmount != null &&

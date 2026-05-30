@@ -5,6 +5,7 @@ using Qash.API.Common.Responses;
 using Qash.API.Features.Profile.Commands;
 using Qash.API.Features.Profile.DTOs;
 using Qash.API.Infrastructure.Data;
+using Qash.API.Infrastructure.Services;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,6 +50,8 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
         user.FirstName = request.FirstName.Trim();
         user.LastName = request.LastName.Trim();
         user.Email = email;
+        user.PreferredCurrency = UserCurrencyResolver.NormalizeDisplayCurrency(
+            request.PreferredCurrency);
         user.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);

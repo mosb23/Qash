@@ -13,4 +13,6 @@ public class SavingGoalDto
     public DateTime Deadline { get; set; }
 
     public decimal ProgressPercent { get; set; }
+
+    public string Currency { get; set; } = "USD";
 }

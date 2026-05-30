@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/navigation/app_navigation.dart';
+import '../../../core/currency/currency_conversion_service.dart';
 import '../../../core/currency/currency_format.dart';
+import '../../../core/providers/user_session_invalidation.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/widgets/transaction_category_icon.dart';
 import '../../transactions/domain/entities/transaction.dart';
 import '../../transactions/providers/transactions_providers.dart';
 import '../../transactions/utils/transaction_wallet_display.dart';
+import '../../transactions/utils/transfer_amount_utils.dart';
 import '../utils/wallet_balance_utils.dart';
 import '../domain/entities/wallet.dart';
 import '../providers/wallets_providers.dart';
@@ -53,7 +57,12 @@ class WalletDetailScreen extends ConsumerWidget {
       walletsById: walletsById,
       exchangeRates: exchangeRates,
     );
-    final summary = _walletSummary(walletTransactions);
+    final summary = _walletSummary(
+      walletTransactions,
+      currentWallet.walletId,
+      walletsById: walletsById,
+      exchangeRates: exchangeRates,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -70,7 +79,7 @@ class WalletDetailScreen extends ConsumerWidget {
             ),
             child: IconButton(
               icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-              onPressed: () => context.pop(),
+              onPressed: () => popOrGo(context, '/wallets'),
             ),
           ),
         ),
@@ -292,7 +301,7 @@ class WalletDetailScreen extends ConsumerWidget {
       walletsById: walletsById,
       exchangeRates: exchangeRates,
     );
-    final isTransfer = item.isTransfer;
+    final isTransfer = item.isTransfer || item.isTransferLinked;
     final amountColor = display.isIncomingTransfer
         ? const Color(0xFF00A63E)
         : isTransfer
@@ -383,7 +392,7 @@ class WalletDetailScreen extends ConsumerWidget {
       MaterialPageRoute(
         builder: (pageContext) => DeleteWalletScreen(
           walletName: wallet.name,
-          onDelete: () => _deleteWallet(pageContext, ref, wallet),
+          onDelete: () => _deleteWallet(context, pageContext, ref, wallet),
           onCancel: () => Navigator.of(pageContext).pop(),
         ),
       ),
@@ -391,26 +400,34 @@ class WalletDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _deleteWallet(
-    BuildContext context,
+    BuildContext detailContext,
+    BuildContext deleteContext,
     WidgetRef ref,
     WalletEntity wallet,
   ) async {
     final result = await ref.read(deleteWalletUseCaseProvider)(wallet.walletId);
-    if (!context.mounted) return;
 
     if (result.isSuccess) {
-      ref.invalidate(walletsProvider);
-      ref.invalidate(transactionsProvider);
-      context.go('/wallets');
+      invalidateTransactionRelatedData(ref);
+
+      if (deleteContext.mounted) {
+        Navigator.of(deleteContext).pop();
+      }
+
+      if (detailContext.mounted) {
+        GoRouter.of(detailContext).go('/wallets');
+      }
       return;
     }
+
+    if (!deleteContext.mounted) return;
 
     final message = result.message.isNotEmpty
         ? result.message
         : 'Failed to delete wallet.';
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(deleteContext).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   List<TransactionEntity> _walletTransactions(
@@ -430,14 +447,46 @@ class WalletDetailScreen extends ConsumerWidget {
     );
   }
 
-  _WalletSummary _walletSummary(List<TransactionEntity> items) {
+  _WalletSummary _walletSummary(
+    List<TransactionEntity> items,
+    String walletId, {
+    required Map<String, WalletEntity> walletsById,
+    required Map<String, double> exchangeRates,
+  }) {
     var income = 0.0;
     var expenses = 0.0;
+    final conversion = CurrencyConversionService(exchangeRates);
 
     for (final item in items) {
-      if (item.isTransfer) {
+      if (item.isTransferLinked) {
+        if (item.isIncome &&
+            normalizeTransactionId(item.walletId) ==
+                normalizeTransactionId(walletId)) {
+          income += item.amount;
+        } else if (item.isExpense &&
+            normalizeTransactionId(item.walletId) ==
+                normalizeTransactionId(walletId)) {
+          expenses += item.amount;
+        }
         continue;
       }
+
+      if (item.isTransfer) {
+        if (isIncomingTransferToWallet(item, walletId)) {
+          income += resolveTransferCreditAmount(
+            item,
+            walletsById: walletsById,
+            conversion: conversion,
+          );
+        } else if (isOutgoingTransferFromWallet(item, walletId)) {
+          expenses += resolveTransferDebitAmount(
+            item,
+            walletsById: walletsById,
+          );
+        }
+        continue;
+      }
+
       if (item.isIncome) {
         income += item.amount;
       } else if (item.isExpense) {

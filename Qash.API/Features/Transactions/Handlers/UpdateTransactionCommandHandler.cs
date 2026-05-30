@@ -18,15 +18,18 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
     private readonly ApplicationDbContext _context;
     private readonly IMapper _mapper;
     private readonly IExchangeRateService _exchangeRateService;
+    private readonly ICurrencyConversionService _currencyConversionService;
 
     public UpdateTransactionCommandHandler(
         ApplicationDbContext context,
         IMapper mapper,
-        IExchangeRateService exchangeRateService)
+        IExchangeRateService exchangeRateService,
+        ICurrencyConversionService currencyConversionService)
     {
         _context = context;
         _mapper = mapper;
         _exchangeRateService = exchangeRateService;
+        _currencyConversionService = currencyConversionService;
     }
 
     public async Task<ApiResponse<TransactionDto>> Handle(UpdateTransactionCommand request, CancellationToken cancellationToken)
@@ -200,6 +203,12 @@ public class UpdateTransactionCommandHandler : IRequestHandler<UpdateTransaction
             ? transaction.TransactionDate
             : request.TransactionDate;
         transaction.UpdatedAt = DateTime.UtcNow;
+
+        TransactionCurrencyHelper.ApplyConversionMetadata(
+            transaction,
+            targetWallet,
+            targetTransferWallet,
+            _currencyConversionService);
 
         await _context.SaveChangesAsync(cancellationToken);
 

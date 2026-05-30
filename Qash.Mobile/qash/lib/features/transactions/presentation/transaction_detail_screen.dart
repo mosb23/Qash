@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/currency/currency_conversion_service.dart';
 import '../../../core/currency/currency_format.dart';
+import '../../../core/currency/currency_providers.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
@@ -22,6 +24,8 @@ class TransactionDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(transactionDetailProvider(transactionId));
     final walletsAsync = ref.watch(walletsProvider);
+    final conversion = ref.watch(currencyConversionServiceProvider);
+    final displayCurrency = ref.watch(effectiveDisplayCurrencyProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -76,6 +80,8 @@ class TransactionDetailScreen extends ConsumerWidget {
             transaction: transaction,
             currency: currency,
             transactionId: transactionId,
+            conversion: conversion,
+            displayCurrency: displayCurrency,
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -142,11 +148,15 @@ class _TransactionDetailBody extends StatelessWidget {
     required this.transaction,
     required this.currency,
     required this.transactionId,
+    required this.conversion,
+    required this.displayCurrency,
   });
 
   final TransactionEntity transaction;
   final String currency;
   final String transactionId;
+  final CurrencyConversionService conversion;
+  final String displayCurrency;
 
   TransactionStyle get _style => TransactionStyle.from(transaction);
 
@@ -359,9 +369,9 @@ class _TransactionDetailBody extends StatelessWidget {
         transaction.toWalletCurrency!,
       );
     }
-    final code = transaction.walletCurrency.isNotEmpty
-        ? transaction.walletCurrency
-        : currency;
+    final code = transaction.sourceCurrency.isNotEmpty
+        ? transaction.sourceCurrency
+        : (transaction.walletCurrency.isNotEmpty ? transaction.walletCurrency : currency);
     return '${_style.amountPrefix}${formatMoney(transaction.amount, code)}';
   }
 

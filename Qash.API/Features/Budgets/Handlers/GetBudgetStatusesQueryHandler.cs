@@ -5,19 +5,26 @@ using Qash.API.Domain.Enums;
 using Qash.API.Features.Budgets.DTOs;
 using Qash.API.Features.Budgets.Queries;
 using Qash.API.Infrastructure.Data;
+using Qash.API.Infrastructure.Services;
 
 namespace Qash.API.Features.Budgets.Handlers;
 
 public class GetBudgetStatusesQueryHandler : IRequestHandler<GetBudgetStatusesQuery, ApiResponse<List<BudgetStatusDto>>>
 {
     private readonly ApplicationDbContext _context;
+    private readonly ICurrencyConversionService _currency;
 
-    public GetBudgetStatusesQueryHandler(ApplicationDbContext context)
+    public GetBudgetStatusesQueryHandler(
+        ApplicationDbContext context,
+        ICurrencyConversionService currency)
     {
         _context = context;
+        _currency = currency;
     }
 
-    public async Task<ApiResponse<List<BudgetStatusDto>>> Handle(GetBudgetStatusesQuery request, CancellationToken cancellationToken)
+    public async Task<ApiResponse<List<BudgetStatusDto>>> Handle(
+        GetBudgetStatusesQuery request,
+        CancellationToken cancellationToken)
     {
         var monthStart = new DateTime(request.Year, request.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var monthEnd = monthStart.AddMonths(1);
@@ -37,22 +44,31 @@ public class GetBudgetStatusesQueryHandler : IRequestHandler<GetBudgetStatusesQu
 
         var categoryIds = budgets.Select(x => x.CategoryId).Distinct().ToList();
 
-        var spentByCategory = await _context.Transactions
+        var expenses = await _context.Transactions
             .AsNoTracking()
+            .Include(x => x.Wallet)
             .Where(x =>
                 x.ApplicationUserId == request.UserId &&
                 x.TransactionType == CategoryType.Expense &&
                 categoryIds.Contains(x.CategoryId) &&
                 x.TransactionDate >= monthStart &&
                 x.TransactionDate < monthEnd)
-            .GroupBy(x => x.CategoryId)
-            .Select(g => new { CategoryId = g.Key, Total = g.Sum(t => t.Amount) })
-            .ToDictionaryAsync(x => x.CategoryId, x => x.Total, cancellationToken);
+            .ToListAsync(cancellationToken);
 
         var result = budgets.Select(b =>
         {
-            spentByCategory.TryGetValue(b.CategoryId, out var spent);
-            var remaining = b.Amount - spent;
+            var spentInBudgetCurrency = expenses
+                .Where(x => x.CategoryId == b.CategoryId)
+                .Sum(x =>
+                {
+                    var amountInBase = TransactionCurrencyHelper.ResolveAmountInBase(
+                        x,
+                        x.Wallet.Currency,
+                        _currency);
+                    return _currency.ConvertFromBase(amountInBase, b.Currency);
+                });
+
+            var remaining = b.Amount - spentInBudgetCurrency;
             return new BudgetStatusDto
             {
                 BudgetId = b.Id,
@@ -61,8 +77,9 @@ public class GetBudgetStatusesQueryHandler : IRequestHandler<GetBudgetStatusesQu
                 Year = b.Year,
                 Month = b.Month,
                 BudgetAmount = b.Amount,
-                SpentAmount = spent,
-                RemainingAmount = remaining
+                SpentAmount = spentInBudgetCurrency,
+                RemainingAmount = remaining,
+                Currency = b.Currency
             };
         }).ToList();
 

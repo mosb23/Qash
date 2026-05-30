@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/currency/currency_format.dart';
+import '../../../core/input/text_input_formatters.dart';
+import '../../../core/widgets/goal_logo.dart';
 import '../domain/entities/saving_goal_create.dart';
 import '../providers/saving_goals_providers.dart';
+import '../utils/saving_goal_currency.dart';
 
 class CreateGoalScreen extends ConsumerStatefulWidget {
   const CreateGoalScreen({super.key});
@@ -17,42 +22,24 @@ class CreateGoalScreen extends ConsumerStatefulWidget {
 class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
   final TextEditingController _goalNameController = TextEditingController();
   final TextEditingController _targetController = TextEditingController();
-  final TextEditingController _savedController = TextEditingController();
 
-  String _selectedEmoji = '💻';
   DateTime? _selectedDeadline;
   bool _submitting = false;
   String? _errorMessage;
 
   static const Color _goalCardColor = Color(0xFFE5E7EB);
 
-  final List<String> _emojis = const [
-    '💻',
-    '✈️',
-    '🛡️',
-    '🏠',
-    '🚗',
-    '📚',
-    '💍',
-    '🎓',
-    '🏋️',
-    '🎵',
-    '📱',
-    '🌴',
-  ];
-
   @override
   void dispose() {
     _goalNameController.dispose();
     _targetController.dispose();
-    _savedController.dispose();
     super.dispose();
   }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: _selectedDeadline ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2100),
     );
@@ -77,7 +64,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
       return;
     }
     if (_selectedDeadline == null) {
-      setState(() => _errorMessage = 'Select a deadline.');
+      setState(() => _errorMessage = 'Select a target date.');
       return;
     }
 
@@ -86,12 +73,22 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
       _errorMessage = null;
     });
 
+    final deadline = DateTime(
+      _selectedDeadline!.year,
+      _selectedDeadline!.month,
+      _selectedDeadline!.day,
+      23,
+      59,
+      59,
+    );
+
     final result = await ref.read(createSavingGoalUseCaseProvider)(
       SavingGoalCreateData(
         name: name,
         targetAmount: targetAmount,
-        deadline: _selectedDeadline!,
+        deadline: deadline,
         colorHex: _toHexColor(_goalCardColor),
+        currency: goalBaseCurrency,
       ),
     );
 
@@ -101,9 +98,15 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
 
     if (result.isSuccess) {
       ref.invalidate(savingGoalsProvider);
+      if (!mounted) return;
       context.pop(true);
     } else {
-      setState(() => _errorMessage = result.message);
+      final message = result.errors.isNotEmpty
+          ? result.errors.join('\n')
+          : (result.message.isNotEmpty
+                ? result.message
+                : 'Failed to create goal.');
+      setState(() => _errorMessage = message);
     }
   }
 
@@ -112,10 +115,8 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
     final goalName = _goalNameController.text.isEmpty
         ? 'Goal Name'
         : _goalNameController.text;
-    final target = _targetController.text.isEmpty
-        ? '0'
-        : _targetController.text;
-    final saved = _savedController.text.isEmpty ? '0' : _savedController.text;
+    final targetAmount =
+        double.tryParse(_targetController.text.trim()) ?? 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -152,54 +153,9 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
           child: Column(
             children: [
               GoalPreviewCard(
-                emoji: _selectedEmoji,
                 goalName: goalName,
-                target: target,
-                saved: saved,
+                targetAmount: targetAmount,
                 color: _goalCardColor,
-              ),
-              const SizedBox(height: 24),
-              _sectionTitle('Icon'),
-              const SizedBox(height: 12),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _emojis.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 6,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemBuilder: (context, index) {
-                  final emoji = _emojis[index];
-                  final selected = _selectedEmoji == emoji;
-
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedEmoji = emoji;
-                      });
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: selected ? Colors.black : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 6,
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          emoji,
-                          style: const TextStyle(fontSize: 24),
-                        ),
-                      ),
-                    ),
-                  );
-                },
               ),
               const SizedBox(height: 24),
               CustomInputField(
@@ -209,65 +165,22 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomInputField(
-                      label: 'Target (\$)',
-                      hint: '2000',
-                      controller: _targetController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomInputField(
-                      label: 'Saved so far',
-                      hint: '0',
-                      controller: _savedController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ),
-                ],
+              CustomInputField(
+                label: 'Target (${currencySymbol(goalBaseCurrency)})',
+                hint: '2000',
+                controller: _targetController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: amountInputFormatters,
+                onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 16),
-              _sectionTitle('Deadline'),
-              const SizedBox(height: 8),
-              GestureDetector(
+              _DatePickerField(
+                label: 'Target Date',
+                value: _selectedDeadline,
                 onTap: _pickDate,
-                child: Container(
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today_outlined),
-                      const SizedBox(width: 12),
-                      Text(
-                        _selectedDeadline == null
-                            ? 'Select Deadline'
-                            : DateFormat(
-                                'dd/MM/yyyy',
-                              ).format(_selectedDeadline!),
-                        style: const TextStyle(
-                          color: Color(0xFF111111),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
-              const SizedBox(height: 24),
               const SizedBox(height: 24),
               if (_errorMessage != null)
                 Padding(
@@ -311,20 +224,6 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
     );
   }
 
-  Widget _sectionTitle(String title) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: Color(0xFF111111),
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
-        ),
-      ),
-    );
-  }
-
   String _toHexColor(Color color) {
     final value = color.value.toRadixString(16).padLeft(8, '0').toUpperCase();
     return '#${value.substring(2)}';
@@ -332,18 +231,14 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
 }
 
 class GoalPreviewCard extends StatelessWidget {
-  final String emoji;
   final String goalName;
-  final String target;
-  final String saved;
+  final double targetAmount;
   final Color color;
 
   const GoalPreviewCard({
     super.key,
-    required this.emoji,
     required this.goalName,
-    required this.target,
-    required this.saved,
+    required this.targetAmount,
     required this.color,
   });
 
@@ -351,28 +246,28 @@ class GoalPreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 36)),
+          const GoalLogo(size: 48, padding: 8),
           const SizedBox(height: 12),
           Text(
             goalName,
             style: const TextStyle(
               color: Color(0xFF111111),
               fontSize: 18,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            '\$$saved / \$$target',
+            'Target ${formatMoney(targetAmount, goalBaseCurrency)}',
             style: TextStyle(
-              color: Colors.black.withValues(alpha: 0.6),
+              color: Colors.black.withValues(alpha: 0.55),
               fontSize: 14,
             ),
           ),
@@ -382,20 +277,100 @@ class GoalPreviewCard extends StatelessWidget {
   }
 }
 
+class _DatePickerField extends StatelessWidget {
+  final String label;
+  final DateTime? value;
+  final VoidCallback onTap;
+
+  const _DatePickerField({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDate = value != null;
+    final dateText =
+        hasDate ? DateFormat('dd/MM/yyyy').format(value!) : 'Select Target Date';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF111111),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              height: 56,
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              alignment: Alignment.centerLeft,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 20,
+                    color: hasDate
+                        ? const Color(0xFF111111)
+                        : const Color(0xFFC4C4C4),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      dateText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: hasDate
+                            ? const Color(0xFF111111)
+                            : const Color(0xFFC4C4C4),
+                        fontSize: 16,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class CustomInputField extends StatelessWidget {
   final String label;
   final String hint;
   final TextEditingController controller;
-  final TextInputType? keyboardType;
+  final TextInputType keyboardType;
   final ValueChanged<String>? onChanged;
+  final List<TextInputFormatter>? inputFormatters;
 
   const CustomInputField({
     super.key,
     required this.label,
     required this.hint,
     required this.controller,
-    this.keyboardType,
+    this.keyboardType = TextInputType.text,
     this.onChanged,
+    this.inputFormatters,
   });
 
   @override
@@ -407,25 +382,31 @@ class CustomInputField extends StatelessWidget {
           label,
           style: const TextStyle(
             color: Color(0xFF111111),
-            fontWeight: FontWeight.w600,
             fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          onChanged: onChanged,
-          style: const TextStyle(color: Color(0xFF111111)),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFFB0B0B0), fontSize: 14),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
+        Container(
+          height: 56,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            onChanged: onChanged,
+            inputFormatters: inputFormatters,
+            style: const TextStyle(color: Color(0xFF111111), fontSize: 16),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: const TextStyle(color: Color(0xFFC4C4C4), fontSize: 16),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
             ),
           ),
         ),

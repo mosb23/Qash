@@ -5,6 +5,7 @@ class ProfileEntity {
   final String fullName;
   final String email;
   final String phoneNumber;
+  final String preferredCurrency;
 
   const ProfileEntity({
     required this.userId,
@@ -13,6 +14,7 @@ class ProfileEntity {
     required this.fullName,
     required this.email,
     required this.phoneNumber,
+    this.preferredCurrency = 'USD',
   });
 
   String get resolvedName {

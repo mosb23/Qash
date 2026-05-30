@@ -43,6 +43,7 @@ builder.Services.AddScoped<IPasswordHasherService, PasswordHasherService>();
 
 builder.Services.Configure<ExchangeRateOptions>(
     builder.Configuration.GetSection(ExchangeRateOptions.SectionName));
+builder.Services.AddSingleton<ICurrencyConversionService, CurrencyConversionService>();
 builder.Services.AddSingleton<IExchangeRateService, ExchangeRateService>();
 
 builder.Services.AddHostedService<RecurringTransactionsBackgroundService>();

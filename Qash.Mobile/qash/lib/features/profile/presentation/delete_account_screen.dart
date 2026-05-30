@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../config/providers.dart';
+import '../../../core/providers/user_session_invalidation.dart';
 import '../providers/profile_providers.dart';
 
 class DeleteAccountScreen extends ConsumerStatefulWidget {
@@ -47,6 +48,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
 
       if (result.isSuccess) {
         await ref.read(secureStorageProvider).clearTokens();
+        invalidateUserSessionData(ref);
         if (!mounted) return;
         context.go('/login');
         return;

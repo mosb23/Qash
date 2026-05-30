@@ -44,7 +44,13 @@ public class MappingProfile : Profile
                 opt => opt.MapFrom(src => src.ToWallet != null ? src.ToWallet.Name : null))
             .ForMember(
                 dest => dest.ToWalletCurrency,
-                opt => opt.MapFrom(src => src.ToWallet != null ? src.ToWallet.Currency : null));
+                opt => opt.MapFrom(src => src.ToWallet != null ? src.ToWallet.Currency : null))
+            .ForMember(dest => dest.SourceCurrency, opt => opt.MapFrom(src => src.SourceCurrency))
+            .ForMember(dest => dest.DestinationCurrency, opt => opt.MapFrom(src => src.DestinationCurrency))
+            .ForMember(dest => dest.AmountInBaseCurrency, opt => opt.MapFrom(src => src.AmountInBaseCurrency))
+            .ForMember(dest => dest.ExchangeRateUsed, opt => opt.MapFrom(src => src.ExchangeRateUsed))
+            .ForMember(dest => dest.TransferGroupId, opt => opt.MapFrom(src => src.TransferGroupId))
+            .ForMember(dest => dest.LinkedTransactionId, opt => opt.MapFrom(src => src.LinkedTransactionId));
 
         CreateMap<Category, CategoryDto>();
 
@@ -54,6 +60,7 @@ public class MappingProfile : Profile
 
         CreateMap<SavingGoal, SavingGoalDto>()
             .ForMember(dest => dest.SavingGoalId, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.Currency, opt => opt.MapFrom(src => src.Currency))
             .AfterMap((src, dest) =>
             {
                 dest.ProgressPercent = src.TargetAmount <= 0

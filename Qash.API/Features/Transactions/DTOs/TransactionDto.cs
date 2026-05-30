@@ -16,11 +16,23 @@ public class TransactionDto
 
     public string? ToWalletName { get; set; }
 
+    public Guid? TransferGroupId { get; set; }
+
+    public Guid? LinkedTransactionId { get; set; }
+
     public Guid UserId { get; set; }
 
     public decimal Amount { get; set; }
 
     public decimal? ToAmount { get; set; }
+
+    public string SourceCurrency { get; set; } = string.Empty;
+
+    public string? DestinationCurrency { get; set; }
+
+    public decimal AmountInBaseCurrency { get; set; }
+
+    public decimal? ExchangeRateUsed { get; set; }
 
     public string WalletCurrency { get; set; } = string.Empty;
 

@@ -1,4 +1,4 @@
-import '../../../core/currency/exchange_rates.dart';
+import '../../../core/currency/currency_conversion_service.dart';
 import '../../transactions/domain/entities/transaction.dart';
 import '../../transactions/providers/transactions_providers.dart';
 import '../../transactions/utils/transaction_wallet_display.dart';
@@ -25,7 +25,7 @@ double adjustWalletBalanceForTransfers({
     final expectedCredit = resolveTransferCreditAmount(
       item,
       walletsById: walletsById,
-      exchangeRates: exchangeRates,
+      conversion: CurrencyConversionService(exchangeRates),
     );
     final recordedCredit = item.toAmount ?? item.amount;
     final delta = expectedCredit - recordedCredit;
@@ -82,6 +82,3 @@ WalletEntity resolveLiveWallet({
   return findWalletById(wallets, fallback.walletId) ?? fallback;
 }
 
-Map<String, double> defaultRatesOr(Map<String, double>? rates) {
-  return rates ?? defaultExchangeRates;
-}

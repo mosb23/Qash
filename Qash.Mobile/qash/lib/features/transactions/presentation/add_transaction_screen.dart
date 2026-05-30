@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../../core/input/text_input_formatters.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/currency/currency_conversion_service.dart';
 import '../../../core/currency/currency_format.dart';
-import '../../../core/currency/exchange_rates.dart';
+import '../../../core/currency/currency_providers.dart';
+import '../../../core/providers/user_session_invalidation.dart';
 import '../../../core/widgets/transaction_category_icon.dart';
 import '../../categories/domain/entities/category.dart';
 import '../../categories/providers/categories_providers.dart';
-import '../../dashboard/providers/dashboard_providers.dart';
 import '../../wallets/domain/entities/wallet.dart';
 import '../../wallets/providers/wallets_providers.dart';
 import '../domain/entities/transaction_create.dart';
@@ -196,7 +200,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     return null;
   }
 
-  String? _transferConversionPreview(Map<String, double> rates) {
+  String? _transferConversionPreview(CurrencyConversionService conversion) {
     if (_transactionType != 3) {
       return null;
     }
@@ -219,11 +223,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     }
 
     try {
-      final converted = convertCurrencyAmount(
-        amount: amount,
-        fromCurrency: fromCurrency,
-        toCurrency: toCurrency,
-        rates: rates,
+      final converted = conversion.transferCreditAmount(
+        sourceAmount: amount,
+        sourceCurrency: fromCurrency,
+        targetCurrency: toCurrency,
       );
       return 'Destination receives ${formatMoney(converted, toCurrency)}';
     } catch (_) {
@@ -232,14 +235,21 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   String _amountFieldLabel() {
-    if (_transactionType != 3) {
+    final wallet = _walletById(_walletId);
+    final currency = wallet?.currency.trim().toUpperCase();
+    if (currency == null || currency.isEmpty) {
       return 'Amount';
     }
-    final source = _walletById(_walletId);
-    if (source == null || source.currency.isEmpty) {
-      return 'Amount (source wallet)';
+    return 'Amount ($currency)';
+  }
+
+  String? _selectedWalletCurrency() {
+    final wallet = _walletById(_walletId);
+    final currency = wallet?.currency.trim().toUpperCase();
+    if (currency == null || currency.isEmpty) {
+      return null;
     }
-    return 'Amount (${source.currency.toUpperCase()})';
+    return currency;
   }
 
   String _typeLabel(int type) {
@@ -312,9 +322,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     setState(() => _submitting = false);
 
     if (result.isSuccess) {
-      ref.invalidate(transactionsProvider);
-      ref.invalidate(walletsProvider);
-      ref.invalidate(dashboardProvider);
+      invalidateTransactionRelatedData(ref);
       Navigator.pop(context, true);
     } else {
       setState(() => _errorMessage = result.message);
@@ -336,6 +344,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     required TextEditingController controller,
     required String hint,
     TextInputType keyboardType = TextInputType.text,
+    String? prefixText,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Container(
       width: double.infinity,
@@ -360,10 +370,17 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         style: const TextStyle(color: Color(0xFF111111), fontSize: 16),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: const TextStyle(color: Color(0xFFC4C4C4), fontSize: 16),
+          prefixText: prefixText,
+          prefixStyle: const TextStyle(
+            color: Color(0xFF111111),
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -431,12 +448,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ratesAsync = ref.watch(exchangeRatesProvider);
-    final rates = ratesAsync.maybeWhen(
-      data: (value) => value,
-      orElse: () => defaultExchangeRates,
-    );
-    final conversionPreview = _transferConversionPreview(rates);
+    final conversion = ref.watch(currencyConversionServiceProvider);
+    final conversionPreview = _transferConversionPreview(conversion);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -507,6 +520,61 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             ],
                           ),
                           const SizedBox(height: 20),
+                          if (_wallets.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 16),
+                              child: Text(
+                                'No wallets found. Create a wallet on the home screen first.',
+                                style: TextStyle(
+                                  color: Color(0xFF8B8B8B),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            )
+                          else
+                            _dropdown<String>(
+                              label: 'Wallet',
+                              value: _walletId,
+                              items: _wallets.map((wallet) {
+                                return DropdownMenuItem<String>(
+                                  value: wallet.walletId,
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          wallet.name,
+                                          style: const TextStyle(
+                                            color: Color(0xFF111111),
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        wallet.currency.trim().toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Color(0xFF8B8B8B),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _walletId = value;
+                                  if (_transactionType == 3 &&
+                                      _toWalletId == value) {
+                                    _toWalletId = _defaultToWalletId(
+                                      _wallets,
+                                      value,
+                                    );
+                                  }
+                                });
+                              },
+                            ),
+                          const SizedBox(height: 16),
                           _label(_amountFieldLabel()),
                           const SizedBox(height: 8),
                           _textField(
@@ -515,6 +583,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             keyboardType: const TextInputType.numberWithOptions(
                               decimal: true,
                             ),
+                            inputFormatters: amountInputFormatters,
+                            prefixText: _selectedWalletCurrency() == null
+                                ? null
+                                : '${currencySymbol(_selectedWalletCurrency()!)} ',
                           ),
                           if (conversionPreview != null) ...[
                             const SizedBox(height: 10),
@@ -612,60 +684,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               ),
                             const SizedBox(height: 16),
                           ],
-                          if (_wallets.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 16),
-                              child: Text(
-                                'No wallets found. Create a wallet on the home screen first.',
-                                style: TextStyle(
-                                  color: Color(0xFF8B8B8B),
-                                  fontSize: 14,
-                                ),
-                              ),
-                            )
-                          else
-                            _dropdown<String>(
-                              label: 'Wallet',
-                              value: _walletId,
-                              items: _wallets.map((wallet) {
-                                return DropdownMenuItem<String>(
-                                  value: wallet.walletId,
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          wallet.name,
-                                          style: const TextStyle(
-                                            color: Color(0xFF111111),
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ),
-                                      Text(
-                                        wallet.currency.trim().toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Color(0xFF8B8B8B),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _walletId = value;
-                                  if (_transactionType == 3 &&
-                                      _toWalletId == value) {
-                                    _toWalletId = _defaultToWalletId(
-                                      _wallets,
-                                      value,
-                                    );
-                                  }
-                                });
-                              },
-                            ),
                           if (_transactionType == 3) ...[
                             const SizedBox(height: 16),
                             if (_wallets.length < 2)

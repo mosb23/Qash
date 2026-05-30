@@ -15,4 +15,6 @@ public class CreateBudgetCommand : IRequest<ApiResponse<BudgetDto>>
     public int Month { get; set; }
 
     public decimal Amount { get; set; }
+
+    public string Currency { get; set; } = "USD";
 }

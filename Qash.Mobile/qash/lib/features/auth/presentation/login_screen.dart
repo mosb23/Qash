@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/input/text_input_formatters.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../domain/entities/auth_requests.dart';
+import '../../../core/providers/user_session_invalidation.dart';
 import '../providers/auth_providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -53,6 +56,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     if (response.isSuccess) {
+      invalidateUserSessionData(ref);
       context.go('/home');
     } else {
       _showMessage(
@@ -159,9 +163,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: TextField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
+                    inputFormatters: phoneInputFormatters,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
-                      hintText: '+20 1xx xxx xxxx',
+                      hintText: kPhoneHint,
                       hintStyle: TextStyle(
                         color: Color(0xFFC4C4C4),
                         fontSize: 16,

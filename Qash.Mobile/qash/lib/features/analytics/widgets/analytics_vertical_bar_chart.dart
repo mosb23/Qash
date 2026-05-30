@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/currency/currency_format.dart';
 import '../utils/analytics_chart_data.dart';
 
 class AnalyticsVerticalBarChart extends StatelessWidget {
@@ -94,21 +95,20 @@ class AnalyticsVerticalBarChart extends StatelessWidget {
     if (formatValue != null) {
       return formatValue!(value);
     }
-    if (value >= 1000) {
-      return NumberFormat.compactCurrency(symbol: '\$').format(value);
-    }
-    return NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(value);
+    return formatMoney(value, 'USD');
   }
 }
 
 class AnalyticsVerticalGroupedBarChart extends StatelessWidget {
   final List<AnalyticsComparisonBar> bars;
   final double chartHeight;
+  final String displayCurrency;
 
   const AnalyticsVerticalGroupedBarChart({
     super.key,
     required this.bars,
     this.chartHeight = 200,
+    this.displayCurrency = 'USD',
   });
 
   static const _incomeColor = Color(0xFF10B981);
@@ -155,6 +155,7 @@ class AnalyticsVerticalGroupedBarChart extends StatelessWidget {
                               height: incomeHeight,
                               color: _incomeColor,
                               value: bar.income,
+                              displayCurrency: displayCurrency,
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -163,6 +164,7 @@ class AnalyticsVerticalGroupedBarChart extends StatelessWidget {
                               height: expenseHeight,
                               color: _expenseColor,
                               value: bar.expenses,
+                              displayCurrency: displayCurrency,
                             ),
                           ),
                         ],
@@ -202,11 +204,13 @@ class _GroupedBar extends StatelessWidget {
   final double height;
   final Color color;
   final double value;
+  final String displayCurrency;
 
   const _GroupedBar({
     required this.height,
     required this.color,
     required this.value,
+    required this.displayCurrency,
   });
 
   @override
@@ -241,10 +245,11 @@ class _GroupedBar extends StatelessWidget {
   }
 
   String _shortValue(double value) {
+    final symbol = currencySymbol(displayCurrency);
     if (value >= 1000) {
-      return NumberFormat.compactCurrency(symbol: '\$').format(value);
+      return NumberFormat.compactCurrency(symbol: symbol).format(value);
     }
-    return NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(value);
+    return NumberFormat.currency(symbol: symbol, decimalDigits: 0).format(value);
   }
 }
 

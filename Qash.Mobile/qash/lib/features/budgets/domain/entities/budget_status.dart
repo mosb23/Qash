@@ -7,6 +7,7 @@ class BudgetStatusEntity {
   final double budgetAmount;
   final double spentAmount;
   final double remainingAmount;
+  final String currency;
 
   const BudgetStatusEntity({
     required this.budgetId,
@@ -17,6 +18,7 @@ class BudgetStatusEntity {
     required this.budgetAmount,
     required this.spentAmount,
     required this.remainingAmount,
+    this.currency = 'USD',
   });
 
   double get progress {

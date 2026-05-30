@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/currency/currency_format.dart';
+import '../../../core/currency/currency_conversion_service.dart';
+import '../../../core/currency/currency_providers.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/result.dart';
 import '../../../core/widgets/transaction_category_icon.dart';
@@ -20,6 +23,20 @@ class BudgetDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final transactions = ref.watch(transactionsProvider);
+    final budgets = ref.watch(adjustedBudgetStatusesProvider);
+    final conversion = ref.watch(currencyConversionServiceProvider);
+
+    final liveBudget = budgets.maybeWhen(
+      data: (items) {
+        for (final item in items) {
+          if (item.budgetId == budget.budgetId) {
+            return item;
+          }
+        }
+        return budget;
+      },
+      orElse: () => budget,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -39,12 +56,18 @@ class BudgetDetailScreen extends ConsumerWidget {
             ),
             child: IconButton(
               icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/budgets');
+                }
+              },
             ),
           ),
         ),
         title: Text(
-          budget.categoryName,
+          liveBudget.categoryName,
           style: const TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.w600,
@@ -57,14 +80,14 @@ class BudgetDetailScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _summaryCard(budget),
+            _summaryCard(liveBudget),
             const SizedBox(height: 18),
             Row(
               children: [
                 Expanded(
                   child: _miniStat(
                     label: 'Budget',
-                    value: _formatCurrency(budget.budgetAmount),
+                    value: formatMoney(liveBudget.budgetAmount, liveBudget.currency),
                     valueColor: const Color(0xFF111111),
                   ),
                 ),
@@ -72,7 +95,7 @@ class BudgetDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: _miniStat(
                     label: 'Spent',
-                    value: _formatCurrency(budget.spentAmount),
+                    value: formatMoney(liveBudget.spentAmount, liveBudget.currency),
                     valueColor: const Color(0xFF111111),
                   ),
                 ),
@@ -80,8 +103,11 @@ class BudgetDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: _miniStat(
                     label: 'Left',
-                    value: _formatCurrency(budget.remainingAmount.abs()),
-                    valueColor: budget.remainingAmount >= 0
+                    value: formatMoney(
+                      liveBudget.remainingAmount.abs(),
+                      liveBudget.currency,
+                    ),
+                    valueColor: liveBudget.remainingAmount >= 0
                         ? const Color(0xFF10B981)
                         : const Color(0xFFFB2C36),
                   ),
@@ -99,7 +125,7 @@ class BudgetDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             transactions.when(
-              data: (result) => _transactionsList(result, budget),
+              data: (result) => _transactionsList(result, liveBudget, conversion),
               loading: () => const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: Center(child: CircularProgressIndicator()),
@@ -122,7 +148,7 @@ class BudgetDetailScreen extends ConsumerWidget {
               width: double.infinity,
               height: 56,
               child: OutlinedButton.icon(
-                onPressed: () => _deleteBudget(context, ref, budget),
+                onPressed: () => _deleteBudget(context, ref, liveBudget),
                 icon: const Icon(
                   Icons.delete_outline,
                   color: Color(0xFFFB2C36),
@@ -192,7 +218,7 @@ class BudgetDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            _formatCurrency(budget.spentAmount),
+            formatMoney(budget.spentAmount, budget.currency),
             style: const TextStyle(
               color: Color(0xFF111111),
               fontSize: 32,
@@ -201,7 +227,7 @@ class BudgetDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'of ${_formatCurrency(budget.budgetAmount)} budget',
+            'of ${formatMoney(budget.budgetAmount, budget.currency)} budget',
             style: const TextStyle(
               color: Color(0xFF6B7280),
               fontSize: 14,
@@ -221,8 +247,8 @@ class BudgetDetailScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(
             remaining >= 0
-                ? '${_formatCurrency(remaining)} remaining'
-                : '${_formatCurrency(remaining.abs())} over budget',
+                ? '${formatMoney(remaining, budget.currency)} remaining'
+                : '${formatMoney(remaining.abs(), budget.currency)} over budget',
             style: TextStyle(
               color: remaining >= 0
                   ? const Color(0xFF10B981)
@@ -277,6 +303,7 @@ class BudgetDetailScreen extends ConsumerWidget {
   Widget _transactionsList(
     Result<List<TransactionEntity>> result,
     BudgetStatusEntity budget,
+    CurrencyConversionService conversion,
   ) {
     if (result.isFailure) {
       return Text(
@@ -296,7 +323,7 @@ class BudgetDetailScreen extends ConsumerWidget {
     return Column(
       children: [
         for (final item in items) ...[
-          _transactionCard(item),
+          _transactionCard(item, budget, conversion),
           const SizedBox(height: 12),
         ],
       ],
@@ -308,6 +335,9 @@ class BudgetDetailScreen extends ConsumerWidget {
     BudgetStatusEntity budget,
   ) {
     final filtered = items.where((item) {
+      if (!item.isExpense) {
+        return false;
+      }
       if (item.categoryId != budget.categoryId) {
         return false;
       }
@@ -317,11 +347,21 @@ class BudgetDetailScreen extends ConsumerWidget {
     return filtered;
   }
 
-  Widget _transactionCard(TransactionEntity item) {
-    final amountSign = item.isIncome ? '+' : '-';
-    final amountColor = item.isIncome
-        ? const Color(0xFF00A63E)
-        : const Color(0xFFFF0000);
+  Widget _transactionCard(
+    TransactionEntity item,
+    BudgetStatusEntity budget,
+    CurrencyConversionService conversion,
+  ) {
+    final amountSign = '-';
+    const amountColor = Color(0xFFFF0000);
+    final walletCurrency = item.walletCurrency.isNotEmpty
+        ? item.walletCurrency
+        : budget.currency;
+    final amountInBudgetCurrency = conversion.convert(
+      amount: item.amount,
+      fromCurrency: walletCurrency,
+      toCurrency: budget.currency,
+    );
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -373,8 +413,10 @@ class BudgetDetailScreen extends ConsumerWidget {
             ],
           ),
           Text(
-            '$amountSign${_formatCurrency(item.amount)}',
-            style: TextStyle(
+            walletCurrency.toUpperCase() == budget.currency.toUpperCase()
+                ? '$amountSign${formatMoney(item.amount, walletCurrency)}'
+                : '$amountSign${formatMoney(amountInBudgetCurrency, budget.currency)} (${formatMoney(item.amount, walletCurrency)})',
+            style: const TextStyle(
               color: amountColor,
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -390,9 +432,6 @@ class BudgetDetailScreen extends ConsumerWidget {
     return DateFormat('MMMM yyyy').format(date);
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: '\$').format(value);
-  }
 
   String _formatDate(DateTime value) {
     return DateFormat('yyyy-MM-dd').format(value);
