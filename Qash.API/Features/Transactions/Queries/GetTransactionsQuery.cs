@@ -10,8 +10,11 @@ public class GetTransactionsQuery : IRequest<ApiResponse<List<TransactionDto>>>
 {
     public Guid UserId { get; set; }
 
-    public GetTransactionsQuery(Guid userId)
+    public Guid? WalletId { get; set; }
+
+    public GetTransactionsQuery(Guid userId, Guid? walletId = null)
     {
         UserId = userId;
+        WalletId = walletId;
     }
 }

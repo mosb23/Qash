@@ -25,11 +25,21 @@ public class GetTransactionsQueryHandler : IRequestHandler<GetTransactionsQuery,
 
     public async Task<ApiResponse<List<TransactionDto>>> Handle(GetTransactionsQuery request, CancellationToken cancellationToken)
     {
-        var transactions = await _context.Transactions
+        var query = _context.Transactions
             .AsNoTracking()
             .Include(x => x.Wallet)
+            .Include(x => x.Category)
             .Include(x => x.ToWallet)
-            .Where(x => x.ApplicationUserId == request.UserId)
+            .Where(x => x.ApplicationUserId == request.UserId);
+
+        if (request.WalletId.HasValue)
+        {
+            query = query.Where(
+                x => x.WalletId == request.WalletId.Value ||
+                     x.ToWalletId == request.WalletId.Value);
+        }
+
+        var transactions = await query
             .OrderByDescending(x => x.TransactionDate)
             .ThenByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);

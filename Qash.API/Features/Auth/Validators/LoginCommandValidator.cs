@@ -8,11 +8,13 @@ public class LoginCommandValidator : AbstractValidator<LoginCommand>
     public LoginCommandValidator()
     {
         RuleFor(x => x.PhoneNumber)
-            .NotEmpty()
-            .Matches(@"^[0-9]{10,15}$")
-            .WithMessage("Invalid phone number.");
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage("Phone number is required.")
+            .Matches(@"^\d+$").WithMessage("Phone number must contain digits only.")
+            .MinimumLength(11).WithMessage("Phone number must contain 11 digits.")
+            .MaximumLength(11).WithMessage("Phone number cannot exceed 11 digits.");
 
         RuleFor(x => x.Password)
-            .NotEmpty();
+            .NotEmpty().WithMessage("Password is required.");
     }
 }

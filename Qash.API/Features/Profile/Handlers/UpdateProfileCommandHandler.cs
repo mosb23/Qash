@@ -36,6 +36,14 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
         }
 
         var email = request.Email.Trim().ToLower();
+        var incomingPhone = request.PhoneNumber.Trim();
+
+        if (!string.IsNullOrEmpty(incomingPhone) && incomingPhone != user.PhoneNumber)
+        {
+            return ApiResponse<ProfileDto>.FailResponse(
+                "Update profile failed.",
+                ["Phone number cannot be changed after account creation."]);
+        }
 
         var emailExists = await _context.Users
             .AnyAsync(x => x.Id != request.UserId && x.Email == email, cancellationToken);
