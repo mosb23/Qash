@@ -17,16 +17,14 @@ public class UpdateProfileCommandValidator : AbstractValidator<UpdateProfileComm
 
         RuleFor(x => x.Email)
             .NotEmpty()
-            .Must(BeValidDemoEmail)
-            .WithMessage("Email must contain @ and end with .com");
-    }
+            .EmailAddress()
+            .WithMessage("Please enter a valid email address.");
 
-    private bool BeValidDemoEmail(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return false;
-
-        email = email.Trim().ToLower();
-        return email.Contains("@") && email.EndsWith(".com");
+        RuleFor(x => x.PhoneNumber)
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage("Phone number is required.")
+            .Matches(@"^\d+$").WithMessage("Phone number must contain digits only.")
+            .MinimumLength(11).WithMessage("Phone number must contain 11 digits.")
+            .MaximumLength(11).WithMessage("Phone number cannot exceed 11 digits.");
     }
 }

@@ -36,14 +36,14 @@ public class TransactionController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetTransactions()
+    public async Task<IActionResult> GetTransactions([FromQuery] Guid? walletId = null)
     {
         var userId = GetCurrentUserId();
 
         if (userId is null)
             return Unauthorized();
 
-        var response = await _mediator.Send(new GetTransactionsQuery(userId.Value));
+        var response = await _mediator.Send(new GetTransactionsQuery(userId.Value, walletId));
         return response.Success ? Ok(response) : BadRequest(response);
     }
 

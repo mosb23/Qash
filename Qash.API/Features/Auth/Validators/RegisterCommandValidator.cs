@@ -17,32 +17,25 @@ public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
 
         RuleFor(x => x.Email)
             .NotEmpty()
-            .Must(BeValidDemoEmail)
-            .WithMessage("Email must contain @ and end with .com");
+            .EmailAddress()
+            .WithMessage("Please enter a valid email address.");
 
         RuleFor(x => x.PhoneNumber)
-            .NotEmpty()
-            .Matches(@"^[0-9]{10,15}$")
-            .WithMessage("Invalid phone number.");
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage("Phone number is required.")
+            .Matches(@"^\d+$").WithMessage("Phone number must contain digits only.")
+            .MinimumLength(11).WithMessage("Phone number must contain 11 digits.")
+            .MaximumLength(11).WithMessage("Phone number cannot exceed 11 digits.");
 
         RuleFor(x => x.Password)
             .NotEmpty()
-            .MinimumLength(8)
-            .Matches("[A-Z]").WithMessage("Password must contain uppercase letter.")
-            .Matches("[a-z]").WithMessage("Password must contain lowercase letter.")
-            .Matches("[0-9]").WithMessage("Password must contain number.");
+            .MinimumLength(8).WithMessage("Password must be at least 8 characters.")
+            .Matches("[A-Z]").WithMessage("Password must contain at least 1 uppercase letter.")
+            .Matches("[a-z]").WithMessage("Password must contain at least 1 lowercase letter.")
+            .Matches("[0-9]").WithMessage("Password must contain at least 1 number.");
 
         RuleFor(x => x.ConfirmPassword)
             .Equal(x => x.Password)
             .WithMessage("Passwords do not match.");
-    }
-
-    private bool BeValidDemoEmail(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return false;
-
-        email = email.Trim().ToLower();
-        return email.Contains("@") && email.EndsWith(".com");
     }
 }

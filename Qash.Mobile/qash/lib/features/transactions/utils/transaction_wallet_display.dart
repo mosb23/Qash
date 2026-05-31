@@ -10,12 +10,14 @@ class WalletTransactionDisplay {
     required this.sign,
     required this.currencyCode,
     required this.isIncomingTransfer,
+    this.exchangeRateText,
   });
 
   final double amount;
   final String sign;
   final String currencyCode;
   final bool isIncomingTransfer;
+  final String? exchangeRateText;
 }
 
 bool transactionInvolvesWallet(TransactionEntity item, String walletId) {
@@ -105,6 +107,7 @@ WalletTransactionDisplay walletTransactionDisplay(
       sign: '+',
       currencyCode: currencyCode,
       isIncomingTransfer: true,
+      exchangeRateText: _buildExchangeRateText(item),
     );
   }
 
@@ -122,6 +125,7 @@ WalletTransactionDisplay walletTransactionDisplay(
         fallback: fallbackCurrency,
       ),
       isIncomingTransfer: false,
+      exchangeRateText: _buildExchangeRateText(item),
     );
   }
 
@@ -179,4 +183,18 @@ WalletTransactionDisplay walletTransactionDisplay(
     currencyCode: currency,
     isIncomingTransfer: false,
   );
+}
+
+String? _buildExchangeRateText(TransactionEntity item) {
+  if (!item.isTransfer || item.exchangeRateUsed == null) {
+    return null;
+  }
+  final source = item.sourceCurrency.trim().toUpperCase();
+  final destination = (item.destinationCurrency ?? item.toWalletCurrency ?? '')
+      .trim()
+      .toUpperCase();
+  if (source.isEmpty || destination.isEmpty || source == destination) {
+    return null;
+  }
+  return '1 $source = ${item.exchangeRateUsed!.toStringAsFixed(4)} $destination';
 }

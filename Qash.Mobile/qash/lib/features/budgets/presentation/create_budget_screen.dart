@@ -259,7 +259,11 @@ class _CreateBudgetScreenState extends ConsumerState<CreateBudgetScreen> {
                 }
 
                 final items = (result.data ?? const <CategoryEntity>[])
-                    .where((category) => category.type == CategoryType.expense)
+                    .where(
+                      (category) =>
+                          category.type == CategoryType.expense &&
+                          category.name.trim().toLowerCase() != 'transfer',
+                    )
                     .toList();
 
                 if (items.isNotEmpty &&
