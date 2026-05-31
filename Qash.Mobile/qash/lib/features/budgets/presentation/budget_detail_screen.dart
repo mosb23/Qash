@@ -12,6 +12,8 @@ import '../../../core/utils/result.dart';
 import '../../../core/widgets/transaction_category_icon.dart';
 import '../../transactions/domain/entities/transaction.dart';
 import '../../transactions/providers/transactions_providers.dart';
+import '../../categories/domain/entities/category.dart';
+import '../../categories/providers/categories_providers.dart';
 import '../domain/entities/budget_status.dart';
 import '../providers/budgets_providers.dart';
 
@@ -25,6 +27,7 @@ class BudgetDetailScreen extends ConsumerWidget {
     final transactions = ref.watch(transactionsProvider);
     final budgets = ref.watch(adjustedBudgetStatusesProvider);
     final conversion = ref.watch(currencyConversionServiceProvider);
+    final categories = ref.watch(categoriesProvider);
 
     final liveBudget = budgets.maybeWhen(
       data: (items) {
@@ -80,7 +83,7 @@ class BudgetDetailScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _summaryCard(liveBudget),
+            _summaryCard(liveBudget, categories),
             const SizedBox(height: 18),
             Row(
               children: [
@@ -175,9 +178,24 @@ class BudgetDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryCard(BudgetStatusEntity budget) {
+  Widget _summaryCard(
+    BudgetStatusEntity budget,
+    AsyncValue<Result<List<CategoryEntity>>> categories,
+  ) {
     final progress = budget.progress;
     final remaining = budget.remainingAmount;
+    final categoryIcon = categories.maybeWhen(
+      data: (result) {
+        final items = result.data ?? const <CategoryEntity>[];
+        for (final category in items) {
+          if (category.id == budget.categoryId) {
+            return category.icon;
+          }
+        }
+        return null;
+      },
+      orElse: () => null,
+    );
 
     return Container(
       width: double.infinity,
@@ -196,14 +214,14 @@ class BudgetDetailScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Center(
-              child: Text(
-                budget.categoryName.isNotEmpty
-                    ? budget.categoryName.substring(0, 1).toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: TransactionCategoryIcon(
+                categoryName: budget.categoryName,
+                categoryIcon: categoryIcon,
+                isTransfer: false,
+                backgroundColor: Colors.transparent,
+                size: 56,
+                iconSize: 26,
+                borderRadius: 20,
               ),
             ),
           ),

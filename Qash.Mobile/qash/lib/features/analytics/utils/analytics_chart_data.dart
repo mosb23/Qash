@@ -149,10 +149,6 @@ List<AnalyticsComparisonBar> _dailyIncomeExpenseBars(
     from: from,
     toExclusive: toExclusive,
   )) {
-    if (transaction.excludeFromGlobalTotals) {
-      continue;
-    }
-
     final local = _toLocal(transaction.transactionDate);
     final dayIndex = local.difference(from).inDays;
     if (dayIndex < 0 || dayIndex >= dayCount) {
@@ -166,7 +162,9 @@ List<AnalyticsComparisonBar> _dailyIncomeExpenseBars(
       walletsById: walletsById,
     );
 
-    if (transaction.isIncome) {
+    if (transaction.isTransfer) {
+      expenseTotals[dayIndex] += converted;
+    } else if (transaction.isIncome) {
       incomeTotals[dayIndex] += converted;
     } else if (transaction.isExpense) {
       expenseTotals[dayIndex] += converted;
@@ -205,10 +203,6 @@ List<AnalyticsComparisonBar> _monthWeekIncomeExpenseBars(
     from: from,
     toExclusive: toExclusive,
   )) {
-    if (transaction.excludeFromGlobalTotals) {
-      continue;
-    }
-
     final local = _toLocal(transaction.transactionDate);
     if (local.year != now.year || local.month != now.month) {
       continue;
@@ -222,7 +216,9 @@ List<AnalyticsComparisonBar> _monthWeekIncomeExpenseBars(
       walletsById: walletsById,
     );
 
-    if (transaction.isIncome) {
+    if (transaction.isTransfer) {
+      expenseTotals[weekIndex] += converted;
+    } else if (transaction.isIncome) {
       incomeTotals[weekIndex] += converted;
     } else if (transaction.isExpense) {
       expenseTotals[weekIndex] += converted;

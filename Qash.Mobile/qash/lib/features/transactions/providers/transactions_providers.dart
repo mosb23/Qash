@@ -186,16 +186,27 @@ bool matchesWalletFilter(TransactionEntity item, String walletId) {
     return false;
   }
 
-  if (normalizeTransactionId(item.walletId) == target) {
-    return true;
+  final sourceMatch = normalizeTransactionId(item.walletId) == target;
+  final destinationMatch =
+      item.toWalletId != null &&
+      item.toWalletId!.isNotEmpty &&
+      normalizeTransactionId(item.toWalletId) == target;
+
+  if (item.isTransfer || item.isTransferLinked) {
+    // For a wallet-specific view, keep only one transfer leg:
+    // source wallet sees outgoing, destination wallet sees incoming.
+    if (item.isTransferLinked) {
+      return sourceMatch;
+    }
+
+    if (!item.isTransfer) {
+      return false;
+    }
+
+    return sourceMatch || destinationMatch;
   }
 
-  final destinationId = item.toWalletId;
-  if (destinationId != null && destinationId.isNotEmpty) {
-    return normalizeTransactionId(destinationId) == target;
-  }
-
-  return false;
+  return sourceMatch;
 }
 
 List<TransactionEntity> sortTransactions(
@@ -231,11 +242,17 @@ final filteredTransactionsProvider =
         var items = result.data ?? const [];
         switch (filter) {
           case TransactionFilter.income:
-            items = items.where((item) => item.isIncome).toList();
+            items = items
+                .where((item) => item.isIncome && !item.isTransferLinked)
+                .toList();
           case TransactionFilter.expense:
-            items = items.where((item) => item.isExpense).toList();
+            items = items
+                .where((item) => item.isExpense && !item.isTransferLinked)
+                .toList();
           case TransactionFilter.transfer:
-            items = items.where((item) => item.isTransfer).toList();
+            items = items
+                .where((item) => item.isTransfer || item.isTransferLinked)
+                .toList();
           case TransactionFilter.all:
             break;
         }
@@ -245,6 +262,7 @@ final filteredTransactionsProvider =
           items = items
               .where((item) => matchesWalletFilter(item, walletId))
               .toList();
+          items = _dedupeTransferLegs(items);
         }
 
         return sortTransactions(items, listOptions.sort);
@@ -280,10 +298,6 @@ final transactionsSummaryProvider = Provider<AsyncValue<TransactionsSummary>>((
     var expenseTotal = 0.0;
 
     for (final item in items) {
-      if (item.excludeFromGlobalTotals) {
-        continue;
-      }
-
       final converted = convertTransactionAmount(
         transaction: item,
         targetCurrency: displayCurrency,
@@ -291,7 +305,9 @@ final transactionsSummaryProvider = Provider<AsyncValue<TransactionsSummary>>((
         walletsById: walletsById,
       );
 
-      if (item.isIncome) {
+      if (item.isTransfer) {
+        expenseTotal += converted;
+      } else if (item.isIncome) {
         incomeTotal += converted;
       } else if (item.isExpense) {
         expenseTotal += converted;
@@ -304,3 +320,31 @@ final transactionsSummaryProvider = Provider<AsyncValue<TransactionsSummary>>((
     );
   });
 });
+
+List<TransactionEntity> _dedupeTransferLegs(List<TransactionEntity> items) {
+  final grouped = <String, List<TransactionEntity>>{};
+  final withoutGroup = <TransactionEntity>[];
+
+  for (final item in items) {
+    final groupId = item.transferGroupId?.trim();
+    if (groupId == null || groupId.isEmpty) {
+      withoutGroup.add(item);
+      continue;
+    }
+    grouped.putIfAbsent(groupId, () => []).add(item);
+  }
+
+  final deduped = <TransactionEntity>[...withoutGroup];
+  for (final groupItems in grouped.values) {
+    TransactionEntity? preferred;
+    for (final candidate in groupItems) {
+      if (candidate.isTransfer) {
+        preferred = candidate;
+        break;
+      }
+    }
+    deduped.add(preferred ?? groupItems.first);
+  }
+
+  return deduped;
+}

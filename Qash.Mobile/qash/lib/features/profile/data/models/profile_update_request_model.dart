@@ -4,11 +4,13 @@ class ProfileUpdateRequestModel {
   final String firstName;
   final String lastName;
   final String email;
+  final String phoneNumber;
 
   const ProfileUpdateRequestModel({
     required this.firstName,
     required this.lastName,
     required this.email,
+    required this.phoneNumber,
   });
 
   factory ProfileUpdateRequestModel.fromDomain(ProfileUpdateData data) {
@@ -16,6 +18,7 @@ class ProfileUpdateRequestModel {
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
+      phoneNumber: data.phoneNumber,
     );
   }
 
@@ -24,6 +27,7 @@ class ProfileUpdateRequestModel {
       'firstName': firstName,
       'lastName': lastName,
       'email': email,
+      'phoneNumber': phoneNumber,
     };
   }
 }

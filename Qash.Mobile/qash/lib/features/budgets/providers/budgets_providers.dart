@@ -105,7 +105,13 @@ final adjustedBudgetStatusesProvider =
         conversion: conversion,
       );
 
-      return AsyncValue.data(adjusted);
+      final filtered = adjusted
+          .where(
+            (budget) => budget.categoryName.trim().toLowerCase() != 'transfer',
+          )
+          .toList();
+
+      return AsyncValue.data(filtered);
     });
 
 enum BudgetFilter { all, current, expired }

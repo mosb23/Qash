@@ -182,7 +182,7 @@ class _TransactionDetailBody extends StatelessWidget {
                 TransactionCategoryIcon(
                   categoryName: transaction.categoryName,
                   categoryIcon: transaction.categoryName,
-                  isTransfer: transaction.isTransfer,
+                  isTransfer: transaction.isTransfer || transaction.isTransferLinked,
                   backgroundColor: Colors.white,
                   size: 72,
                   iconSize: 32,

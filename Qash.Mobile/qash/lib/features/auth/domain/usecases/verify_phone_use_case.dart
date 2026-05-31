@@ -1,5 +1,6 @@
 import '../../../../core/utils/result.dart';
 import '../entities/auth_requests.dart';
+import '../entities/auth_session.dart';
 import '../repositories/auth_repository.dart';
 
 class VerifyPhoneUseCase {
@@ -7,7 +8,7 @@ class VerifyPhoneUseCase {
 
   const VerifyPhoneUseCase(this._repository);
 
-  Future<Result<String>> call(PhoneVerificationData data) {
+  Future<Result<AuthSession>> call(PhoneVerificationData data) {
     return _repository.verifyPhone(data);
   }
 }

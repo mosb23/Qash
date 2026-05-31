@@ -21,4 +21,4 @@ final List<TextInputFormatter> nameInputFormatters = [
 ];
 
 /// Default hint for Egyptian mobile numbers.
-const String kPhoneHint = '+201*********';
+const String kPhoneHint = '01*********';

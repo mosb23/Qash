@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/validation/password_policy.dart';
+import '../../../core/widgets/password_requirements_widget.dart';
 import '../../auth/domain/entities/auth_requests.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../providers/profile_providers.dart';
@@ -26,9 +27,18 @@ class _ProfileChangeResetPasswordScreenState
     extends ConsumerState<ProfileChangeResetPasswordScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
+
   bool _isLoading = false;
   bool _passwordObscured = true;
   bool _confirmPasswordObscured = true;
+  bool _hasSubmitted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_onFormChanged);
+    _confirmController.addListener(_onFormChanged);
+  }
 
   @override
   void dispose() {
@@ -37,10 +47,13 @@ class _ProfileChangeResetPasswordScreenState
     super.dispose();
   }
 
+  void _onFormChanged() {
+    if (mounted) setState(() {});
+  }
+
   void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _resetPassword() async {
@@ -48,14 +61,19 @@ class _ProfileChangeResetPasswordScreenState
     final code = widget.verificationCode?.trim() ?? '';
     final password = _passwordController.text.trim();
     final confirm = _confirmController.text.trim();
+    final passwordPolicy = evaluatePasswordPolicy(password);
+
+    setState(() => _hasSubmitted = true);
 
     if (phone.isEmpty || code.isEmpty) {
       _showMessage('Missing phone number or verification code.');
       return;
     }
 
-    if (password.isEmpty || confirm.isEmpty) {
-      _showMessage('Enter and confirm your new password.');
+    if (!passwordPolicy.isValid) {
+      _showMessage(
+        'Password requirements:\n${passwordPolicy.unmetRequirements.map((r) => '• $r').join('\n')}',
+      );
       return;
     }
 
@@ -64,9 +82,7 @@ class _ProfileChangeResetPasswordScreenState
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     final resetPassword = ref.read(resetForgotPasswordUseCaseProvider);
     final response = await resetPassword(
@@ -78,13 +94,8 @@ class _ProfileChangeResetPasswordScreenState
       ),
     );
 
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isLoading = false;
-    });
+    if (!mounted) return;
+    setState(() => _isLoading = false);
 
     if (response.isSuccess) {
       context.go('/profile/change-success');
@@ -97,12 +108,22 @@ class _ProfileChangeResetPasswordScreenState
     }
   }
 
+  bool get _canSubmit {
+    final phone = _resolvedPhone();
+    final code = widget.verificationCode?.trim() ?? '';
+    final password = _passwordController.text.trim();
+    final confirm = _confirmController.text.trim();
+    final policy = evaluatePasswordPolicy(password);
+    return !_isLoading &&
+        phone.isNotEmpty &&
+        code.isNotEmpty &&
+        policy.isValid &&
+        password == confirm;
+  }
+
   String _resolvedPhone() {
     final directPhone = widget.phoneNumber?.trim() ?? '';
-    if (directPhone.isNotEmpty) {
-      return directPhone;
-    }
-
+    if (directPhone.isNotEmpty) return directPhone;
     final profileAsync = ref.read(profileProvider);
     return profileAsync.maybeWhen(
       data: (result) => result.data?.phoneNumber ?? '',
@@ -112,12 +133,17 @@ class _ProfileChangeResetPasswordScreenState
 
   @override
   Widget build(BuildContext context) {
+    final password = _passwordController.text.trim();
+    final confirm = _confirmController.text.trim();
+    final policy = evaluatePasswordPolicy(password);
+    final showConfirmError =
+        _hasSubmitted && confirm.isNotEmpty && password != confirm;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Container(
-            width: double.infinity,
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,66 +179,18 @@ class _ProfileChangeResetPasswordScreenState
                   ),
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                        spreadRadius: -1,
-                      ),
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _passwordController,
-                          obscureText: _passwordObscured,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Enter new password',
-                            hintStyle: TextStyle(
-                              color: Color(0xFFC4C4C4),
-                              fontSize: 16,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          style: const TextStyle(
-                            color: Color(0xFF111111),
-                            fontSize: 16,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => setState(
-                          () => _passwordObscured = !_passwordObscured,
-                        ),
-                        icon: Icon(
-                          _passwordObscured
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: const Color(0xFFC4C4C4),
-                          size: 20,
-                        ),
-                      ),
-                    ],
-                  ),
+                _buildPasswordField(
+                  controller: _passwordController,
+                  hint: 'Enter new password',
+                  obscured: _passwordObscured,
+                  hasError: _hasSubmitted && !policy.isValid,
+                  onToggle: () =>
+                      setState(() => _passwordObscured = !_passwordObscured),
+                ),
+                const SizedBox(height: 12),
+                PasswordRequirementsWidget(
+                  policy: policy,
+                  showValidation: _hasSubmitted,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -225,77 +203,37 @@ class _ProfileChangeResetPasswordScreenState
                   ),
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                        spreadRadius: -1,
-                      ),
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _confirmController,
-                          obscureText: _confirmPasswordObscured,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Confirm new password',
-                            hintStyle: TextStyle(
-                              color: Color(0xFFC4C4C4),
-                              fontSize: 16,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          style: const TextStyle(
-                            color: Color(0xFF111111),
-                            fontSize: 16,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => setState(
-                          () => _confirmPasswordObscured =
-                              !_confirmPasswordObscured,
-                        ),
-                        icon: Icon(
-                          _confirmPasswordObscured
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: const Color(0xFFC4C4C4),
-                          size: 20,
-                        ),
-                      ),
-                    ],
+                _buildPasswordField(
+                  controller: _confirmController,
+                  hint: 'Confirm new password',
+                  obscured: _confirmPasswordObscured,
+                  hasError: showConfirmError,
+                  onToggle: () => setState(
+                    () => _confirmPasswordObscured = !_confirmPasswordObscured,
                   ),
                 ),
+                if (showConfirmError)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Passwords do not match.',
+                      style: TextStyle(
+                        color: Color(0xFFD32F2F),
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? () {} : _resetPassword,
+                    onPressed: _canSubmit ? _resetPassword : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF111111),
-                      disabledBackgroundColor: const Color(0xFF111111),
+                      disabledBackgroundColor: const Color(0xFF9CA3AF),
                       foregroundColor: Colors.white,
                       disabledForegroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
@@ -336,6 +274,78 @@ class _ProfileChangeResetPasswordScreenState
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String hint,
+    required bool obscured,
+    required VoidCallback onToggle,
+    bool hasError = false,
+  }) {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: hasError ? const Color(0xFFD32F2F) : Colors.transparent,
+          width: 1.5,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x19000000),
+            blurRadius: 2,
+            offset: Offset(0, 1),
+            spreadRadius: -1,
+          ),
+          BoxShadow(
+            color: Color(0x19000000),
+            blurRadius: 3,
+            offset: Offset(0, 1),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              obscureText: obscured,
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: hint,
+                hintStyle: const TextStyle(
+                  color: Color(0xFFC4C4C4),
+                  fontSize: 16,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              style: const TextStyle(
+                color: Color(0xFF111111),
+                fontSize: 16,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: onToggle,
+            icon: Icon(
+              obscured
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
+              color: const Color(0xFFC4C4C4),
+              size: 20,
+            ),
+          ),
+        ],
       ),
     );
   }

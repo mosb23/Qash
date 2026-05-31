@@ -23,31 +23,12 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
   final TextEditingController _walletNameController = TextEditingController();
   final TextEditingController _balanceController = TextEditingController();
 
-  String _selectedWalletType = 'Bank Account';
   String _selectedCurrency = 'USD';
 
   bool _submitting = false;
   String? _errorMessage;
 
   bool get _isEdit => widget.wallet != null;
-
-  final List<_WalletTypeModel> _walletTypes = [
-    _WalletTypeModel(
-      title: 'Bank Account',
-      subtitle: 'Debit or credit card',
-      emoji: '🏦',
-    ),
-    _WalletTypeModel(
-      title: 'Cash',
-      subtitle: 'Physical money on hand',
-      emoji: '💵',
-    ),
-    _WalletTypeModel(
-      title: 'Savings',
-      subtitle: 'Savings & deposits',
-      emoji: '🐖',
-    ),
-  ];
 
   final List<String> _currencies = ['USD', 'EGP', 'EUR', 'GBP', 'JPY'];
 
@@ -158,23 +139,6 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
               hint: 'e.g. My Bank Account',
             ),
             const SizedBox(height: 24),
-            const _SectionTitle('Wallet Type'),
-            const SizedBox(height: 8),
-            ..._walletTypes.map(
-              (type) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _WalletTypeTile(
-                  walletType: type,
-                  selected: _selectedWalletType == type.title,
-                  onTap: () {
-                    setState(() {
-                      _selectedWalletType = type.title;
-                    });
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
             const _SectionTitle('Currency'),
             const SizedBox(height: 12),
             Wrap(
@@ -235,9 +199,6 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
               }).toList(),
             ),
             const SizedBox(height: 24),
-            const SizedBox(
-              height: 24,
-            ), // Keep the spacing after removing the color section
             const _SectionTitle('Initial Balance'),
             const SizedBox(height: 8),
             _CustomInputField(
@@ -288,76 +249,6 @@ class _AddWalletScreenState extends ConsumerState<AddWalletScreen> {
                       ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _WalletTypeTile extends StatelessWidget {
-  final _WalletTypeModel walletType;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _WalletTypeTile({
-    required this.walletType,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? Colors.black : Colors.transparent,
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Text(walletType.emoji, style: const TextStyle(fontSize: 28)),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    walletType.title,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    walletType.subtitle,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (selected)
-              const CircleAvatar(
-                radius: 12,
-                backgroundColor: Colors.black,
-                child: Icon(Icons.check, size: 14, color: Colors.white),
-              ),
           ],
         ),
       ),
@@ -419,16 +310,4 @@ class _SectionTitle extends StatelessWidget {
       ),
     );
   }
-}
-
-class _WalletTypeModel {
-  final String title;
-  final String subtitle;
-  final String emoji;
-
-  const _WalletTypeModel({
-    required this.title,
-    required this.subtitle,
-    required this.emoji,
-  });
 }

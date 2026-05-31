@@ -180,12 +180,12 @@ class WalletsScreen extends ConsumerWidget {
     List<TransactionEntity> transactions,
     CurrencyConversionService conversion,
   ) {
-    final total = sumWalletBalancesInCurrency(
+    final groupedTotals = _walletTotalsByCurrency(
       wallets: wallets,
       transactions: transactions,
-      targetCurrency: activeCurrency,
       conversion: conversion,
     );
+    final selectedTotal = groupedTotals[activeCurrency] ?? 0;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -207,15 +207,40 @@ class WalletsScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            formatMoney(total, activeCurrency),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 30,
-              fontWeight: FontWeight.w400,
+          if (groupedTotals.isEmpty)
+            const Text(
+              'No assets yet',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w500,
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    activeCurrency,
+                    style: const TextStyle(
+                      color: Color(0xFF8B8B8B),
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    formatMoney(selectedTotal, activeCurrency),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             '${wallets.length} wallets',
             style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
@@ -406,5 +431,32 @@ class WalletsScreen extends ConsumerWidget {
       return error.message;
     }
     return 'Failed to load wallets.';
+  }
+
+  Map<String, double> _walletTotalsByCurrency({
+    required List<WalletEntity> wallets,
+    required List<TransactionEntity> transactions,
+    required CurrencyConversionService conversion,
+  }) {
+    if (wallets.isEmpty) {
+      return const <String, double>{};
+    }
+
+    final walletsById = walletsByIdMap(wallets);
+    final totals = <String, double>{};
+
+    for (final wallet in wallets) {
+      final currency = wallet.currency.trim().toUpperCase();
+      final balance = displayWalletBalance(
+        wallet: wallet,
+        allTransactions: transactions,
+        walletsById: walletsById,
+        exchangeRates: conversion.rates,
+      );
+      totals[currency] = (totals[currency] ?? 0) + balance;
+    }
+
+    final keys = totals.keys.toList()..sort();
+    return {for (final key in keys) key: totals[key] ?? 0};
   }
 }

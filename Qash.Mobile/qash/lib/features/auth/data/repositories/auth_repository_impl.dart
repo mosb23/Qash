@@ -46,18 +46,18 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Result<String>> verifyPhone(PhoneVerificationData data) async {
+  Future<Result<AuthSession>> verifyPhone(PhoneVerificationData data) async {
     final response = await _remoteDataSource.verifyPhone(
       VerifyPhoneRequestModel.fromDomain(data),
     );
 
-    if (response.success) {
-      return Result.success(response.data ?? response.message);
+    final result = _mapAuthResponse(response);
+    final session = result.data;
+    if (result.isSuccess && session != null) {
+      await _saveTokens(session);
     }
 
-    return Result.failure(
-      AppFailure(message: response.message, errors: response.errors),
-    );
+    return result;
   }
 
   @override

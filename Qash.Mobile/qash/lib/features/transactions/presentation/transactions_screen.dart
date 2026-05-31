@@ -823,15 +823,11 @@ class TransactionsScreen extends ConsumerWidget {
       walletsById: walletsById,
       exchangeRates: exchangeRates,
     );
-    final isTransfer = item.isTransfer;
-    final amountColor = display.isIncomingTransfer
-        ? const Color(0xFF00A63E)
-        : isTransfer
-        ? const Color(0xFF2B7FFF)
-        : item.isIncome
-        ? const Color(0xFF00A63E)
-        : const Color(0xFFFF0000);
+    final isTransfer = item.isTransfer || item.isTransferLinked;
     final amountSign = display.sign;
+    final amountColor = amountSign == '-'
+        ? const Color(0xFFFF0000)
+        : const Color(0xFF00A63E);
     final iconBg = isTransfer
         ? const Color(0xFFE1EBFF)
         : item.isIncome
@@ -889,7 +885,7 @@ class TransactionsScreen extends ConsumerWidget {
                 TransactionCategoryIcon(
                   categoryName: resolvedCategoryName,
                   categoryIcon: categoryMap[item.categoryId]?.icon,
-                  isTransfer: item.isTransfer,
+                  isTransfer: isTransfer,
                   backgroundColor: iconBg,
                 ),
                 const SizedBox(width: 12),

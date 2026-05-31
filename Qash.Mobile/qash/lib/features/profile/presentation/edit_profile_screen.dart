@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/input/text_input_formatters.dart';
+import '../../../core/validation/contact_validation.dart';
 
 import '../providers/profile_providers.dart';
 import '../domain/entities/profile_update.dart';
@@ -23,6 +24,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   bool _loading = false;
   bool _initialized = false;
+  bool _hasSubmitted = false;
+  String? _emailError;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_onFormChanged);
+    _firstNameController.addListener(_onFormChanged);
+    _lastNameController.addListener(_onFormChanged);
+  }
 
   @override
   void dispose() {
@@ -33,14 +44,41 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.dispose();
   }
 
+  void _onFormChanged() {
+    if (!mounted) return;
+    setState(() {
+      if (_hasSubmitted) {
+        _emailError = validateEmailAddress(_emailController.text);
+      }
+    });
+  }
+
   Future<void> _handleSave() async {
+    setState(() {
+      _hasSubmitted = true;
+      _emailError = validateEmailAddress(_emailController.text);
+    });
+    if (_emailError != null) return;
+
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    if (firstName.isEmpty || lastName.isEmpty || email.isEmpty || phone.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields.')));
+      return;
+    }
+
     setState(() => _loading = true);
 
     final result = await ref.read(updateProfileUseCaseProvider)(
       ProfileUpdateData(
-        firstName: _firstNameController.text.trim(),
-        lastName: _lastNameController.text.trim(),
-        email: _emailController.text.trim(),
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        phoneNumber: phone,
       ),
     );
 
@@ -60,6 +98,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  bool get _canSubmit {
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final email = _emailController.text.trim();
+    return !_loading &&
+        firstName.isNotEmpty &&
+        lastName.isNotEmpty &&
+        validateEmailAddress(email) == null;
   }
 
   @override
@@ -146,6 +194,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 hintText: 'your@email.com',
+                errorText: _emailError,
+                onChanged: (_) => _onFormChanged(),
               ),
               const SizedBox(height: 16),
               _InputField(
@@ -153,6 +203,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 hintText: 'Phone number',
+                inputFormatters: phoneInputFormatters,
                 enabled: false,
               ),
               const SizedBox(height: 24),
@@ -167,7 +218,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                  onPressed: _loading ? null : _handleSave,
+                  onPressed: _canSubmit ? _handleSave : null,
                   child: Text(_loading ? 'Saving...' : 'Save Changes'),
                 ),
               ),
@@ -192,19 +243,27 @@ class _InputField extends StatelessWidget {
     required this.controller,
     required this.keyboardType,
     required this.hintText,
-    this.enabled = true,
     this.inputFormatters,
+    this.errorText,
+    this.onChanged,
+    this.enabled = true,
   });
 
   final String label;
   final TextEditingController controller;
   final TextInputType keyboardType;
   final String hintText;
-  final bool enabled;
   final List<TextInputFormatter>? inputFormatters;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
+    final fillColor = enabled ? Colors.white : const Color(0xFFF3F4F6);
+    final textColor =
+        enabled ? const Color(0xFF111111) : const Color(0xFF9CA3AF);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -215,18 +274,16 @@ class _InputField extends StatelessWidget {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          onChanged: onChanged,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           enabled: enabled,
-          style: TextStyle(
-            fontSize: 14,
-            color: enabled ? const Color(0xFF111111) : const Color(0xFF6B7280),
-          ),
+          style: TextStyle(fontSize: 14, color: textColor),
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
             filled: true,
-            fillColor: enabled ? Colors.white : const Color(0xFFF3F4F6),
+            fillColor: fillColor,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,
@@ -235,8 +292,25 @@ class _InputField extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               borderSide: BorderSide.none,
             ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
+        if (errorText != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              errorText!,
+              style: const TextStyle(
+                color: Color(0xFFD32F2F),
+                fontSize: 12,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
       ],
     );
   }

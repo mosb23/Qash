@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../config/providers.dart';
 import '../../../core/currency/currency_aggregation.dart';
 import '../../../core/currency/currency_conversion_service.dart';
 import '../../../core/currency/currency_format.dart';
@@ -37,7 +38,18 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  static const String _hideBalancesStorageKey = 'home_hide_balances';
+  static const String _firstWalletPromptStorageKey = 'home_first_wallet_prompt_seen';
+
   bool _hideBalances = false;
+  bool _hideBalancesLoaded = false;
+  bool _firstWalletPromptShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => _restoreUiPreferences());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +77,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
     final recents = _resolveRecentTransactions(ref.watch(transactionsProvider));
     final exchangeRates = conversion.rates;
+    _maybeShowCreateWalletPrompt(wallets);
+
+    if (!_hideBalancesLoaded) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF7F6F3),
+        body: SafeArea(child: Center(child: CircularProgressIndicator())),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -179,9 +199,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   const SizedBox(width: 8),
                                   IconButton(
                                     onPressed: () {
-                                      setState(() {
-                                        _hideBalances = !_hideBalances;
-                                      });
+                                      _toggleHideBalances();
                                     },
                                     icon: Icon(
                                       _hideBalances
@@ -520,6 +538,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   ),
                                 ),
                               ],
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                'Recent transactions are converted to the selected display currency from Total Balance.',
+                                style: TextStyle(
+                                  color: Color(0xFF1D4ED8),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             _recentSection(
@@ -1266,17 +1304,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     String displayCurrency,
     Map<String, WalletEntity> walletsById,
   ) {
-    final isTransfer = item.isTransfer;
-    final amountColor = isTransfer
-        ? const Color(0xFF2B7FFF)
-        : item.isIncome
-        ? const Color(0xFF00A63E)
-        : const Color(0xFFFF0000);
-    final amountSign = isTransfer
-        ? ''
-        : item.isIncome
-        ? '+'
-        : '-';
+    final isTransfer = item.isTransfer || item.isTransferLinked;
+    final amountSign = item.isIncome ? '+' : '-';
+    final amountColor = amountSign == '-'
+        ? const Color(0xFFFF0000)
+        : const Color(0xFF00A63E);
     final convertedAmount = convertTransactionAmount(
       transaction: item,
       targetCurrency: displayCurrency,
@@ -1319,7 +1351,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 TransactionCategoryIcon(
                   categoryName: item.categoryName,
                   categoryIcon: item.categoryName,
-                  isTransfer: item.isTransfer,
+                  isTransfer: isTransfer,
                   backgroundColor: iconBg,
                 ),
                 const SizedBox(width: 12),
@@ -1483,5 +1515,133 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _restoreUiPreferences() async {
+    final storage = ref.read(secureStorageProvider);
+    final hideBalancesSaved = await storage.readBool(_hideBalancesStorageKey);
+    final firstPromptSaved = await storage.readBool(_firstWalletPromptStorageKey);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _hideBalances = hideBalancesSaved ?? false;
+      _hideBalancesLoaded = true;
+      _firstWalletPromptShown = firstPromptSaved ?? false;
+    });
+  }
+
+  Future<void> _toggleHideBalances() async {
+    final nextValue = !_hideBalances;
+    setState(() {
+      _hideBalances = nextValue;
+    });
+    await ref.read(secureStorageProvider).writeBool(
+      _hideBalancesStorageKey,
+      nextValue,
+    );
+  }
+
+  void _maybeShowCreateWalletPrompt(AsyncValue<List<WalletEntity>> wallets) {
+    if (!_hideBalancesLoaded || _firstWalletPromptShown) {
+      return;
+    }
+    final hasNoWallets = wallets.maybeWhen(
+      data: (items) => items.isEmpty,
+      orElse: () => false,
+    );
+    if (!hasNoWallets) {
+      return;
+    }
+
+    _firstWalletPromptShown = true;
+    Future.microtask(() async {
+      if (!mounted) {
+        return;
+      }
+      await ref
+          .read(secureStorageProvider)
+          .writeBool(_firstWalletPromptStorageKey, true);
+      if (!mounted) {
+        return;
+      }
+      showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF111111),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Welcome to Qash',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Create your first wallet before adding transactions, so every record has a home.',
+                  style: TextStyle(
+                    color: Color(0xFFBDBDBD),
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Color(0xFF3A3A3A)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text('Later'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          context.push('/wallets/create');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF4D93A),
+                          foregroundColor: const Color(0xFF111111),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Create Wallet',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
   }
 }

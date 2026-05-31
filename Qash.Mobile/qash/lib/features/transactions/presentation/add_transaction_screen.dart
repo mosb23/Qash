@@ -29,7 +29,6 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
 }
 
 class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
-  static const String _emptyGuid = '00000000-0000-0000-0000-000000000000';
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
 
@@ -114,14 +113,20 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   List<CategoryEntity> _filterCategories(List<CategoryEntity> categories) {
+    bool isTransferCategory(CategoryEntity category) {
+      return category.type == CategoryType.transfer ||
+          category.name.trim().toLowerCase() == 'transfer';
+    }
+
     if (_transactionType == 1) {
-      return categories.where((c) => c.type == CategoryType.income).toList();
+      return categories
+          .where((c) => c.type == CategoryType.income && !isTransferCategory(c))
+          .toList();
     }
     if (_transactionType == 2) {
-      return categories.where((c) => c.type == CategoryType.expense).toList();
-    }
-    if (_transactionType == 3) {
-      return categories.where((c) => c.type == CategoryType.transfer).toList();
+      return categories
+          .where((c) => c.type == CategoryType.expense && !isTransferCategory(c))
+          .toList();
     }
     return const [];
   }
@@ -298,9 +303,24 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _errorMessage = null;
     });
 
+    CategoryEntity? transferCategory;
+    for (final category in _allCategories) {
+      if (category.type == CategoryType.transfer) {
+        transferCategory = category;
+        break;
+      }
+    }
     final resolvedCategoryId = _transactionType == 3
-        ? (_categoryId ?? _emptyGuid)
+        ? (transferCategory?.id ?? _categoryId ?? '')
         : _categoryId!;
+
+    if (_transactionType == 3 && resolvedCategoryId.isEmpty) {
+      setState(() {
+        _submitting = false;
+        _errorMessage = 'Unable to resolve transfer category.';
+      });
+      return;
+    }
 
     final result = await ref.read(createTransactionUseCaseProvider)(
       TransactionCreateData(

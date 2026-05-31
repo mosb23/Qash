@@ -302,19 +302,22 @@ class WalletDetailScreen extends ConsumerWidget {
       exchangeRates: exchangeRates,
     );
     final isTransfer = item.isTransfer || item.isTransferLinked;
-    final amountColor = display.isIncomingTransfer
-        ? const Color(0xFF00A63E)
-        : isTransfer
-        ? const Color(0xFF2B7FFF)
-        : item.isIncome
-        ? const Color(0xFF00A63E)
-        : const Color(0xFFFF0000);
     final amountSign = display.sign;
+    final amountColor = amountSign == '-'
+        ? const Color(0xFFFF0000)
+        : const Color(0xFF00A63E);
     final iconBg = isTransfer
         ? const Color(0xFFE1EBFF)
         : item.isIncome
         ? const Color(0xFFD9F0C8)
         : const Color(0xFFFFD3D4);
+    final transferContext = _transferContextText(
+      item: item,
+      walletId: walletId,
+      walletsById: walletsById,
+      display: display,
+    );
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -366,6 +369,22 @@ class WalletDetailScreen extends ConsumerWidget {
                       fontSize: 12,
                     ),
                   ),
+                  if (transferContext != null)
+                    Text(
+                      transferContext,
+                      style: const TextStyle(
+                        color: Color(0xFF8B8B8B),
+                        fontSize: 12,
+                      ),
+                    ),
+                  if (display.exchangeRateText != null)
+                    Text(
+                      display.exchangeRateText!,
+                      style: const TextStyle(
+                        color: Color(0xFF8B8B8B),
+                        fontSize: 11,
+                      ),
+                    ),
                 ],
               ),
             ],
@@ -438,7 +457,10 @@ class WalletDetailScreen extends ConsumerWidget {
       data: (items) {
         final filtered =
             items
-                .where((item) => transactionInvolvesWallet(item, walletId))
+                .where(
+                  (item) =>
+                      transactionInvolvesWallet(item, walletId),
+                )
                 .toList()
               ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
         return filtered;
@@ -458,19 +480,6 @@ class WalletDetailScreen extends ConsumerWidget {
     final conversion = CurrencyConversionService(exchangeRates);
 
     for (final item in items) {
-      if (item.isTransferLinked) {
-        if (item.isIncome &&
-            normalizeTransactionId(item.walletId) ==
-                normalizeTransactionId(walletId)) {
-          income += item.amount;
-        } else if (item.isExpense &&
-            normalizeTransactionId(item.walletId) ==
-                normalizeTransactionId(walletId)) {
-          expenses += item.amount;
-        }
-        continue;
-      }
-
       if (item.isTransfer) {
         if (isIncomingTransferToWallet(item, walletId)) {
           income += resolveTransferCreditAmount(
@@ -531,6 +540,55 @@ class WalletDetailScreen extends ConsumerWidget {
 
   String _formatDate(DateTime value) {
     return DateFormat('yyyy-MM-dd').format(value);
+  }
+
+  String? _transferContextText({
+    required TransactionEntity item,
+    required String walletId,
+    required Map<String, WalletEntity> walletsById,
+    required WalletTransactionDisplay display,
+  }) {
+    if (!item.isTransfer) {
+      return null;
+    }
+
+    final normalizedWalletId = normalizeTransactionId(walletId);
+    final sourceWalletName = walletsById[normalizeTransactionId(item.walletId)]?.name ??
+        item.walletName;
+    final destinationWalletId = item.toWalletId;
+    final destinationWalletName = destinationWalletId == null
+        ? (item.toWalletName ?? '')
+        : (walletsById[normalizeTransactionId(destinationWalletId)]?.name ??
+            (item.toWalletName ?? ''));
+    final sourceCurrency = (item.sourceCurrency.isNotEmpty
+            ? item.sourceCurrency
+            : item.walletCurrency)
+        .trim()
+        .toUpperCase();
+    final destinationCurrency =
+        (item.destinationCurrency ?? item.toWalletCurrency ?? '')
+            .trim()
+            .toUpperCase();
+
+    final sourceMatch = normalizeTransactionId(item.walletId) == normalizedWalletId;
+    if (sourceMatch) {
+      final targetCurrencyText = destinationCurrency.isNotEmpty
+          ? destinationCurrency
+          : display.currencyCode;
+      final receivedText = item.toAmount != null
+          ? formatMoney(item.toAmount!, targetCurrencyText)
+          : formatMoney(display.amount, display.currencyCode);
+      return 'To $destinationWalletName · Receives $receivedText';
+    }
+
+    final destinationMatch = destinationWalletId != null &&
+        normalizeTransactionId(destinationWalletId) == normalizedWalletId;
+    if (destinationMatch) {
+      final sentText = formatMoney(item.amount, sourceCurrency);
+      return 'From $sourceWalletName · Sent $sentText';
+    }
+
+    return null;
   }
 }
 

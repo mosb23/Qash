@@ -1,16 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/currency/currency_providers.dart';
-import '../../../core/currency/currency_conversion_service.dart';
 import '../../../core/errors/app_failure.dart';
-import '../../../core/utils/result.dart';
 import '../../analytics/utils/analytics_transaction_aggregation.dart';
-import '../../transactions/domain/entities/transaction.dart';
 import '../../transactions/providers/transactions_providers.dart';
 import '../../wallets/domain/entities/wallet.dart';
 import '../../wallets/providers/wallets_providers.dart';
 import '../../wallets/utils/wallet_balance_utils.dart';
 import '../domain/entities/dashboard.dart';
+
 
 /// Top categories for the current month, computed with wallet-aware conversion.
 final clientTopCategoriesProvider =
@@ -42,7 +40,12 @@ final clientTopCategoriesProvider =
 
           return AsyncValue.data(
             computeTopCategoriesFromTransactions(
-              transactions: result.data ?? const [],
+              transactions: (result.data ?? const [])
+                  .where(
+                    (transaction) =>
+                        !transaction.isTransfer && !transaction.isTransferLinked,
+                  )
+                  .toList(),
               displayCurrency: displayCurrency,
               conversion: conversion,
               walletsById: walletsById,

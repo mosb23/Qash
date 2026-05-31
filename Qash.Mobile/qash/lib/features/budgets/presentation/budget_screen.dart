@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/currency/currency_format.dart';
 import '../../../core/currency/currency_providers.dart';
+import '../../../core/widgets/transaction_category_icon.dart';
+import '../../categories/domain/entities/category.dart';
+import '../../categories/providers/categories_providers.dart';
 import '../../goals/utils/saving_goal_currency.dart';
 import '../../transactions/providers/transactions_providers.dart';
 import '../../wallets/providers/wallets_providers.dart';
@@ -22,6 +25,8 @@ class BudgetScreen extends ConsumerWidget {
     final hasExpiredBudgets = ref.watch(hasExpiredBudgetsProvider);
     final period = ref.watch(budgetPeriodProvider);
     final conversion = ref.watch(currencyConversionServiceProvider);
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final categoryIconsById = _categoryIconsById(categoriesAsync);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F3),
@@ -185,7 +190,11 @@ class BudgetScreen extends ConsumerWidget {
                                         '/budgets/${budget.budgetId}',
                                         extra: budget,
                                       ),
-                                      child: BudgetCard(budget: budget),
+                                      child: BudgetCard(
+                                        budget: budget,
+                                        categoryIcon:
+                                            categoryIconsById[budget.categoryId],
+                                      ),
                                     ),
                                   ),
                               ],
@@ -241,6 +250,18 @@ class BudgetScreen extends ConsumerWidget {
       BudgetFilter.expired => 'No limit reached budgets.',
       BudgetFilter.all => 'No budgets for this month.',
     };
+  }
+
+  Map<String, String?> _categoryIconsById(
+    AsyncValue<dynamic> categoriesAsync,
+  ) {
+    return categoriesAsync.maybeWhen(
+      data: (result) {
+        final items = (result.data as List<CategoryEntity>?) ?? const [];
+        return {for (final item in items) item.id: item.icon};
+      },
+      orElse: () => const <String, String?>{},
+    );
   }
 
   Widget _filterTab({
@@ -428,8 +449,9 @@ class BudgetSummaryCard extends StatelessWidget {
 
 class BudgetCard extends StatelessWidget {
   final BudgetStatusEntity budget;
+  final String? categoryIcon;
 
-  const BudgetCard({super.key, required this.budget});
+  const BudgetCard({super.key, required this.budget, this.categoryIcon});
 
   @override
   Widget build(BuildContext context) {
@@ -459,26 +481,14 @@ class BudgetCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(
-                    budget.categoryName.isNotEmpty
-                        ? budget.categoryName.substring(0, 1).toUpperCase()
-                        : '?',
-                    style: TextStyle(
-                      color: isAtOrOverLimit
-                          ? const Color(0xFFEF4444)
-                          : Colors.black,
-                      fontSize: 20,
-                    ),
-                  ),
-                ),
+              TransactionCategoryIcon(
+                categoryName: budget.categoryName,
+                categoryIcon: categoryIcon,
+                isTransfer: false,
+                backgroundColor: iconBg,
+                size: 44,
+                iconSize: 20,
+                borderRadius: 14,
               ),
               const SizedBox(width: 12),
               Expanded(

@@ -102,9 +102,6 @@ MonthlyCurrencyTotals sumMonthlyIncomeExpenseInCurrency({
   var expenses = 0.0;
 
   for (final item in transactions) {
-    if (item.excludeFromGlobalTotals) {
-      continue;
-    }
     if (item.transactionDate.year != now.year ||
         item.transactionDate.month != now.month) {
       continue;
@@ -117,7 +114,9 @@ MonthlyCurrencyTotals sumMonthlyIncomeExpenseInCurrency({
       walletsById: walletsById,
     );
 
-    if (item.isIncome) {
+    if (item.isTransfer) {
+      expenses += converted;
+    } else if (item.isIncome) {
       income += converted;
     } else if (item.isExpense) {
       expenses += converted;
@@ -138,6 +137,8 @@ List<BudgetStatusEntity> recomputeBudgetSpentAmounts({
         .where(
           (item) =>
               item.isExpense &&
+              !item.isTransfer &&
+              !item.isTransferLinked &&
               item.categoryId == budget.categoryId &&
               item.transactionDate.year == budget.year &&
               item.transactionDate.month == budget.month,

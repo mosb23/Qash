@@ -251,10 +251,6 @@ final analyticsSummaryProvider = Provider<AsyncValue<AnalyticsSummary>>((ref) {
     var expenses = 0.0;
 
     for (final item in result.data ?? const <TransactionEntity>[]) {
-      if (item.excludeFromGlobalTotals) {
-        continue;
-      }
-
       final local = item.transactionDate.isUtc
           ? item.transactionDate.toLocal()
           : item.transactionDate;
@@ -270,7 +266,9 @@ final analyticsSummaryProvider = Provider<AsyncValue<AnalyticsSummary>>((ref) {
         walletsById: walletsById,
       );
 
-      if (item.isIncome) {
+      if (item.isTransfer) {
+        expenses += converted;
+      } else if (item.isIncome) {
         income += converted;
       } else if (item.isExpense) {
         expenses += converted;
@@ -316,7 +314,7 @@ final clientCategoryBreakdownProvider =
 
           final totals = <String, double>{};
           for (final item in result.data ?? const <TransactionEntity>[]) {
-            if (!item.isExpense) {
+            if (!item.isExpense || item.isTransfer || item.isTransferLinked) {
               continue;
             }
 

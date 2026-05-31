@@ -40,9 +40,6 @@ List<YearlyComparison> computeYearlyComparisonFromTransactions({
     var expenses = 0.0;
 
     for (final item in transactions) {
-      if (item.excludeFromGlobalTotals) {
-        continue;
-      }
       if (!transactionInRange(item, from, toExclusive)) {
         continue;
       }
@@ -54,7 +51,9 @@ List<YearlyComparison> computeYearlyComparisonFromTransactions({
         walletsById: walletsById,
       );
 
-      if (item.isIncome) {
+      if (item.isTransfer) {
+        expenses += converted;
+      } else if (item.isIncome) {
         income += converted;
       } else if (item.isExpense) {
         expenses += converted;
@@ -125,7 +124,7 @@ List<AnalyticsChartBar> _dailyExpenseBars({
   final totals = List<double>.filled(dayCount, 0);
 
   for (final item in transactions) {
-    if (!item.isExpense) {
+    if (!item.isExpense || item.isTransfer || item.isTransferLinked) {
       continue;
     }
     if (!transactionInRange(item, from, toExclusive)) {
@@ -166,7 +165,7 @@ List<AnalyticsChartBar> _monthlyWeekExpenseBars({
   final totals = List<double>.filled(weekCount, 0);
 
   for (final item in transactions) {
-    if (!item.isExpense) {
+    if (!item.isExpense || item.isTransfer || item.isTransferLinked) {
       continue;
     }
     if (!transactionInRange(item, config.fromUtc, config.toUtcExclusive)) {
@@ -208,7 +207,7 @@ List<TopCategoryEntity> computeTopCategoriesFromTransactions({
   var totalExpenses = 0.0;
 
   for (final item in transactions) {
-    if (!item.isExpense) {
+    if (!item.isExpense || item.isTransfer || item.isTransferLinked) {
       continue;
     }
     if (!transactionInRange(item, monthStart, monthEnd)) {

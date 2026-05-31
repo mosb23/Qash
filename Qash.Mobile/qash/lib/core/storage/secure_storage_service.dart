@@ -39,4 +39,30 @@ class SecureStorageService {
   Future<void> clearTokens() async {
     await _storage.deleteAll();
   }
+
+  Future<void> writeString(String key, String value) async {
+    await _storage.write(key: key, value: value);
+  }
+
+  Future<String?> readString(String key) async {
+    return _storage.read(key: key);
+  }
+
+  Future<void> writeBool(String key, bool value) async {
+    await _storage.write(key: key, value: value ? '1' : '0');
+  }
+
+  Future<bool?> readBool(String key) async {
+    final raw = await _storage.read(key: key);
+    if (raw == null) {
+      return null;
+    }
+    if (raw == '1' || raw.toLowerCase() == 'true') {
+      return true;
+    }
+    if (raw == '0' || raw.toLowerCase() == 'false') {
+      return false;
+    }
+    return null;
+  }
 }
